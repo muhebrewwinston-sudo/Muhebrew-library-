@@ -156,11 +156,19 @@ CREATE INDEX IF NOT EXISTS idx_reports_resolved ON reports(resolved);
 
 db.exec(schemaSql);
 
-// Older databases get the "status" column (existing items stay approved)
+// Older databases get the "status" and "category" columns
 for (const t of ['papers', 'books']) {
   const cols = db.prepare('PRAGMA table_info(' + t + ')').all().map((c) => c.name);
   if (!cols.includes('status')) db.exec('ALTER TABLE ' + t + " ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'");
+  if (!cols.includes('category')) db.exec('ALTER TABLE ' + t + " ADD COLUMN category TEXT DEFAULT '" + (t === 'books' ? 'MSCE' : 'MANEB') + "'");
 }
+
+// Ensure reports table has details and email columns
+try {
+  const reportCols = db.prepare('PRAGMA table_info(reports)').all().map((c) => c.name);
+  if (!reportCols.includes('details')) db.exec('ALTER TABLE reports ADD COLUMN details TEXT');
+  if (!reportCols.includes('email')) db.exec('ALTER TABLE reports ADD COLUMN email TEXT');
+} catch (_) {}
 
 // Ensure users table has bonus_downloads and email verification columns
 try {
@@ -185,9 +193,12 @@ try {
   }
 } catch (_) {}
 
-// Ensure muhebrewwinston@gmail.com is always role = 'admin' and verified
+// Ensure muhebrewwinston@gmail.com is always role = 'admin', owner and verified
 try {
-  db.prepare("UPDATE users SET role = 'admin', is_verified = 1 WHERE LOWER(email) = 'muhebrewwinston@gmail.com'").run();
+  const owner = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'muhebrewwinston@gmail.com'").get();
+  if (owner) {
+    db.prepare("UPDATE users SET role = 'admin', is_verified = 1 WHERE id = ?").run(owner.id);
+  }
 } catch (_) {}
 
 module.exports = db;

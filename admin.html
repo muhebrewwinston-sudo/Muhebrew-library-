@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin - Muhebrew Library</title>
+<title>Admin & Owner Dashboard - Muhebrew Library</title>
 <meta name="theme-color" content="#1b7f4b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%231b7f4b' stroke-width='4' stroke-linejoin='round'%3E%3Cpath d='M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z'/%3E%3Cpath d='M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,40 +25,95 @@
     </a>
     <span class="spacer"></span>
     <button class="btn sm" id="themeBtn">Theme</button>
-    <a class="btn sm" href="/">Browse</a>
-    <span class="btn sm" id="who"></span>
+    <a class="btn sm" href="/">Browse Library</a>
+    <button class="btn sm danger" id="adminSignOutBtn" title="Sign out">Sign out</button>
   </div>
 </header>
-<main class="wrap" style="padding-bottom:30px">
-  <h1 style="margin:20px 0 4px;font-size:22px">Admin dashboard</h1>
-  <p style="color:var(--muted);margin:0 0 16px;font-size:13px">Upload resources, review teacher uploads and manage users.</p>
-  <div class="stat-grid">
-    <div class="stat"><b id="sUsers">-</b><span>Users</span></div>
-    <div class="stat"><b id="sPapers">-</b><span>Past papers</span></div>
-    <div class="stat"><b id="sBooks">-</b><span>Books</span></div>
-    <div class="stat"><b id="sDl">-</b><span>Total downloads</span></div>
-    <div class="stat" style="grid-column:1/-1"><b id="s7">-</b><span>Downloads last 7 days</span></div>
+
+<main class="wrap" style="padding-bottom:40px">
+  <!-- Owner Header -->
+  <div style="margin:18px 0 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <h1 style="margin:0 0 2px;font-size:22px">Admin &amp; Owner Dashboard</h1>
+      <p style="color:var(--muted);margin:0;font-size:13px">
+        Logged in as <b id="ownerBadge" style="color:var(--primary)">muhebrewwinston@gmail.com (Owner)</b>
+      </p>
+    </div>
+    <span class="role-badge badge-admin">Owner Active</span>
   </div>
-  <div class="panel"><h3>Upload resource</h3>
-    <form id="uploadForm" class="form-grid">
-      <div><label>Type</label><select id="uType"><option value="papers">Past paper</option><option value="books">Book</option></select></div>
-      <div><label>Subject</label><input id="uSubject" required placeholder="Mathematics"></div>
-      <div><label>Title</label><input id="uTitle" required placeholder="Mathematics Paper 1"></div>
-      <div><label>Level</label><select id="uLevel" required><option>Form 1</option><option>Form 2</option><option>Form 3</option><option>Form 4</option></select></div>
-      <div id="yearWrap"><label>Year</label><input id="uYear" type="number" min="1990" max="2100" placeholder="2024"></div>
-      <div id="boardWrap"><label>Exam board</label><input id="uBoard" placeholder="MANEB"></div>
-      <div id="authorWrap" hidden><label>Author</label><input id="uAuthor"></div>
-      <div id="publisherWrap" hidden><label>Publisher</label><input id="uPublisher"></div>
-      <div><label>Description</label><textarea id="uDesc" rows="2"></textarea></div>
-      <div><label>File (PDF works best)</label><input id="uFile" type="file" required></div>
-      <div><label>Cover image (books only, optional)</label><input id="uCover" type="file" accept="image/*"></div>
-      <div><button class="btn primary" id="uSubmit" type="submit" style="width:100%">Upload</button></div>
-    </form>
-  </div>
-  <div class="panel"><h3>Pending teacher uploads</h3><div id="pending"></div></div>
-  <div class="panel"><h3>Reported files</h3><div id="reports"></div></div>
-  <div class="panel"><h3>Recent uploads</h3><div id="recent"></div></div>
-  <div class="panel"><h3>Assign Teacher Access</h3>
+
+  <!-- SECTION 1: Statistics & Most Favorite Books -->
+  <section class="panel" style="background:var(--surface)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0;font-size:16px">1. Library Statistics</h3>
+      <span style="font-size:12px;color:var(--muted)">Live Real-time Stats</span>
+    </div>
+    <div class="stat-grid" style="margin-top:0">
+      <div class="stat"><b id="sUsers">-</b><span>Total Users</span></div>
+      <div class="stat"><b id="sDl">-</b><span>Total Downloads</span></div>
+      <div class="stat"><b id="sPapers">-</b><span>Past Papers</span></div>
+      <div class="stat"><b id="sBooks">-</b><span>Textbooks</span></div>
+      <div class="stat" style="grid-column:1/-1;background:var(--surface-2)">
+        <b id="s7">-</b><span>Downloads in Last 7 Days</span>
+      </div>
+    </div>
+
+    <!-- Sub-section: Most Favorite Books That Mostly Downloaded -->
+    <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+      <h4 style="margin:0 0 10px;font-size:14px;color:var(--primary);display:flex;align-items:center;gap:6px">
+        <span>⭐</span> Most Favorite Textbooks (Mostly Downloaded)
+      </h4>
+      <div id="favoriteBooksList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Sub-section: Most Favorite Past Papers -->
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+      <h4 style="margin:0 0 10px;font-size:14px;color:var(--primary);display:flex;align-items:center;gap:6px">
+        <span>📜</span> Most Favorite Past Papers &amp; Notes
+      </h4>
+      <div id="favoritePapersList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: Issues Faced by Users (Reports & Help Requests) -->
+  <section class="panel" style="background:var(--surface)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;font-size:16px">2. Issues Faced by Users</h3>
+      <span id="issuesCountBadge" class="tag wait" style="font-size:11px">Open Issues</span>
+    </div>
+    <p style="color:var(--muted);margin:0 0 12px;font-size:12.5px">
+      Student inquiries, broken file notifications, and help requests submitted through the system:
+    </p>
+    <div id="reports"></div>
+  </section>
+
+  <!-- SECTION 3: Live Progression Happening on the Web -->
+  <section class="panel" style="background:var(--surface)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;font-size:16px">3. Web Progression Activity</h3>
+      <span class="tag ok" style="font-size:11px">Live Feed</span>
+    </div>
+    <p style="color:var(--muted);margin:0 0 12px;font-size:12.5px">
+      Track real-time downloads, new student signups, and community interactions:
+    </p>
+    
+    <div style="display:flex;gap:6px;margin-bottom:12px" class="tabs">
+      <button class="btn sm primary" id="progTabDl" type="button">Recent Downloads</button>
+      <button class="btn sm" id="progTabUsers" type="button">New Signups</button>
+      <button class="btn sm" id="progTabUploads" type="button">Recent Uploads</button>
+    </div>
+    <div id="progressionContent"></div>
+  </section>
+
+  <!-- Review Queue for Teacher Uploads -->
+  <section class="panel">
+    <h3>Pending Teacher Uploads for Review</h3>
+    <div id="pending"></div>
+  </section>
+
+  <!-- User & Role Management -->
+  <section class="panel">
+    <h3>Assign Teacher Access</h3>
     <p style="color:var(--muted);margin:0 0 10px;font-size:12.5px">Public registration enrolls users as students. Only admins can grant teacher status to chosen emails.</p>
     <form id="grantTeacherForm" style="display:flex;gap:8px;flex-wrap:wrap">
       <input id="grantEmail" type="email" required placeholder="teacher@example.com" style="flex:1;min-width:180px">
@@ -69,17 +124,116 @@
       </select>
       <button class="btn primary sm" type="submit">Assign Role</button>
     </form>
-  </div>
-  <div class="panel"><h3>Users</h3><div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table id="usersTable">
-    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>School</th><th>Joined</th></tr></thead><tbody></tbody></table></div></div>
-  <div class="panel"><h3>Change my password</h3>
+  </section>
+
+  <section class="panel">
+    <h3>Registered Users</h3>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table id="usersTable">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>School</th><th>Joined</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SECTION 4: THE LAST BAR - UPLOAD RESOURCES -->
+  <!-- "The last bar on admin display should show upload button where I will use to upload resources." -->
+  <section class="panel" style="border:2px solid var(--primary);box-shadow:0 0 18px rgba(27,127,75,0.18)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h3 style="margin:0;font-size:17px;color:var(--primary);display:flex;align-items:center;gap:6px">
+        <span>📤</span> Upload Resource Bar
+      </h3>
+      <span class="badge-new">Owner Tool</span>
+    </div>
+    <p style="color:var(--muted);margin:0 0 14px;font-size:13px">
+      Directly publish verified past papers, textbooks, study notes, and marking keys to the library:
+    </p>
+
+    <form id="uploadForm" class="form-grid">
+      <div>
+        <label>Resource Type</label>
+        <select id="uType">
+          <option value="papers">Past paper (MANEB / Mock)</option>
+          <option value="books">Textbook / Student Guide</option>
+          <option value="papers-notes">Study Revision Notes</option>
+          <option value="papers-keys">Official Marking Key</option>
+        </select>
+      </div>
+      <div>
+        <label>Subject</label>
+        <input id="uSubject" required placeholder="e.g. Mathematics, Biology, English">
+      </div>
+      <div>
+        <label>Title</label>
+        <input id="uTitle" required placeholder="e.g. Senior Secondary Mathematics Form 4">
+      </div>
+      <div>
+        <label>Class Level</label>
+        <select id="uLevel" required>
+          <option>Form 1</option>
+          <option>Form 2</option>
+          <option>Form 3</option>
+          <option>Form 4</option>
+        </select>
+      </div>
+      <div id="categoryWrap">
+        <label>Curriculum Category</label>
+        <select id="uCategory">
+          <option value="MSCE">MSCE (Senior Secondary Form 3 & 4)</option>
+          <option value="JCE">JCE (Junior Secondary Form 1 & 2)</option>
+          <option value="MANEB">MANEB Official Exam</option>
+          <option value="Mock">Mock Exam Paper</option>
+          <option value="Notes">Study Notes</option>
+          <option value="Marking Key">Marking Scheme / Key</option>
+        </select>
+      </div>
+      <div id="yearWrap">
+        <label>Exam / Publication Year</label>
+        <input id="uYear" type="number" min="1990" max="2100" placeholder="2024">
+      </div>
+      <div id="boardWrap">
+        <label>Exam Board / Publisher</label>
+        <input id="uBoard" placeholder="e.g. MANEB, Longhorn, Grey Matter">
+      </div>
+      <div id="authorWrap" hidden>
+        <label>Author(s)</label>
+        <input id="uAuthor" placeholder="e.g. Florence Thomo, Jared Ondera">
+      </div>
+      <div id="publisherWrap" hidden>
+        <label>Publisher</label>
+        <input id="uPublisher" placeholder="e.g. Longhorn Publishers">
+      </div>
+      <div>
+        <label>Description (optional)</label>
+        <textarea id="uDesc" rows="2" placeholder="Brief overview of curriculum chapters or exam paper..."></textarea>
+      </div>
+      <div>
+        <label>Document File (PDF works best)</label>
+        <input id="uFile" type="file" required accept=".pdf,.doc,.docx,.jpg,.png">
+      </div>
+      <div id="coverWrap">
+        <label>Book Cover Image (optional)</label>
+        <input id="uCover" type="file" accept="image/*">
+      </div>
+      <div>
+        <button class="btn primary" id="uSubmit" type="submit" style="width:100%;padding:13px;font-size:15px;font-weight:700">
+          Publish Resource to Library
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Password change for owner -->
+  <section class="panel">
+    <h3>Owner Account Security</h3>
     <form id="pwForm" class="form-grid">
       <div><label for="pwCurrent">Current password</label><input id="pwCurrent" type="password" required autocomplete="current-password" autocapitalize="none"></div>
       <div><label for="pwNew">New password (6+ characters)</label><input id="pwNew" type="password" required minlength="6" autocomplete="new-password" autocapitalize="none"></div>
       <div><button class="btn primary" type="submit" style="width:100%">Change password</button></div>
     </form>
-  </div>
+  </section>
 </main>
+
 <footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
 <script src="/js/api.js"></script>
 <script src="/js/admin.js"></script>

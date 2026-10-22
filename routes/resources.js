@@ -52,8 +52,8 @@ function buildRouter(table, type) {
   const router = express.Router();
   const isBook = type === 'book';
   const fields = isBook
-    ? ['title', 'author', 'publisher', 'subject', 'level', 'edition', 'isbn', 'description']
-    : ['title', 'subject', 'level', 'year', 'exam_board', 'paper_no', 'description'];
+    ? ['title', 'author', 'publisher', 'subject', 'level', 'category', 'edition', 'isbn', 'description']
+    : ['title', 'subject', 'level', 'category', 'year', 'exam_board', 'paper_no', 'description'];
   const getRow = (id) => db.prepare('SELECT * FROM ' + table + ' WHERE id = ?').get(id);
   const absPath = (row) => path.join(__dirname, '..', row.file_path);
 
@@ -69,18 +69,37 @@ function buildRouter(table, type) {
   });
 
   router.get('/', optionalAuth, (req, res) => {
-    const { q, subject, level, year, board, sort = 'recent' } = req.query;
-    const limit = Math.min(Number(req.query.limit) || 20, 100);
+    const { q, subject, level, year, board, category, sort = 'recent' } = req.query;
+    const limit = Math.min(Number(req.query.limit) || 24, 100);
     const page = Math.max(Number(req.query.page) || 1, 1);
     const where = ["status = 'approved'"], params = [];
 
     if (q) {
-      const cols = isBook ? ['title', 'subject', 'author', 'publisher'] : ['title', 'subject', 'exam_board'];
+      const cols = isBook ? ['title', 'subject', 'author', 'publisher', 'category'] : ['title', 'subject', 'exam_board', 'category'];
       where.push('(' + cols.map((c) => c + ' LIKE ?').join(' OR ') + ')');
       cols.forEach(() => params.push('%' + q + '%'));
     }
     if (subject) { where.push('subject = ?'); params.push(subject); }
-    if (level)   { where.push('level = ?');   params.push(level); }
+    if (level) {
+      const l = level.trim().toLowerCase();
+      if (l === 'jce') {
+        where.push("(level IN ('Form 1', 'Form 2') OR LOWER(category) = 'jce')");
+      } else if (l === 'msce') {
+        where.push("(level IN ('Form 3', 'Form 4') OR LOWER(category) = 'msce')");
+      } else {
+        where.push('level = ?'); params.push(level);
+      }
+    }
+    if (category) {
+      const cat = category.trim().toLowerCase();
+      if (cat === 'jce') {
+        where.push("(level IN ('Form 1', 'Form 2') OR LOWER(category) = 'jce')");
+      } else if (cat === 'msce') {
+        where.push("(level IN ('Form 3', 'Form 4') OR LOWER(category) = 'msce')");
+      } else {
+        where.push('LOWER(category) = ?'); params.push(cat);
+      }
+    }
     if (year)    { where.push('year = ?');    params.push(Number(year)); }
     if (board && !isBook) { where.push('exam_board = ?'); params.push(board); }
 
@@ -202,7 +221,12 @@ function buildRouter(table, type) {
 
       const rel = (f) => path.relative(path.join(__dirname, '..'), f.path).split(path.sep).join('/');
       const cols = [...fields, 'file_path', 'file_name', 'file_size', 'mime_type', 'uploaded_by', 'status'];
-      const vals = fields.map((f) => (f === 'year' ? (body[f] ? Number(body[f]) : null) : (body[f] || null)));
+      const defaultCategory = isBook ? 'MSCE' : 'MANEB';
+      const vals = fields.map((f) => {
+        if (f === 'year') return body[f] ? Number(body[f]) : null;
+        if (f === 'category') return body[f] || defaultCategory;
+        return body[f] || null;
+      });
       vals.push(rel(file), file.originalname, file.size, file.mimetype, req.user.id, req.user.role === 'admin' ? 'approved' : 'pending');
       if (isBook) { cols.push('cover_path'); vals.push(cover ? rel(cover) : null); }
 

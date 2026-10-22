@@ -1395,7 +1395,176 @@ body.auth::after {
   margin-top: 2px;
 }
 
-/* Modal styles for student upload & limit alert */
+/* ============ Trust Showcase: Verified Curriculum Resources ============ */
+.trust-showcase {
+  margin: 14px 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 12px;
+  box-shadow: var(--shadow);
+  position: relative;
+  z-index: 1;
+}
+
+.trust-header {
+  margin-bottom: 12px;
+}
+
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(27, 127, 75, 0.12);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 6px;
+  border: 1px solid rgba(27, 127, 75, 0.25);
+}
+
+[data-theme="dark"] .trust-badge {
+  background: rgba(62, 207, 132, 0.18);
+  color: #3ecf84;
+}
+
+.trust-header h3 {
+  margin: 0 0 3px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.trust-header p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.trust-carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 2px 8px;
+  scroll-snap-type: x mandatory;
+}
+
+.trust-carousel::-webkit-scrollbar {
+  height: 5px;
+}
+
+.trust-carousel::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.trust-card {
+  flex: 0 0 105px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.trust-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(27, 127, 75, 0.2);
+}
+
+.trust-card img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  display: block;
+  background: #fff;
+}
+
+.trust-card-meta {
+  padding: 6px 8px;
+  flex: 1;
+}
+
+.trust-card-meta b {
+  font-size: 11px;
+  line-height: 1.25;
+  display: block;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trust-card-meta span {
+  font-size: 9.5px;
+  color: var(--muted);
+  display: block;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Drawer Sub-category Items */
+.drawer-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 32px;
+  font-size: 13px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  border-radius: 8px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.drawer-sub-item:hover {
+  background: var(--surface-2);
+  color: var(--primary);
+}
+
+.drawer-sub-item .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.drawer-sub-item:hover .dot {
+  background: var(--primary);
+}
+
+/* Card file size badge */
+.tag.size {
+  background: rgba(0, 0, 0, 0.06);
+  font-weight: 600;
+  color: var(--text);
+}
+
+[data-theme="dark"] .tag.size {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+.tag.pdf {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+  font-weight: 700;
+}
 .modal-dialog {
   background: var(--surface);
   border-radius: 16px;

@@ -49,6 +49,17 @@ const resources = require('./routes/resources');
 const searchRoutes = require('./routes/search');
 const adminRoutes = require('./routes/admin');
 
+// Auto-seed authentic textbooks & papers if database is fresh
+try {
+  const db = require('./db/database');
+  const hasBooks = db.prepare('SELECT COUNT(*) c FROM books').get().c;
+  if (!hasBooks) {
+    require('./db/seed-content');
+  }
+} catch (err) {
+  console.warn('[Warning] Auto-seed check:', err.message);
+}
+
 const app = express();
 // Support standard PORT as well as Pterodactyl/X Systems SERVER_PORT
 const PORT = Number(process.env.PORT || process.env.SERVER_PORT) || 3000;

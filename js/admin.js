@@ -2,6 +2,9 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const tbl = (head, rows) => '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table><thead><tr>' + head.map((h) => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
 
+let progressionData = { signups: [], downloads: [], uploads: [] };
+let activeProgTab = 'dl';
+
 function isAdmin(user) {
   if (!user) return false;
   if (user.role === 'admin') return true;
@@ -18,17 +21,23 @@ function isAdmin(user) {
   document.body.classList.remove('auth-protected');
   document.body.classList.add('auth-ready');
 
-  $('who').textContent = (user.name || 'Admin').split(' ')[0];
-  $('who').title = 'Click to sign out';
-  $('who').style.cursor = 'pointer';
-  $('who').onclick = () => {
-    if (confirm('Sign out?')) {
+  const ownerBadge = $('ownerBadge');
+  if (ownerBadge) {
+    ownerBadge.textContent = (user.email || 'muhebrewwinston@gmail.com') + ' (Owner)';
+  }
+
+  $('adminSignOutBtn')?.addEventListener('click', () => {
+    if (confirm('Sign out from owner dashboard?')) {
       API.setToken(null);
       location.replace('/auth.html');
     }
-  };
+  });
 
-  loadStats(); loadRecent(); loadUsers(); loadPending(); loadReports();
+  loadStats();
+  loadReports();
+  loadProgression();
+  loadPending();
+  loadUsers();
 })();
 
 const themeBtn = $('themeBtn');
@@ -40,23 +49,193 @@ if (themeBtn) {
   });
 }
 
+// ============ SECTION 1: Statistics & Most Favorite Books ============
 async function loadStats() {
-  const s = await API.get('/admin/stats');
-  $('sUsers').textContent = s.users;
-  $('sPapers').textContent = s.papers;
-  $('sBooks').textContent = s.books;
-  $('sDl').textContent = s.downloads.toLocaleString();
-  $('s7').textContent = s.last7.toLocaleString();
+  try {
+    const s = await API.get('/admin/stats');
+    $('sUsers').textContent = s.users.toLocaleString();
+    $('sDl').textContent = s.downloads.toLocaleString();
+    $('sPapers').textContent = s.papers.toLocaleString();
+    $('sBooks').textContent = s.books.toLocaleString();
+    $('s7').textContent = s.last7.toLocaleString() + ' downloads';
+
+    // Render Most Favorite Textbooks (Mostly Downloaded)
+    const fbList = $('favoriteBooksList');
+    if (fbList && s.favoriteBooks) {
+      if (!s.favoriteBooks.length) {
+        fbList.innerHTML = '<p style="color:var(--muted);font-size:13px">No textbooks downloaded yet.</p>';
+      } else {
+        fbList.innerHTML = s.favoriteBooks.map((b, idx) => `
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
+            <span style="font-weight:800;color:var(--primary);font-size:14px;width:20px;text-align:center">#${idx + 1}</span>
+            <div style="width:36px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;display:grid;place-items:center">
+              ${b.cover_path ? `<img src="/${esc(b.cover_path)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '📖'}
+            </div>
+            <div style="flex:1;min-width:0">
+              <b style="font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.title)}</b>
+              <span style="font-size:11.5px;color:var(--muted)">${esc(b.subject)} · ${esc(b.level)}</span>
+            </div>
+            <span class="tag ok" style="font-size:11.5px;font-weight:700">🔥 ${b.downloads.toLocaleString()} dl</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Render Most Favorite Past Papers
+    const fpList = $('favoritePapersList');
+    if (fpList && s.favoritePapers) {
+      if (!s.favoritePapers.length) {
+        fpList.innerHTML = '<p style="color:var(--muted);font-size:13px">No papers downloaded yet.</p>';
+      } else {
+        fpList.innerHTML = s.favoritePapers.map((p, idx) => `
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
+            <span style="font-weight:800;color:var(--primary);font-size:14px;width:20px;text-align:center">#${idx + 1}</span>
+            <span style="font-size:22px;flex-shrink:0">📜</span>
+            <div style="flex:1;min-width:0">
+              <b style="font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title)}</b>
+              <span style="font-size:11.5px;color:var(--muted)">${esc(p.subject)} · ${esc(p.level)} · ${esc(p.category || p.exam_board || '')}</span>
+            </div>
+            <span class="tag ok" style="font-size:11.5px;font-weight:700">🔥 ${p.downloads.toLocaleString()} dl</span>
+          </div>
+        `).join('');
+      }
+    }
+  } catch (err) {
+    console.error('Stats error:', err);
+  }
 }
 
-async function loadRecent() {
-  const [p, b] = await Promise.all([API.get('/papers?limit=5'), API.get('/books?limit=5')]);
-  const rows = [...p.items.map((i) => ({ ...i, t: 'papers' })), ...b.items.map((i) => ({ ...i, t: 'books' }))]
-    .sort((a, c) => (c.created_at > a.created_at ? 1 : -1)).slice(0, 8);
-  $('recent').innerHTML = rows.length
-    ? tbl(['Title', 'Type', 'Downloads', ''], rows.map((r) => '<tr><td>' + esc(r.title) + '</td><td>' + (r.t === 'papers' ? 'Paper' : 'Book') + '</td><td>' + r.downloads +
-        '</td><td><button class="btn sm danger" data-del="' + r.t + ':' + r.id + '">Delete</button></td></tr>'))
-    : '<p style="color:var(--muted)">No uploads yet.</p>';
+// ============ SECTION 2: Issues Faced by Users ============
+async function loadReports() {
+  try {
+    const { items } = await API.get('/admin/reports');
+    const badge = $('issuesCountBadge');
+    const openCount = items.filter((i) => !i.resolved).length;
+    if (badge) {
+      badge.textContent = openCount + ' Open Issue' + (openCount === 1 ? '' : 's');
+      badge.className = openCount > 0 ? 'tag wait' : 'tag ok';
+    }
+
+    const reportsDiv = $('reports');
+    if (!items.length) {
+      reportsDiv.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No issues reported by users yet. System running smoothly!</p>';
+      return;
+    }
+
+    reportsDiv.innerHTML = items.map((r) => `
+      <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;${r.resolved ? 'opacity:0.65' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div>
+            <span class="tag ${r.resolved ? 'ok' : 'wait'}" style="font-size:10px;font-weight:700">
+              ${r.resolved ? 'RESOLVED' : 'OPEN ISSUE'}
+            </span>
+            <span class="tag" style="font-size:10px">${esc(r.t.toUpperCase())}</span>
+          </div>
+          <span style="font-size:11px;color:var(--muted)">${new Date(r.created_at + 'Z').toLocaleString()}</span>
+        </div>
+        <div style="margin:8px 0 6px">
+          <b style="font-size:13.5px;color:var(--text)">${esc(r.reason)}</b>
+          ${r.details ? `<p style="margin:4px 0 0;font-size:12.5px;color:var(--muted);line-height:1.4">${esc(r.details)}</p>` : ''}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;font-size:11.5px;color:var(--muted);border-top:1px solid var(--border);padding-top:8px;margin-top:6px">
+          <span>Reported by: <b style="color:var(--text)">${esc(r.reporter)}</b></span>
+          <div style="display:flex;gap:6px">
+            ${!r.resolved ? `<button class="btn sm primary" data-rs="${r.id}" style="padding:3px 8px;min-height:26px;font-size:11.5px">Mark Resolved</button>` : ''}
+            ${r.item_id ? `<button class="btn sm danger" data-rdel="${r.t}:${r.item_id}:${r.id}" style="padding:3px 8px;min-height:26px;font-size:11.5px">Delete File</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('Reports error:', err);
+  }
+}
+
+// ============ SECTION 3: Live Progression Happening on the Web ============
+async function loadProgression() {
+  try {
+    progressionData = await API.get('/admin/progression');
+    renderProgression();
+  } catch (err) {
+    console.error('Progression error:', err);
+  }
+}
+
+function renderProgression() {
+  const container = $('progressionContent');
+  if (!container) return;
+
+  if (activeProgTab === 'dl') {
+    const list = progressionData.downloads || [];
+    container.innerHTML = list.length ? list.map((d) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
+        <div style="flex:1;min-width:0">
+          <span style="font-weight:700;color:var(--primary)">⚡ Downloaded:</span>
+          <b>${esc(d.item_title)}</b>
+          <div style="font-size:11px;color:var(--muted)">By ${esc(d.user_name || d.user_email || 'Student')}</div>
+        </div>
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap">${new Date(d.created_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+    `).join('') : '<p style="color:var(--muted);font-size:13px">No downloads recorded yet.</p>';
+  } else if (activeProgTab === 'users') {
+    const list = progressionData.signups || [];
+    container.innerHTML = list.length ? list.map((u) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
+        <div>
+          <b>${esc(u.name)}</b> <span class="tag" style="font-size:10px">${esc(u.role)}</span>
+          <div style="font-size:11px;color:var(--muted)">${esc(u.email)} ${u.school ? '· ' + esc(u.school) : ''}</div>
+        </div>
+        <span style="font-size:11px;color:var(--muted)">${new Date(u.created_at + 'Z').toLocaleDateString()}</span>
+      </div>
+    `).join('') : '<p style="color:var(--muted);font-size:13px">No recent signups.</p>';
+  } else {
+    const list = progressionData.uploads || [];
+    container.innerHTML = list.length ? list.map((up) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
+        <div>
+          <b>${esc(up.title)}</b> <span class="tag ok" style="font-size:10px">${esc(up.t)}</span>
+          <div style="font-size:11px;color:var(--muted)">${esc(up.subject)} · ${esc(up.level)}</div>
+        </div>
+        <span style="font-size:11px;color:var(--muted)">${new Date(up.created_at + 'Z').toLocaleDateString()}</span>
+      </div>
+    `).join('') : '<p style="color:var(--muted);font-size:13px">No recent uploads.</p>';
+  }
+}
+
+$('progTabDl')?.addEventListener('click', () => {
+  activeProgTab = 'dl';
+  $('progTabDl').className = 'btn sm primary';
+  $('progTabUsers').className = 'btn sm';
+  $('progTabUploads').className = 'btn sm';
+  renderProgression();
+});
+
+$('progTabUsers')?.addEventListener('click', () => {
+  activeProgTab = 'users';
+  $('progTabDl').className = 'btn sm';
+  $('progTabUsers').className = 'btn sm primary';
+  $('progTabUploads').className = 'btn sm';
+  renderProgression();
+});
+
+$('progTabUploads')?.addEventListener('click', () => {
+  activeProgTab = 'uploads';
+  $('progTabDl').className = 'btn sm';
+  $('progTabUsers').className = 'btn sm';
+  $('progTabUploads').className = 'btn sm primary';
+  renderProgression();
+});
+
+// ============ SECTION 4: Teacher Uploads Review & Users ============
+async function loadPending() {
+  const { items } = await API.get('/admin/pending');
+  $('pending').innerHTML = items.length
+    ? tbl(['Title', 'Type', 'By', ''], items.map((r) => '<tr><td>' + esc(r.title) + '<br><small style="color:var(--muted)">' + esc(r.subject) + ' · ' + esc(r.level) + '</small></td><td>' +
+        (r.t === 'papers' ? 'Paper' : 'Book') + '</td><td>' + esc(r.uploader || '-') + '</td><td style="white-space:nowrap">' +
+        '<a class="btn sm" target="_blank" rel="noopener" href="' + API.base + '/' + r.t + '/' + r.id + '/preview?t=' + encodeURIComponent(API.token()) + '">Preview</a> ' +
+        '<button class="btn sm primary" data-rv="approve:' + r.t + ':' + r.id + '">Approve</button> ' +
+        '<button class="btn sm danger" data-rv="reject:' + r.t + ':' + r.id + '">Reject</button></td></tr>'))
+    : '<p style="color:var(--muted);font-size:13px">Nothing waiting for review.</p>';
 }
 
 async function loadUsers() {
@@ -67,31 +246,16 @@ async function loadUsers() {
     '</select></td><td>' + esc(u.school || '-') + '</td><td>' + new Date(u.created_at + 'Z').toLocaleDateString() + '</td></tr>').join('');
 }
 
-async function loadPending() {
-  const { items } = await API.get('/admin/pending');
-  $('pending').innerHTML = items.length
-    ? tbl(['Title', 'Type', 'By', ''], items.map((r) => '<tr><td>' + esc(r.title) + '<br><small style="color:var(--muted)">' + esc(r.subject) + ' · ' + esc(r.level) + '</small></td><td>' +
-        (r.t === 'papers' ? 'Paper' : 'Book') + '</td><td>' + esc(r.uploader || '-') + '</td><td style="white-space:nowrap">' +
-        '<a class="btn sm" target="_blank" rel="noopener" href="' + API.base + '/' + r.t + '/' + r.id + '/preview?t=' + encodeURIComponent(API.token()) + '">Preview</a> ' +
-        '<button class="btn sm primary" data-rv="approve:' + r.t + ':' + r.id + '">Approve</button> ' +
-        '<button class="btn sm danger" data-rv="reject:' + r.t + ':' + r.id + '">Reject</button></td></tr>'))
-    : '<p style="color:var(--muted)">Nothing waiting for review.</p>';
-}
-
-async function loadReports() {
-  const { items } = await API.get('/admin/reports');
-  $('reports').innerHTML = items.length
-    ? tbl(['File', 'Reason', 'By', ''], items.map((r) => '<tr><td>' + esc(r.title) + '</td><td>' + esc(r.reason) + '</td><td>' + esc(r.reporter || 'Guest') + '</td><td style="white-space:nowrap">' +
-        '<button class="btn sm" data-rs="' + r.id + '">Resolve</button> ' +
-        '<button class="btn sm danger" data-rdel="' + r.t + ':' + r.item_id + ':' + r.id + '">Delete file</button></td></tr>'))
-    : '<p style="color:var(--muted)">No open reports.</p>';
-}
-
 document.addEventListener('change', async (e) => {
   const sel = e.target.closest('[data-role]');
   if (!sel) return;
-  try { await API.patch('/admin/users/' + sel.dataset.role + '/role', { role: sel.value }); toast('Role updated'); }
-  catch (err) { toast(err.message, true); loadUsers(); }
+  try {
+    await API.patch('/admin/users/' + sel.dataset.role + '/role', { role: sel.value });
+    toast('Role updated successfully');
+  } catch (err) {
+    toast(err.message, true);
+    loadUsers();
+  }
 });
 
 $('grantTeacherForm')?.addEventListener('submit', async (e) => {
@@ -110,53 +274,94 @@ $('grantTeacherForm')?.addEventListener('submit', async (e) => {
 
 document.addEventListener('click', async (e) => {
   try {
-    const del = e.target.closest('[data-del]');
-    if (del) {
-      const [t, id] = del.dataset.del.split(':');
-      if (!confirm('Delete this resource and its file?')) return;
-      await API.del('/' + t + '/' + id);
-      toast('Deleted'); loadRecent(); loadStats();
-    }
     const rv = e.target.closest('[data-rv]');
     if (rv) {
       const [action, t, id] = rv.dataset.rv.split(':');
       if (action === 'reject' && !confirm('Reject and delete this upload?')) return;
       await API.post('/admin/review/' + t + '/' + id, { action });
       toast(action === 'approve' ? 'Approved' : 'Rejected');
-      loadPending(); loadRecent(); loadStats();
+      loadPending(); loadStats(); loadProgression();
     }
     const rs = e.target.closest('[data-rs]');
-    if (rs) { await API.post('/admin/reports/' + rs.dataset.rs + '/resolve'); toast('Resolved'); loadReports(); }
+    if (rs) {
+      await API.post('/admin/reports/' + rs.dataset.rs + '/resolve');
+      toast('Issue marked as resolved');
+      loadReports();
+    }
     const rd = e.target.closest('[data-rdel]');
     if (rd) {
       const [t, id, rid] = rd.dataset.rdel.split(':');
       if (!confirm('Delete this file from the site?')) return;
       await API.del('/' + t + '/' + id);
       await API.post('/admin/reports/' + rid + '/resolve');
-      toast('Deleted'); loadReports(); loadRecent(); loadStats();
+      toast('File deleted and report resolved');
+      loadReports(); loadStats(); loadProgression();
     }
   } catch (err) { toast(err.message, true); }
 });
 
-$('uType').addEventListener('change', () => {
-  const book = $('uType').value === 'books';
-  $('yearWrap').hidden = book; $('boardWrap').hidden = book;
-  $('authorWrap').hidden = !book; $('publisherWrap').hidden = !book;
+// ============ SECTION 5: THE LAST BAR - UPLOAD RESOURCES ============
+$('uType')?.addEventListener('change', () => {
+  const val = $('uType').value;
+  const isBook = val === 'books';
+  $('yearWrap').hidden = isBook;
+  $('boardWrap').hidden = isBook;
+  $('authorWrap').hidden = !isBook;
+  $('publisherWrap').hidden = !isBook;
+
+  if (val === 'papers-notes') {
+    $('uCategory').value = 'Notes';
+  } else if (val === 'papers-keys') {
+    $('uCategory').value = 'Marking Key';
+  } else if (val === 'books') {
+    $('uCategory').value = 'MSCE';
+  } else {
+    $('uCategory').value = 'MANEB';
+  }
 });
 
-$('uploadForm').addEventListener('submit', async (e) => {
+$('uploadForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('uSubmit');
   btn.disabled = true;
+  btn.textContent = 'Publishing to library...';
+
   try {
     const fd = new FormData();
-    const map = { title: 'uTitle', subject: 'uSubject', level: 'uLevel', year: 'uYear', exam_board: 'uBoard', author: 'uAuthor', publisher: 'uPublisher', description: 'uDesc' };
-    for (const k in map) if ($(map[k]).value) fd.append(k, $(map[k]).value);
-    fd.append('file', $('uFile').files[0]);
-    if ($('uCover').files[0]) fd.append('cover', $('uCover').files[0]);
-    await API.upload('/' + $('uType').value, fd);
-    toast('Uploaded');
-    e.target.reset(); loadRecent(); loadStats();
-  } catch (err) { toast(err.message, true); }
-  finally { btn.disabled = false; }
+    const rawType = $('uType').value;
+    const isBook = rawType === 'books';
+    const endpoint = isBook ? '/books' : '/papers';
+
+    fd.append('title', $('uTitle').value.trim());
+    fd.append('subject', $('uSubject').value.trim());
+    fd.append('level', $('uLevel').value);
+    fd.append('category', $('uCategory').value);
+    if ($('uDesc').value.trim()) fd.append('description', $('uDesc').value.trim());
+
+    if (!isBook) {
+      if ($('uYear').value) fd.append('year', $('uYear').value);
+      if ($('uBoard').value.trim()) fd.append('exam_board', $('uBoard').value.trim());
+    } else {
+      if ($('uAuthor').value.trim()) fd.append('author', $('uAuthor').value.trim());
+      if ($('uPublisher').value.trim()) fd.append('publisher', $('uPublisher').value.trim());
+      if ($('uCover').files[0]) fd.append('cover', $('uCover').files[0]);
+    }
+
+    if ($('uFile').files[0]) {
+      fd.append('file', $('uFile').files[0]);
+    } else {
+      throw new Error('Please select a file to upload.');
+    }
+
+    await API.upload(endpoint, fd);
+    toast('Resource published to library successfully!');
+    $('uploadForm').reset();
+    loadStats();
+    loadProgression();
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Publish Resource to Library';
+  }
 });
