@@ -11,5 +11,6 @@ uploads/books/*
 !uploads/books/.gitkeep
 uploads/covers/*
 !uploads/covers/.gitkeep
-.DS_Store
+*.DS_Store
 *.log
+*.zip
