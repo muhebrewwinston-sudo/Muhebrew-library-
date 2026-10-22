@@ -1,9 +1,24 @@
+const BACKEND_URL = 'http://195.123.189.186:25692';
+
 const API = {
   get base() {
     const meta = document.querySelector('meta[name="api-base"]');
     const custom = (window.API_BASE_URL || (meta && meta.content) || localStorage.getItem('ph_api_base') || '').replace(/\/$/, '');
-    return custom ? custom + '/api' : '/api';
+    if (custom) return custom + '/api';
+
+    // If running from file:// or a local static dev server on different port without reverse proxy:
+    if (typeof window !== 'undefined' && window.location) {
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const isSamePort = window.location.port === '25692';
+      if (window.location.protocol === 'file:' || (isLocalhost && !isSamePort && !window.location.port)) {
+        return BACKEND_URL + '/api';
+      }
+    }
+
+    // Default to '/api' which works natively and proxies through Vercel rewrites to 195.123.189.186:25692
+    return '/api';
   },
+
   token: () => localStorage.getItem('ph_token'),
   setToken(t) { t ? localStorage.setItem('ph_token', t) : localStorage.removeItem('ph_token'); },
 
