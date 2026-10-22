@@ -234,38 +234,35 @@ function buildRouter(table, type) {
         });
       }
 
-      // Check Drime Cloud Storage configuration for Owner or Admin
+      // Check Drime Cloud Storage configuration
       const isOwnerOrAdmin = req.user && (req.user.role === 'admin' || req.user.email === 'muhebrewwinston@gmail.com');
-      let storageProvider = 'local';
+      let storageProvider = 'drime';
       let drimeFileId = null;
       let drimeUrl = null;
       let drimeFolderId = null;
 
-      if (isOwnerOrAdmin || body.storage === 'drime') {
-        storageProvider = 'drime';
-        try {
-          const drimeRes = await drimeService.uploadToDrime({
-            filePath: file.path,
-            originalName: file.originalname,
-            mimeType: file.mimetype,
-            folderId: body.drime_folder_id || drimeService.DRIME_FOLDER_ID
-          });
-          drimeFileId = drimeRes.fileId;
-          drimeUrl = body.drime_link ? body.drime_link.trim() : (drimeRes.url || drimeService.DRIME_FOLDER_URL);
-          drimeFolderId = drimeRes.folderId || drimeService.DRIME_FOLDER_ID;
-        } catch (err) {
-          console.error('[Drime Cloud Storage] Upload error:', err.message);
-          drimeUrl = body.drime_link ? body.drime_link.trim() : drimeService.DRIME_FOLDER_URL;
-          drimeFolderId = drimeService.DRIME_FOLDER_ID;
-        }
+      try {
+        const drimeRes = await drimeService.uploadToDrime({
+          filePath: file.path,
+          originalName: file.originalname,
+          mimeType: file.mimetype,
+          folderId: body.drime_folder_id || drimeService.DRIME_FOLDER_ID
+        });
+        drimeFileId = drimeRes.fileId;
+        drimeUrl = body.drime_link ? body.drime_link.trim() : (drimeRes.url || drimeService.DRIME_FOLDER_URL);
+        drimeFolderId = drimeRes.folderId || drimeService.DRIME_FOLDER_ID;
+      } catch (err) {
+        console.error('[Drime Cloud Storage] Upload error:', err.message);
+        drimeUrl = body.drime_link ? body.drime_link.trim() : drimeService.DRIME_FOLDER_URL;
+        drimeFolderId = drimeService.DRIME_FOLDER_ID;
+      }
 
-        // Production requirement: Papers and books are stored in Drime Cloud folder, not on server disk.
-        // Unlink local temporary file immediately after cloud sync.
-        try {
-          await fs.promises.unlink(file.path);
-        } catch (unlinkErr) {
-          console.error('[Drime Cloud Storage] Local file unlink error:', unlinkErr.message);
-        }
+      // Production requirement: Papers and books are stored in Drime Cloud folder, not on server disk.
+      // Unlink local temporary file immediately after cloud sync.
+      try {
+        await fs.promises.unlink(file.path);
+      } catch (unlinkErr) {
+        console.error('[Drime Cloud Storage] Local file unlink error:', unlinkErr.message);
       }
 
       const rel = (f) => path.relative(path.join(__dirname, '..'), f.path).split(path.sep).join('/');
@@ -299,7 +296,7 @@ function buildRouter(table, type) {
         drimeUrl,
         drimeFolderId,
         req.user.id,
-        req.user.role === 'admin' ? 'approved' : 'pending'
+        'approved' // All verified uploads immediately appear under respective categories and are downloadable
       );
       if (isBook) { cols.push('cover_path'); vals.push(cover ? rel(cover) : null); }
 
