@@ -101,6 +101,21 @@ app.use('/api/admin', adminRoutes);
 // (so pending uploads stay hidden until approved).
 app.use('/uploads/covers', express.static(path.join(__dirname, 'uploads', 'covers'), { maxAge: '7d' }));
 
+// Direct download for complete backend package
+const { buildBackendZip } = require('./utils/zip');
+
+app.get('/muhebrew-backend-updated.zip', (_req, res) => {
+  const zipPath = path.join(__dirname, 'muhebrew-backend-updated.zip');
+  if (!fs.existsSync(zipPath)) {
+    buildBackendZip();
+  }
+  if (fs.existsSync(zipPath)) {
+    res.download(zipPath, 'muhebrew-backend-updated.zip');
+  } else {
+    res.status(500).send('Zip generation failed');
+  }
+});
+
 // Determine static frontend directory (supports both public/ and root directory)
 const publicDir = fs.existsSync(path.join(__dirname, 'public'))
   ? path.join(__dirname, 'public')
