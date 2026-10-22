@@ -7,10 +7,13 @@ db/*.db-shm
 db/*.db-journal
 uploads/papers/*
 !uploads/papers/.gitkeep
+!uploads/papers/*.pdf
 uploads/books/*
 !uploads/books/.gitkeep
+!uploads/books/*.pdf
 uploads/covers/*
 !uploads/covers/.gitkeep
+!uploads/covers/*.jpg
 *.DS_Store
 *.log
 *.zip

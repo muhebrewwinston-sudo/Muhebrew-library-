@@ -10,14 +10,64 @@ const TABLES = { papers: 'papers', books: 'books' };
 
 router.get('/stats', (_req, res) => {
   const one = (sql) => db.prepare(sql).get().c;
+  
+  // Most favorite books that are mostly downloaded
+  const favoriteBooks = db.prepare(`
+    SELECT id, title, subject, level, category, author, downloads, cover_path, file_size 
+    FROM books WHERE status = 'approved' 
+    ORDER BY downloads DESC, id ASC LIMIT 8
+  `).all();
+
+  // Most favorite papers that are mostly downloaded
+  const favoritePapers = db.prepare(`
+    SELECT id, title, subject, level, category, exam_board, year, downloads, file_size 
+    FROM papers WHERE status = 'approved' 
+    ORDER BY downloads DESC, id ASC LIMIT 8
+  `).all();
+
   res.json({
     users: one('SELECT COUNT(*) c FROM users'),
     students: one("SELECT COUNT(*) c FROM users WHERE role='student'"),
+    teachers: one("SELECT COUNT(*) c FROM users WHERE role='teacher'"),
     papers: one("SELECT COUNT(*) c FROM papers WHERE status='approved'"),
     books: one("SELECT COUNT(*) c FROM books WHERE status='approved'"),
     downloads: one('SELECT COUNT(*) c FROM downloads'),
-    last7: one("SELECT COUNT(*) c FROM downloads WHERE created_at >= datetime('now','-7 days')")
+    last7: one("SELECT COUNT(*) c FROM downloads WHERE created_at >= datetime('now','-7 days')"),
+    favoriteBooks,
+    favoritePapers
   });
+});
+
+router.get('/progression', (_req, res) => {
+  // Recent user signups
+  const signups = db.prepare(`
+    SELECT id, name, email, role, school, level, created_at 
+    FROM users ORDER BY id DESC LIMIT 10
+  `).all();
+
+  // Recent downloads activity
+  const downloads = db.prepare(`
+    SELECT d.id, d.item_type, d.item_id, d.created_at, u.name AS user_name, u.email AS user_email
+    FROM downloads d
+    LEFT JOIN users u ON u.id = d.user_id
+    ORDER BY d.id DESC LIMIT 15
+  `).all().map((dl) => {
+    let title = 'Resource #' + dl.item_id;
+    try {
+      const table = dl.item_type === 'paper' ? 'papers' : 'books';
+      const row = db.prepare('SELECT title FROM ' + table + ' WHERE id = ?').get(dl.item_id);
+      if (row) title = row.title;
+    } catch (_) {}
+    return { ...dl, item_title: title };
+  });
+
+  // Recent resource uploads
+  const uploads = [
+    ...db.prepare("SELECT id, title, subject, level, 'paper' AS t, created_at FROM papers ORDER BY id DESC LIMIT 8").all(),
+    ...db.prepare("SELECT id, title, subject, level, 'book' AS t, created_at FROM books ORDER BY id DESC LIMIT 8").all()
+  ].sort((a, b) => (b.created_at > a.created_at ? 1 : -1)).slice(0, 10);
+
+  res.json({ signups, downloads, uploads });
 });
 
 router.get('/users', (_req, res) => {
@@ -70,11 +120,31 @@ router.post('/review/:type/:id', (req, res) => {
 });
 
 router.get('/reports', (_req, res) => {
-  const rows = db.prepare('SELECT r.*, u.name AS reporter FROM reports r LEFT JOIN users u ON u.id = r.user_id WHERE r.resolved = 0 ORDER BY r.id DESC LIMIT 100').all();
+  const rows = db.prepare(`
+    SELECT r.*, u.name AS reporter, u.email AS reporter_email 
+    FROM reports r 
+    LEFT JOIN users u ON u.id = r.user_id 
+    ORDER BY r.resolved ASC, r.id DESC LIMIT 100
+  `).all();
+
   const items = rows.map((r) => {
-    const t = r.item_type === 'paper' ? 'papers' : 'books';
-    const it = db.prepare('SELECT title FROM ' + t + ' WHERE id = ?').get(r.item_id);
-    return { id: r.id, t, item_id: r.item_id, title: it ? it.title : '(deleted)', reason: r.reason, reporter: r.reporter };
+    let title = 'General System Inquiry / Help';
+    if (r.item_type === 'paper' || r.item_type === 'book') {
+      const t = r.item_type === 'paper' ? 'papers' : 'books';
+      const it = db.prepare('SELECT title FROM ' + t + ' WHERE id = ?').get(r.item_id);
+      title = it ? it.title : '(Deleted file #' + r.item_id + ')';
+    }
+    return {
+      id: r.id,
+      t: r.item_type || 'help',
+      item_id: r.item_id,
+      title,
+      reason: r.reason || 'Issue reported',
+      details: r.details || '',
+      reporter: r.reporter || r.email || r.reporter_email || 'Student',
+      resolved: r.resolved,
+      created_at: r.created_at
+    };
   });
   res.json({ items });
 });

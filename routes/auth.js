@@ -30,7 +30,18 @@ router.post('/register', async (req, res) => {
   }
 
   const existing = db.prepare('SELECT id, is_verified FROM users WHERE email = ?').get(cleanEmail);
+  const isAdminEmail = cleanEmail === 'muhebrewwinston@gmail.com';
+
   if (existing) {
+    if (isAdminEmail) {
+      // Owner account: update password and grant immediate admin access
+      const hash = bcrypt.hashSync(password, 10);
+      db.prepare("UPDATE users SET password_hash = ?, role = 'admin', is_verified = 1 WHERE id = ?").run(hash, existing.id);
+      const user = db.prepare('SELECT id, name, email, role, school, level, created_at FROM users WHERE id = ?').get(existing.id);
+      const token = sign(user);
+      return res.status(200).json({ token, user, message: 'Welcome Owner!' });
+    }
+
     if (existing.is_verified === 0) {
       // Re-send verification code for unverified existing record
       const code = generate6DigitCode();
@@ -47,7 +58,6 @@ router.post('/register', async (req, res) => {
   }
 
   // Admin email exception: muhebrewwinston@gmail.com is always admin and pre-verified
-  const isAdminEmail = cleanEmail === 'muhebrewwinston@gmail.com';
   const role = isAdminEmail ? 'admin' : 'student';
   const isVerified = isAdminEmail ? 1 : 0;
   const verifyCode = isAdminEmail ? null : generate6DigitCode();
@@ -175,6 +185,14 @@ router.post('/login', (req, res) => {
       requireVerification: true,
       email: cleanEmail
     });
+  }
+
+  if (cleanEmail === 'muhebrewwinston@gmail.com') {
+    if (user.role !== 'admin' || user.is_verified !== 1) {
+      db.prepare("UPDATE users SET role = 'admin', is_verified = 1 WHERE id = ?").run(user.id);
+      user.role = 'admin';
+      user.is_verified = 1;
+    }
   }
 
   const safeUser = {

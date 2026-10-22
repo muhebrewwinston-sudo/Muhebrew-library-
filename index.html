@@ -73,7 +73,7 @@
       </button>
     </div>
 
-    <!-- Navigation Menu Items -->
+    <!-- Navigation Menu Items (Exact Student Panel Structure) -->
     <nav class="drawer-nav">
       <!-- Admin Dashboard Menu Item: highlighted light green background & bold text (ADMIN ONLY) -->
       <a class="drawer-item admin-highlight" href="/admin.html" id="drawerAdminLink" hidden>
@@ -95,6 +95,13 @@
         <span class="drawer-label">Teacher uploads</span>
       </a>
 
+      <!-- My Profile (with profile icon *) -->
+      <button class="drawer-item" type="button" id="drawerProfileBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="drawer-label">My profile</span>
+        <span style="color:var(--primary);font-weight:800;font-size:16px;margin-left:auto">*</span>
+      </button>
+
       <!-- Upload Resources Menu Item: with small green "New" badge -->
       <a class="drawer-item" href="#" id="drawerUploadLink">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -106,30 +113,68 @@
         <span class="badge-new">NEW</span>
       </a>
 
-      <!-- Browse Past Papers -->
-      <button class="drawer-item" type="button" data-drawer-tab="papers">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <span class="drawer-label">Past papers</span>
+      <div class="drawer-divider"></div>
+
+      <!-- 📖 Books -->
+      <button class="drawer-item" type="button" data-drawer-tab="books" style="font-weight:700">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span class="drawer-label">📖 Books</span>
+      </button>
+      <button class="drawer-sub-item" type="button" data-drawer-filter="books:JCE">
+        <span class="dot"></span>
+        <span>(JCE) Form 1 &amp; Form 2</span>
+      </button>
+      <button class="drawer-sub-item" type="button" data-drawer-filter="books:MSCE">
+        <span class="dot"></span>
+        <span>(MSCE) Form 3 &amp; Form 4</span>
       </button>
 
-      <!-- Browse Textbooks -->
-      <button class="drawer-item" type="button" data-drawer-tab="books">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        <span class="drawer-label">Textbooks</span>
+      <!-- 📜 Papers -->
+      <button class="drawer-item" type="button" data-drawer-tab="papers" style="font-weight:700;margin-top:4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span class="drawer-label">📜 Papers</span>
+      </button>
+      <button class="drawer-sub-item" type="button" data-drawer-filter="papers:MANEB">
+        <span class="dot"></span>
+        <span>(MANEB) Official Past Papers</span>
+      </button>
+      <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Mock">
+        <span class="dot"></span>
+        <span>(Mock) Division &amp; Cluster Exams</span>
+      </button>
+
+      <!-- 📝 Notes -->
+      <button class="drawer-item" type="button" data-drawer-filter="papers:Notes" style="font-weight:700;margin-top:4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span class="drawer-label">📝 Notes</span>
+      </button>
+
+      <!-- 🗝️ Marking Keys -->
+      <button class="drawer-item" type="button" data-drawer-filter="papers:Marking Key" style="font-weight:700;margin-top:4px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3"/></svg>
+        <span class="drawer-label">🗝️ Marking keys</span>
+      </button>
+      <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Marking Key:JCE">
+        <span class="dot"></span>
+        <span>(JCE) Marking Keys</span>
+      </button>
+      <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Marking Key:MSCE">
+        <span class="dot"></span>
+        <span>(MSCE) Marking Keys</span>
       </button>
 
       <!-- Saved Items -->
-      <button class="drawer-item" type="button" data-drawer-tab="saved">
+      <button class="drawer-item" type="button" data-drawer-tab="saved" style="margin-top:4px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         <span class="drawer-label">Saved resources</span>
       </button>
 
       <div class="drawer-divider"></div>
 
-      <!-- My Profile -->
-      <button class="drawer-item" type="button" id="drawerProfileBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span class="drawer-label">My profile</span>
+      <!-- Help (where students will report any issues faced) -->
+      <button class="drawer-item" type="button" id="drawerHelpBtn" style="color:var(--primary);font-weight:600">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="drawer-label">❓ Help &amp; Report Issue</span>
       </button>
 
       <!-- Theme Switcher -->
@@ -181,6 +226,66 @@
     </div>
   </section>
 
+  <!-- TRUST SHOWCASE: Between website description and search bar -->
+  <section class="trust-showcase">
+    <div class="trust-header">
+      <span class="trust-badge">🛡️ Verified Curriculum Source</span>
+      <h3>Malawi Secondary School Curriculum Textbooks</h3>
+      <p>Verified against Malawi Ministry of Education &amp; MANEB official standards. Tap any cover to view:</p>
+    </div>
+    <div class="trust-carousel" id="trustCarousel">
+      <div class="trust-card" data-trust="Mathematics:Form 4">
+        <img src="/uploads/covers/math_form4.jpg" alt="Senior Secondary Mathematics Form 4" loading="lazy">
+        <div class="trust-card-meta">
+          <b>Mathematics Form 4</b>
+          <span>Excel &amp; Succeed</span>
+        </div>
+      </div>
+      <div class="trust-card" data-trust="Biology:Form 3">
+        <img src="/uploads/covers/bio_form3.jpg" alt="Senior Secondary Biology Form 3" loading="lazy">
+        <div class="trust-card-meta">
+          <b>Biology Form 3</b>
+          <span>Longhorn Secondary</span>
+        </div>
+      </div>
+      <div class="trust-card" data-trust="Agriculture:Form 3">
+        <img src="/uploads/covers/agri_form3.jpg" alt="Senior Secondary Agriculture Form 3" loading="lazy">
+        <div class="trust-card-meta">
+          <b>Agriculture Form 3</b>
+          <span>Excel &amp; Succeed</span>
+        </div>
+      </div>
+      <div class="trust-card" data-trust="Physics:Form 3">
+        <img src="/uploads/covers/physics_form3.jpg" alt="Senior Secondary Physics Form 3" loading="lazy">
+        <div class="trust-card-meta">
+          <b>Physics Form 3</b>
+          <span>Student's Book</span>
+        </div>
+      </div>
+      <div class="trust-card" data-trust="Mathematics:Form 1">
+        <img src="/uploads/covers/math_form1.jpg" alt="Junior Secondary Mathematics Form 1" loading="lazy">
+        <div class="trust-card-meta">
+          <b>Mathematics Form 1</b>
+          <span>Junior Secondary JCE</span>
+        </div>
+      </div>
+      <div class="trust-card" data-trust="Mathematics:Form 3">
+        <img src="/uploads/covers/math_form3_guide.jpg" alt="Senior Secondary Mathematics Form 3 Guide" loading="lazy">
+        <div class="trust-card-meta">
+          <b>Math Form 3 Guide</b>
+          <span>Teacher's Guide</span>
+        </div>
+      </div>
+      <div class="trust-card" data-trust="Agriculture:Form 3">
+        <img src="/uploads/covers/agri_form3_guide.jpg" alt="Senior Secondary Agriculture Form 3 Guide" loading="lazy">
+        <div class="trust-card-meta">
+          <b>Agri Form 3 Guide</b>
+          <span>Teacher's Guide</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Student Quota Status Banner (when logged in as student) -->
   <div id="quotaBanner" style="display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;align-items:center;justify-content:space-between;box-shadow:var(--shadow)">
     <div style="font-size:12.5px;color:var(--text)">
@@ -193,6 +298,15 @@
     <input id="q" placeholder="Search by title, subject or exam board..." autocomplete="off">
     <select id="level"><option value="">All levels</option></select>
     <select id="subject"><option value="">All subjects</option></select>
+    <select id="categoryFilter">
+      <option value="">All categories</option>
+      <option value="MANEB">MANEB Exams</option>
+      <option value="Mock">Mock Exams</option>
+      <option value="JCE">JCE (Forms 1 &amp; 2)</option>
+      <option value="MSCE">MSCE (Forms 3 &amp; 4)</option>
+      <option value="Notes">Study Notes</option>
+      <option value="Marking Key">Marking Keys</option>
+    </select>
     <select id="year"><option value="">All years</option></select>
     <select id="sort"><option value="recent">Newest</option><option value="popular">Most downloaded</option><option value="title">A-Z</option></select>
   </div>
@@ -373,6 +487,44 @@
       <button class="btn danger" id="pmSignOutBtn" style="width:100%;margin-top:4px">
         Sign out
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 4: Student Help & Issue Report Modal -->
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>❓ Help &amp; Report an Issue</h3>
+      <button class="modal-close-btn" id="helpModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.4">
+        Having trouble downloading a past paper, reading a textbook, or need a specific resource? Describe your issue below and our admin team will assist you right away.
+      </p>
+      <form id="helpForm" class="form-grid">
+        <div>
+          <label for="helpReason" style="font-size:12px">What issue are you facing?</label>
+          <select id="helpReason" required>
+            <option value="Download not working or corrupted">Download not working or file corrupted</option>
+            <option value="Missing pages or unclear text in PDF">Missing pages or blurry text in PDF</option>
+            <option value="Request a missing past paper or textbook">Request a missing past paper or textbook</option>
+            <option value="Download limit / quota issue">Download limit / quota question</option>
+            <option value="General help or feedback">General help or feedback</option>
+          </select>
+        </div>
+        <div>
+          <label for="helpDetails" style="font-size:12px">Details / Book or Paper Name</label>
+          <textarea id="helpDetails" rows="3" placeholder="Explain the problem or specify which book/exam paper you need..." required></textarea>
+        </div>
+        <div>
+          <label for="helpEmail" style="font-size:12px">Your email address (for follow-up)</label>
+          <input id="helpEmail" type="email" placeholder="student@example.com" required>
+        </div>
+        <button class="btn primary" type="submit" id="helpSubmitBtn" style="width:100%;margin-top:4px">
+          Submit Issue to Admin
+        </button>
+      </form>
     </div>
   </div>
 </div>

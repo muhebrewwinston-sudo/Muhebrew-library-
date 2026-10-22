@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS papers (
   title TEXT NOT NULL,
   subject TEXT NOT NULL,
   level TEXT NOT NULL,
+  category TEXT DEFAULT 'MANEB',
   year INTEGER,
   exam_board TEXT,
   paper_no TEXT,
@@ -41,6 +42,7 @@ CREATE TABLE IF NOT EXISTS books (
   publisher TEXT,
   subject TEXT NOT NULL,
   level TEXT NOT NULL,
+  category TEXT DEFAULT 'MSCE',
   edition TEXT,
   isbn TEXT,
   description TEXT,
@@ -75,9 +77,11 @@ CREATE TABLE IF NOT EXISTS bookmarks (
 CREATE TABLE IF NOT EXISTS reports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  item_type TEXT NOT NULL,
-  item_id INTEGER NOT NULL,
+  item_type TEXT,
+  item_id INTEGER,
   reason TEXT NOT NULL,
+  details TEXT,
+  email TEXT,
   resolved INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

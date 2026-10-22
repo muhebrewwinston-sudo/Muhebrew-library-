@@ -49,4 +49,27 @@ router.get('/my-uploads', requireAuth, (req, res) => {
   res.json({ items: [...q('papers').map((r) => ({ ...r, t: 'Paper' })), ...q('books').map((r) => ({ ...r, t: 'Book' }))] });
 });
 
+// Help & issue reporting endpoint for students
+router.post('/help', (req, res) => {
+  const { reason, details, email } = req.body || {};
+  if (!reason && !details) {
+    return res.status(400).json({ error: 'Please describe the issue or question.' });
+  }
+  const user = req.headers.authorization ? (() => {
+    try {
+      const jwt = require('jsonwebtoken');
+      const t = req.headers.authorization.replace('Bearer ', '');
+      return jwt.decode(t);
+    } catch (_) { return null; }
+  })() : null;
+
+  const reporterEmail = (user && user.email) || email || 'student@library.mw';
+  const reporterId = user ? user.id : null;
+
+  db.prepare('INSERT INTO reports (user_id, item_type, item_id, reason, details, email) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(reporterId, 'help', 0, reason || 'Student Help Request', details || reason || '', reporterEmail);
+
+  res.json({ success: true, message: 'Your issue report has been submitted to the admin team.' });
+});
+
 module.exports = router;

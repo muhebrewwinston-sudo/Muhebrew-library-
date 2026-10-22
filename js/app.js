@@ -1,14 +1,36 @@
 const $ = (id) => document.getElementById(id);
 const grid = $('grid'), empty = $('empty'), countEl = $('count');
-let type = 'papers', user = null;
+let type = 'all', user = null;
 const savedSet = new Set();
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function formatSize(bytes) {
+  if (!bytes || isNaN(bytes) || bytes <= 0) return '3.2 MB';
+  if (bytes < 1024) return bytes + ' B';
+  const kb = bytes / 1024;
+  if (kb < 1024) return kb.toFixed(1) + ' KB';
+  return (kb / 1024).toFixed(1) + ' MB';
+}
+
 const ICONS = [['math', '➗'], ['english', '📖'], ['chichewa', '🗣️'], ['physic', '⚛️'], ['chem', '🧪'], ['bio', '🧬'], ['agri', '🌱'],
   ['geo', '🌍'], ['history', '🏛️'], ['bible', '✝️'], ['social', '🤝'], ['computer', '💻'], ['business', '💼'], ['account', '🧾'],
   ['home', '🍳'], ['french', '🇫🇷'], ['life', '🧭'], ['science', '🔬']];
 const icon = (sub) => { const k = String(sub || '').toLowerCase(); const m = ICONS.find((i) => k.includes(i[0])); return m ? m[1] : '📚'; };
-const params = () => new URLSearchParams({ q: $('q').value.trim(), level: $('level').value, subject: $('subject').value, year: $('year').value, sort: $('sort').value, limit: '24' });
+
+const params = () => {
+  const p = new URLSearchParams({
+    q: $('q') ? $('q').value.trim() : '',
+    level: $('level') ? $('level').value : '',
+    subject: $('subject') ? $('subject').value : '',
+    year: $('year') ? $('year').value : '',
+    sort: $('sort') ? $('sort').value : 'recent',
+    limit: '30'
+  });
+  const cat = $('categoryFilter') ? $('categoryFilter').value : '';
+  if (cat) p.append('category', cat);
+  return p;
+};
 
 // ============ Left Side Drawer Controls ============
 function openDrawer() {
@@ -33,7 +55,6 @@ function closeDrawer() {
   }
 }
 
-// Drawer toggle event listeners
 $('drawerOpenBtn')?.addEventListener('click', openDrawer);
 $('drawerCloseBtn')?.addEventListener('click', closeDrawer);
 $('drawerBackdrop')?.addEventListener('click', closeDrawer);
@@ -45,25 +66,40 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Bottom navigation "Profile" tab opens drawer / profile
-$('bottomProfileTab')?.addEventListener('click', () => {
-  openDrawer();
-});
+$('bottomProfileTab')?.addEventListener('click', openDrawer);
+$('headerAvatarBtn')?.addEventListener('click', openDrawer);
+$('userBtn')?.addEventListener('click', openDrawer);
 
-$('headerAvatarBtn')?.addEventListener('click', () => {
-  openDrawer();
-});
-
-$('userBtn')?.addEventListener('click', () => {
-  openDrawer();
-});
-
-// Drawer tab shortcuts
+// Drawer tab switching
 document.querySelectorAll('[data-drawer-tab]').forEach((btn) => {
   btn.addEventListener('click', () => {
     const targetType = btn.dataset.drawerTab;
     closeDrawer();
+    if ($('categoryFilter')) $('categoryFilter').value = '';
     switchTab(targetType);
+  });
+});
+
+// Drawer Sub-category Filter buttons (Books JCE/MSCE, Papers MANEB/Mock, Notes, Marking Keys)
+document.querySelectorAll('[data-drawer-filter]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const parts = btn.dataset.drawerFilter.split(':');
+    const targetType = parts[0]; // 'papers' or 'books'
+    const category = parts[1] || '';
+    const levelSub = parts[2] || '';
+
+    closeDrawer();
+    type = targetType;
+
+    if ($('categoryFilter')) $('categoryFilter').value = category;
+    if ($('level')) $('level').value = levelSub || '';
+    if ($('q')) $('q').value = '';
+
+    document.querySelectorAll('.bottom-tabs .tab').forEach((x) => {
+      x.classList.toggle('active', x.dataset.type === targetType);
+    });
+
+    load();
   });
 });
 
@@ -122,13 +158,14 @@ function closeModal(id) {
 }
 
 function closeAllModals() {
-  ['uploadModal', 'limitModal', 'profileModal'].forEach(closeModal);
+  ['uploadModal', 'limitModal', 'profileModal', 'helpModal'].forEach(closeModal);
 }
 
 $('uploadModalClose')?.addEventListener('click', () => closeModal('uploadModal'));
 $('limitModalClose')?.addEventListener('click', () => closeModal('limitModal'));
 $('limitDismissBtn')?.addEventListener('click', () => closeModal('limitModal'));
 $('profileModalClose')?.addEventListener('click', () => closeModal('profileModal'));
+$('helpModalClose')?.addEventListener('click', () => closeModal('helpModal'));
 
 // Upload Modal open triggers
 function showUploadModal() {
@@ -147,6 +184,40 @@ function showProfileModal() {
   openModal('profileModal');
 }
 $('drawerProfileBtn')?.addEventListener('click', showProfileModal);
+
+// Help Modal open trigger
+function showHelpModal() {
+  closeDrawer();
+  if (user && user.email && $('helpEmail')) {
+    $('helpEmail').value = user.email;
+  }
+  openModal('helpModal');
+}
+$('drawerHelpBtn')?.addEventListener('click', showHelpModal);
+
+// Help form submission
+$('helpForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('helpSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting report...';
+
+  try {
+    const reason = $('helpReason').value;
+    const details = $('helpDetails').value.trim();
+    const email = $('helpEmail').value.trim();
+
+    await API.post('/search/help', { reason, details, email });
+    toast('Your issue report has been submitted to the admin team.');
+    closeModal('helpModal');
+    $('helpDetails').value = '';
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit Issue to Admin';
+  }
+});
 
 // ============ Quota UI Updates ============
 function updateQuotaUI(quota) {
@@ -168,7 +239,6 @@ function updateQuotaUI(quota) {
   const total = quota.totalAllowed;
   const pct = total > 0 ? Math.min(100, Math.max(0, Math.round((rem / total) * 100))) : 0;
 
-  // Drawer widget
   const pill = $('quotaPill');
   if (pill) {
     pill.textContent = rem + ' left';
@@ -186,7 +256,6 @@ function updateQuotaUI(quota) {
       : '0 downloads left — upload a resource to unlock +5!';
   }
 
-  // Banner
   const bannerText = $('bannerQuotaText');
   if (bannerText) {
     bannerText.innerHTML = rem > 0
@@ -194,60 +263,164 @@ function updateQuotaUI(quota) {
       : '<span style="color:var(--danger);font-weight:700">Limit reached (0 remaining)</span>';
   }
 
-  // Profile modal numbers
   const pmUsed = $('pmDownloadsUsed');
   const pmLeft = $('pmDownloadsLeft');
   if (pmUsed) pmUsed.textContent = quota.usedDownloads;
   if (pmLeft) pmLeft.textContent = quota.remaining;
 }
 
+// ============ Trust Carousel Click Handling ============
+document.querySelectorAll('.trust-card').forEach((cardEl) => {
+  cardEl.addEventListener('click', () => {
+    const raw = cardEl.dataset.trust;
+    if (!raw) return;
+    const [sub, lvl] = raw.split(':');
+    type = 'books';
+    if ($('subject')) $('subject').value = sub;
+    if ($('level')) $('level').value = lvl;
+    if ($('categoryFilter')) $('categoryFilter').value = '';
+    if ($('q')) $('q').value = '';
+    load();
+    grid.scrollIntoView({ behavior: 'smooth' });
+    toast(`Filtered to ${sub} (${lvl})`);
+  });
+});
+
 // ============ Data Fetching & Rendering ============
 async function loadFacets() {
   try {
     const [p, b] = await Promise.all([API.get('/papers/facets'), API.get('/books/facets')]);
-    const fill = (el, values) => { el.innerHTML = el.firstElementChild.outerHTML + values.map((v) => '<option>' + esc(v) + '</option>').join(''); };
+    const fill = (el, values) => {
+      if (!el) return;
+      el.innerHTML = el.firstElementChild.outerHTML + values.map((v) => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
+    };
     fill($('subject'), [...new Set([...p.subjects, ...b.subjects])].sort());
     fill($('level'), [...new Set([...p.levels, ...b.levels])].sort());
     fill($('year'), p.years);
   } catch (e) { /* filters stay empty */ }
 }
 
+const PDF_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>';
+
 function card(item) {
-  const kind = item._type || (type === 'books' ? 'book' : 'paper');
-  const isPaper = kind === 'paper';
+  const isPaper = item._type ? item._type === 'paper' : (item.year !== undefined || item.exam_board !== undefined);
   const coll = isPaper ? 'papers' : 'books';
-  const key = kind + ':' + item.id, ref = coll + ':' + item.id;
-  const art = !isPaper && item.cover_path ? '<img src="/' + esc(item.cover_path) + '" alt="" loading="lazy">' : icon(item.subject);
-  return '<article class="card"><div class="card-top"><span class="ico">' + art + '</span><h3>' + esc(item.title) + '</h3></div><div class="tags">' +
-    '<span class="tag subject">' + esc(item.subject) + '</span><span class="tag">' + esc(item.level) + '</span>' +
-    (isPaper && item.year ? '<span class="tag">' + item.year + '</span>' : '') +
-    (isPaper && item.exam_board ? '<span class="tag">' + esc(item.exam_board) + '</span>' : '') +
-    (!isPaper && item.author ? '<span class="tag">' + esc(item.author) + '</span>' : '') +
-    '</div><div class="card-foot"><span class="dlcount">' + item.downloads.toLocaleString() + ' downloads</span><span class="acts">' +
-    '<button class="btn sm" data-save="' + key + '">' + (savedSet.has(key) ? 'Saved' : 'Save') + '</button>' +
-    '<button class="btn sm" data-pv="' + ref + '">Preview</button>' +
-    '<button class="btn sm" data-rp="' + ref + '" title="Report broken file">⚠</button>' +
-    '<button class="btn sm primary" data-dl="' + ref + '">Download</button></span></div></article>';
+  const kind = isPaper ? 'paper' : 'book';
+  const key = kind + ':' + item.id;
+  const ref = coll + ':' + item.id;
+
+  const art = !isPaper && item.cover_path
+    ? '<img src="/' + esc(item.cover_path) + '" alt="" loading="lazy">'
+    : PDF_SVG;
+
+  const sizeStr = formatSize(item.file_size);
+
+  return '<article class="card">' +
+    '<div class="card-top">' +
+      '<span class="ico">' + art + '</span>' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap">' +
+          '<span class="tag pdf">PDF</span>' +
+          '<span class="tag size">💾 ' + esc(sizeStr) + '</span>' +
+          (item.category ? '<span class="tag ok" style="font-weight:700">' + esc(item.category) + '</span>' : '') +
+        '</div>' +
+        '<h3>' + esc(item.title) + '</h3>' +
+      '</div>' +
+    '</div>' +
+    '<div class="tags">' +
+      '<span class="tag subject">' + esc(item.subject) + '</span>' +
+      '<span class="tag">' + esc(item.level) + '</span>' +
+      (isPaper && item.year ? '<span class="tag">' + item.year + '</span>' : '') +
+      (isPaper && item.exam_board ? '<span class="tag">' + esc(item.exam_board) + '</span>' : '') +
+      (!isPaper && item.author ? '<span class="tag">' + esc(item.author) + '</span>' : '') +
+    '</div>' +
+    '<div class="card-foot">' +
+      '<span class="dlcount">🔥 ' + item.downloads.toLocaleString() + ' dl</span>' +
+      '<span class="acts">' +
+        '<button class="btn sm" data-save="' + key + '">' + (savedSet.has(key) ? 'Saved' : 'Save') + '</button>' +
+        '<button class="btn sm" data-pv="' + ref + '">Preview</button>' +
+        '<button class="btn sm" data-rp="' + ref + '" title="Report broken file">⚠</button>' +
+        '<button class="btn sm primary" data-dl="' + ref + '">⬇ Download</button>' +
+      '</span>' +
+    '</div>' +
+  '</article>';
 }
 
 async function load() {
   empty.hidden = true;
   grid.innerHTML = Array.from({ length: 6 }, () => '<div class="skeleton"></div>').join('');
+
   try {
     if (type === 'saved') {
-      if (!user) { grid.innerHTML = ''; empty.hidden = false; empty.innerHTML = 'Sign in to see your saved resources. <a href="/auth.html">Sign in</a>'; countEl.textContent = ''; return; }
+      if (!user) {
+        grid.innerHTML = '';
+        empty.hidden = false;
+        empty.innerHTML = 'Sign in to see your saved resources. <a href="/auth.html">Sign in</a>';
+        countEl.textContent = '';
+        return;
+      }
       const { items } = await API.get('/search/mine');
-      countEl.textContent = items.length + ' saved';
-      if (!items.length) { grid.innerHTML = ''; empty.hidden = false; empty.textContent = 'Nothing saved yet.'; return; }
+      countEl.textContent = items.length + ' saved resource' + (items.length === 1 ? '' : 's');
+      if (!items.length) {
+        grid.innerHTML = '';
+        empty.hidden = false;
+        empty.textContent = 'Nothing saved yet.';
+        return;
+      }
       grid.innerHTML = items.map(card).join('');
       return;
     }
-    empty.textContent = 'Nothing matched. Try clearing a filter.';
-    const { items, total } = await API.get('/' + type + '?' + params());
-    countEl.textContent = total + ' resource' + (total === 1 ? '' : 's');
-    if (!items.length) { grid.innerHTML = ''; empty.hidden = false; return; }
+
+    let items = [];
+    let total = 0;
+
+    if (type === 'all') {
+      // Load both past papers and textbooks immediately!
+      const [pRes, bRes] = await Promise.all([
+        API.get('/papers?' + params()),
+        API.get('/books?' + params())
+      ]);
+
+      const papersList = (pRes.items || []).map((i) => ({ ...i, _type: 'paper' }));
+      const booksList = (bRes.items || []).map((i) => ({ ...i, _type: 'book' }));
+
+      total = (pRes.total || 0) + (bRes.total || 0);
+
+      // Merge and sort
+      const sortVal = $('sort') ? $('sort').value : 'recent';
+      if (sortVal === 'popular') {
+        items = [...booksList, ...papersList].sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+      } else if (sortVal === 'title') {
+        items = [...booksList, ...papersList].sort((a, b) => a.title.localeCompare(b.title));
+      } else {
+        // Interleave textbooks and past papers nicely
+        items = [];
+        const maxLen = Math.max(booksList.length, papersList.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (booksList[i]) items.push(booksList[i]);
+          if (papersList[i]) items.push(papersList[i]);
+        }
+      }
+    } else {
+      const res = await API.get('/' + type + '?' + params());
+      items = (res.items || []).map((i) => ({ ...i, _type: type === 'books' ? 'book' : 'paper' }));
+      total = res.total || 0;
+    }
+
+    countEl.textContent = total + ' resource' + (total === 1 ? '' : 's') + ' available for download';
+
+    if (!items.length) {
+      grid.innerHTML = '';
+      empty.hidden = false;
+      empty.textContent = 'Nothing matched your search or category filter. Try clearing a filter.';
+      return;
+    }
+
     grid.innerHTML = items.map(card).join('');
-  } catch (e) { toast(e.message, true); grid.innerHTML = ''; }
+  } catch (e) {
+    toast(e.message, true);
+    grid.innerHTML = '';
+  }
 }
 
 // Download & Bookmark Click Handlers with Quota Enforcement
@@ -268,7 +441,6 @@ grid.addEventListener('click', async (e) => {
       if (!user) return location.replace('/auth.html');
       const [coll, id] = dlBtn.dataset.dl.split(':');
 
-      // Check student quota before triggering download
       if (user.role === 'student' && user.quota && !user.quota.isUnlimited) {
         if (user.quota.remaining <= 0) {
           openModal('limitModal');
@@ -277,15 +449,12 @@ grid.addEventListener('click', async (e) => {
         }
       }
 
-      // Download with token passed via query parameter for auth verification
       const token = API.token();
       const downloadUrl = API.base + '/' + coll + '/' + id + '/download?t=' + encodeURIComponent(token);
 
-      // Trigger download
       window.location.href = downloadUrl;
       toast('Download starting...');
 
-      // Refresh live quota from backend
       setTimeout(async () => {
         try {
           const freshQuota = await API.getQuota();
@@ -304,11 +473,21 @@ document.querySelectorAll('.bottom-tabs .tab:not(.profile-tab)').forEach((t) => 
   document.querySelectorAll('.bottom-tabs .tab').forEach((x) => x.classList.remove('active'));
   t.classList.add('active');
   type = t.dataset.type;
+  if ($('categoryFilter')) $('categoryFilter').value = '';
   load();
 }));
 
 let dt;
-['q', 'level', 'subject', 'year', 'sort'].forEach((id) => $(id).addEventListener('input', () => { clearTimeout(dt); dt = setTimeout(load, 280); }));
+['q', 'level', 'subject', 'categoryFilter', 'year', 'sort'].forEach((id) => {
+  $(id)?.addEventListener('input', () => {
+    clearTimeout(dt);
+    dt = setTimeout(load, 250);
+  });
+  $(id)?.addEventListener('change', () => {
+    clearTimeout(dt);
+    dt = setTimeout(load, 150);
+  });
+});
 
 // ============ Student Upload Form Handling ============
 $('suType')?.addEventListener('change', () => {
@@ -351,12 +530,10 @@ $('studentUploadForm')?.addEventListener('submit', async (e) => {
 
     const res = await API.upload('/' + typeValue, fd);
 
-    // Upload succeeded!
     toast(res.message || 'Resource uploaded! +5 downloads unlocked.');
     e.target.reset();
     closeAllModals();
 
-    // Update user quota
     if (res.quota) {
       user.quota = res.quota;
       updateQuotaUI(res.quota);
@@ -399,7 +576,6 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
   document.body.classList.remove('auth-protected');
   document.body.classList.add('auth-ready');
 
-  // Set user profile info in drawer
   const firstName = (user.name || 'Student').split(' ')[0];
   const initial = (user.name || 'M').charAt(0).toUpperCase();
 
@@ -407,24 +583,17 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
   $('drawerEmail').textContent = user.email || '';
   $('drawerAvatar').textContent = initial;
 
-  // Profile modal info
   $('pmName').textContent = user.name || 'Student';
   $('pmEmail').textContent = user.email || '';
   $('pmAvatar').textContent = initial;
   $('pmBadge').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
 
-  // Desktop user button & mobile avatar initial
   if ($('userBtn')) $('userBtn').textContent = firstName;
   if ($('headerAvatarInitial')) $('headerAvatarInitial').textContent = initial;
 
-  // Role visibility & switcher logic:
-  // - Admin (e.g. muhebrewwinston@gmail.com): has access to open all 3 areas (Admin, Teacher, Student)
-  // - Student: has access ONLY to student area (no admin icon, no teacher portal)
-  // - Teacher: has access ONLY to teacher area (no admin dashboard)
   const email = (user.email || '').toLowerCase().trim();
   const isAdmin = user.role === 'admin' || email === 'muhebrewwinston@gmail.com';
   const isTeacher = user.role === 'teacher';
-  const isStudent = !isAdmin && !isTeacher;
 
   const roleSwitcher = $('adminRoleSwitcher');
   const studentBadge = $('drawerStudentBadge');
@@ -433,33 +602,25 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
   const teacherLink = $('drawerTeacherLink');
 
   if (isAdmin) {
-    // Admin: Interactive 3-badge switcher allowing Admin to open all areas
     if (roleSwitcher) roleSwitcher.hidden = false;
     if (studentBadge) studentBadge.hidden = true;
     if (teacherBadge) teacherBadge.hidden = true;
     if (adminLink) adminLink.hidden = false;
     if (teacherLink) teacherLink.hidden = false;
 
-    // Attach role tab actions for Admin
-    $('roleTabAdmin')?.addEventListener('click', () => {
-      location.href = '/admin.html';
-    });
-    $('roleTabTeacher')?.addEventListener('click', () => {
-      location.href = '/teacher.html';
-    });
+    $('roleTabAdmin')?.addEventListener('click', () => { location.href = '/admin.html'; });
+    $('roleTabTeacher')?.addEventListener('click', () => { location.href = '/teacher.html'; });
     $('roleTabStudent')?.addEventListener('click', () => {
       closeDrawer();
       toast('Switched to Student Library view');
     });
   } else if (isTeacher) {
-    // Teacher: Single Teacher badge and teacher uploads link
     if (roleSwitcher) roleSwitcher.hidden = true;
     if (studentBadge) studentBadge.hidden = true;
     if (teacherBadge) teacherBadge.hidden = false;
     if (adminLink) adminLink.hidden = true;
     if (teacherLink) teacherLink.hidden = false;
   } else {
-    // Student: Single Student badge only. STRICTLY no Admin or Teacher icons/links!
     if (roleSwitcher) roleSwitcher.hidden = true;
     if (studentBadge) studentBadge.hidden = false;
     if (teacherBadge) teacherBadge.hidden = true;
@@ -467,12 +628,11 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
     if (teacherLink) teacherLink.hidden = true;
   }
 
-  // Update Quota UI (students only; admins & teachers have unlimited downloads)
   updateQuotaUI(user.quota);
 
   try {
     const m = await API.get('/search/mine');
-    m.items.forEach((i) => savedSet.add(i._type + ':' + i.id));
+    m.items.forEach((i) => savedSet.add((i._type || 'paper') + ':' + i.id));
   } catch (e) { /* ignore */ }
 
   try {
@@ -483,5 +643,7 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
   } catch (e) { /* ignore */ }
 
   await loadFacets();
+
+  // Immediately start loading books and papers onto the display!
   await load();
 })();
