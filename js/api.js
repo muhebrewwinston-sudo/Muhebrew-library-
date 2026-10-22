@@ -41,8 +41,23 @@ const API = {
 
   async me() {
     if (!this.token()) return null;
-    try { return (await this.get('/auth/me')).user; }
+    try {
+      const data = await this.get('/auth/me');
+      if (data && data.user) {
+        data.user.quota = data.quota || null;
+        return data.user;
+      }
+      return null;
+    }
     catch { this.setToken(null); return null; }
+  },
+
+  async getQuota() {
+    if (!this.token()) return null;
+    try {
+      const data = await this.get('/auth/quota');
+      return data ? data.quota : null;
+    } catch { return null; }
   }
 };
 

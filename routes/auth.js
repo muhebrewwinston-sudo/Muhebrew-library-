@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../db/database');
 const { sign, requireAuth } = require('../middleware/auth');
+const { calculateQuota } = require('../db/quota');
 
 const router = express.Router();
 
@@ -60,9 +61,16 @@ router.post('/login', (req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT id, name, email, role, school, level, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, name, email, role, school, level, bonus_downloads, created_at FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found.' });
-  res.json({ user });
+  const quota = calculateQuota(user.id, user.role);
+  res.json({ user, quota });
+});
+
+router.get('/quota', requireAuth, (req, res) => {
+  const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found.' });
+  res.json({ quota: calculateQuota(user.id, user.role) });
 });
 
 router.post('/password', requireAuth, (req, res) => {

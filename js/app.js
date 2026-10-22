@@ -10,6 +10,194 @@ const ICONS = [['math', '➗'], ['english', '📖'], ['chichewa', '🗣️'], ['
 const icon = (sub) => { const k = String(sub || '').toLowerCase(); const m = ICONS.find((i) => k.includes(i[0])); return m ? m[1] : '📚'; };
 const params = () => new URLSearchParams({ q: $('q').value.trim(), level: $('level').value, subject: $('subject').value, year: $('year').value, sort: $('sort').value, limit: '24' });
 
+// ============ Left Side Drawer Controls ============
+function openDrawer() {
+  const drawer = $('sideDrawer');
+  const backdrop = $('drawerBackdrop');
+  if (drawer && backdrop) {
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    backdrop.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeDrawer() {
+  const drawer = $('sideDrawer');
+  const backdrop = $('drawerBackdrop');
+  if (drawer && backdrop) {
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    backdrop.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+}
+
+// Drawer toggle event listeners
+$('drawerOpenBtn')?.addEventListener('click', openDrawer);
+$('drawerCloseBtn')?.addEventListener('click', closeDrawer);
+$('drawerBackdrop')?.addEventListener('click', closeDrawer);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeDrawer();
+    closeAllModals();
+  }
+});
+
+// Bottom navigation "Profile" tab opens drawer / profile
+$('bottomProfileTab')?.addEventListener('click', () => {
+  openDrawer();
+});
+
+$('userBtn')?.addEventListener('click', () => {
+  openDrawer();
+});
+
+// Drawer tab shortcuts
+document.querySelectorAll('[data-drawer-tab]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const targetType = btn.dataset.drawerTab;
+    closeDrawer();
+    switchTab(targetType);
+  });
+});
+
+function switchTab(t) {
+  type = t;
+  document.querySelectorAll('.bottom-tabs .tab').forEach((x) => {
+    x.classList.toggle('active', x.dataset.type === t);
+  });
+  load();
+}
+
+// Theme handling
+function updateThemeText() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const label = $('drawerThemeText');
+  if (label) label.textContent = isDark ? 'Light mode' : 'Dark mode';
+}
+
+function toggleTheme() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const next = dark ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('ph_theme', next);
+  updateThemeText();
+}
+
+$('themeBtn')?.addEventListener('click', toggleTheme);
+$('drawerThemeBtn')?.addEventListener('click', toggleTheme);
+updateThemeText();
+
+// Sign out handlers
+function handleSignOut() {
+  if (confirm('Are you sure you want to sign out?')) {
+    API.setToken(null);
+    location.replace('/auth.html');
+  }
+}
+$('drawerSignOutBtn')?.addEventListener('click', handleSignOut);
+$('pmSignOutBtn')?.addEventListener('click', handleSignOut);
+
+// ============ Modals Handling ============
+function openModal(id) {
+  const m = $(id);
+  if (m) {
+    m.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeModal(id) {
+  const m = $(id);
+  if (m) {
+    m.hidden = true;
+    document.body.style.overflow = '';
+  }
+}
+
+function closeAllModals() {
+  ['uploadModal', 'limitModal', 'profileModal'].forEach(closeModal);
+}
+
+$('uploadModalClose')?.addEventListener('click', () => closeModal('uploadModal'));
+$('limitModalClose')?.addEventListener('click', () => closeModal('limitModal'));
+$('limitDismissBtn')?.addEventListener('click', () => closeModal('limitModal'));
+$('profileModalClose')?.addEventListener('click', () => closeModal('profileModal'));
+
+// Upload Modal open triggers
+function showUploadModal() {
+  closeDrawer();
+  closeModal('limitModal');
+  openModal('uploadModal');
+}
+$('drawerUploadLink')?.addEventListener('click', (e) => { e.preventDefault(); showUploadModal(); });
+$('drawerUnlockBtn')?.addEventListener('click', showUploadModal);
+$('bannerUploadBtn')?.addEventListener('click', showUploadModal);
+$('limitUploadBtn')?.addEventListener('click', showUploadModal);
+
+// Profile Modal open trigger
+function showProfileModal() {
+  closeDrawer();
+  openModal('profileModal');
+}
+$('drawerProfileBtn')?.addEventListener('click', showProfileModal);
+
+// ============ Quota UI Updates ============
+function updateQuotaUI(quota) {
+  if (!quota) return;
+  const isStudent = user && user.role === 'student';
+  const quotaCard = $('drawerQuotaCard');
+  const quotaBanner = $('quotaBanner');
+
+  if (!isStudent || quota.isUnlimited) {
+    if (quotaCard) quotaCard.hidden = true;
+    if (quotaBanner) quotaBanner.style.display = 'none';
+    return;
+  }
+
+  if (quotaCard) quotaCard.hidden = false;
+  if (quotaBanner) quotaBanner.style.display = 'flex';
+
+  const rem = quota.remaining;
+  const total = quota.totalAllowed;
+  const pct = total > 0 ? Math.min(100, Math.max(0, Math.round((rem / total) * 100))) : 0;
+
+  // Drawer widget
+  const pill = $('quotaPill');
+  if (pill) {
+    pill.textContent = rem + ' left';
+    pill.classList.toggle('empty', rem <= 0);
+  }
+  const fill = $('quotaFill');
+  if (fill) {
+    fill.style.width = pct + '%';
+    fill.classList.toggle('empty', rem <= 0);
+  }
+  const sub = $('quotaSub');
+  if (sub) {
+    sub.textContent = rem > 0
+      ? rem + ' of ' + total + ' downloads available'
+      : '0 downloads left — upload a resource to unlock +5!';
+  }
+
+  // Banner
+  const bannerText = $('bannerQuotaText');
+  if (bannerText) {
+    bannerText.innerHTML = rem > 0
+      ? '<b>' + rem + '</b> of ' + total + ' downloads remaining'
+      : '<span style="color:var(--danger);font-weight:700">Limit reached (0 remaining)</span>';
+  }
+
+  // Profile modal numbers
+  const pmUsed = $('pmDownloadsUsed');
+  const pmLeft = $('pmDownloadsLeft');
+  if (pmUsed) pmUsed.textContent = quota.usedDownloads;
+  if (pmLeft) pmLeft.textContent = quota.remaining;
+}
+
+// ============ Data Fetching & Rendering ============
 async function loadFacets() {
   try {
     const [p, b] = await Promise.all([API.get('/papers/facets'), API.get('/books/facets')]);
@@ -58,6 +246,7 @@ async function load() {
   } catch (e) { toast(e.message, true); grid.innerHTML = ''; }
 }
 
+// Download & Bookmark Click Handlers with Quota Enforcement
 grid.addEventListener('click', async (e) => {
   const saveBtn = e.target.closest('[data-save]');
   const dlBtn = e.target.closest('[data-dl]');
@@ -70,16 +259,45 @@ grid.addEventListener('click', async (e) => {
       saveBtn.textContent = r.saved ? 'Saved' : 'Save';
       toast(r.saved ? 'Saved to your list' : 'Removed from your list');
     }
+
     if (dlBtn) {
+      if (!user) return location.replace('/auth.html');
       const [coll, id] = dlBtn.dataset.dl.split(':');
-      window.location.href = API.base + '/' + coll + '/' + id + '/download';
+
+      // Check student quota before triggering download
+      if (user.role === 'student' && user.quota && !user.quota.isUnlimited) {
+        if (user.quota.remaining <= 0) {
+          openModal('limitModal');
+          toast('Download limit reached. Upload a new file to unlock!', true);
+          return;
+        }
+      }
+
+      // Download with token passed via query parameter for auth verification
+      const token = API.token();
+      const downloadUrl = API.base + '/' + coll + '/' + id + '/download?t=' + encodeURIComponent(token);
+
+      // Trigger download
+      window.location.href = downloadUrl;
       toast('Download starting...');
+
+      // Refresh live quota from backend
+      setTimeout(async () => {
+        try {
+          const freshQuota = await API.getQuota();
+          if (freshQuota) {
+            user.quota = freshQuota;
+            updateQuotaUI(freshQuota);
+          }
+        } catch (_) {}
+      }, 1200);
     }
   } catch (err) { toast(err.message, true); }
 });
 
-document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => {
-  document.querySelectorAll('.tab').forEach((x) => x.classList.remove('active'));
+// Bottom tabs click navigation
+document.querySelectorAll('.bottom-tabs .tab:not(.profile-tab)').forEach((t) => t.addEventListener('click', () => {
+  document.querySelectorAll('.bottom-tabs .tab').forEach((x) => x.classList.remove('active'));
   t.classList.add('active');
   type = t.dataset.type;
   load();
@@ -88,12 +306,86 @@ document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () 
 let dt;
 ['q', 'level', 'subject', 'year', 'sort'].forEach((id) => $(id).addEventListener('input', () => { clearTimeout(dt); dt = setTimeout(load, 280); }));
 
-$('themeBtn').addEventListener('click', () => {
-  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
-  localStorage.setItem('ph_theme', dark ? 'light' : 'dark');
+// ============ Student Upload Form Handling ============
+$('suType')?.addEventListener('change', () => {
+  const isBook = $('suType').value === 'books';
+  $('suYearWrap').hidden = isBook;
+  $('suBoardWrap').hidden = isBook;
+  $('suAuthorWrap').hidden = !isBook;
+  $('suCoverWrap').hidden = !isBook;
 });
 
+$('studentUploadForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('suSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading & verifying...';
+
+  try {
+    const fd = new FormData();
+    const typeValue = $('suType').value;
+    const isBook = typeValue === 'books';
+
+    fd.append('title', $('suTitle').value.trim());
+    fd.append('subject', $('suSubject').value.trim());
+    fd.append('level', $('suLevel').value);
+    if ($('suDesc').value.trim()) fd.append('description', $('suDesc').value.trim());
+
+    if (!isBook) {
+      if ($('suYear').value) fd.append('year', $('suYear').value);
+      if ($('suBoard').value.trim()) fd.append('exam_board', $('suBoard').value.trim());
+    } else {
+      if ($('suAuthor').value.trim()) fd.append('author', $('suAuthor').value.trim());
+      if ($('suCover').files[0]) fd.append('cover', $('suCover').files[0]);
+    }
+
+    if ($('suFile').files[0]) {
+      fd.append('file', $('suFile').files[0]);
+    } else {
+      throw new Error('Please select a file to upload.');
+    }
+
+    const res = await API.upload('/' + typeValue, fd);
+
+    // Upload succeeded!
+    toast(res.message || 'Resource uploaded! +5 downloads unlocked.');
+    e.target.reset();
+    closeAllModals();
+
+    // Update user quota
+    if (res.quota) {
+      user.quota = res.quota;
+      updateQuotaUI(res.quota);
+    } else {
+      const q = await API.getQuota();
+      if (q) { user.quota = q; updateQuotaUI(q); }
+    }
+
+    await loadFacets();
+    await load();
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit & Unlock +5 Downloads';
+  }
+});
+
+// ============ Profile Modal Password Form ============
+$('pmPwForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const current = $('pmCurrentPw').value;
+  const next = $('pmNewPw').value;
+  try {
+    await API.post('/auth/password', { current, next });
+    toast('Password updated successfully!');
+    $('pmPwForm').reset();
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
+// ============ App Initialization ============
 (async function init() {
   user = await API.me();
   if (!user) {
@@ -103,19 +395,62 @@ $('themeBtn').addEventListener('click', () => {
   document.body.classList.remove('auth-protected');
   document.body.classList.add('auth-ready');
 
-  const a = $('authLink');
-  a.textContent = (user.name || 'Account').split(' ')[0];
-  a.href = '#';
-  a.title = 'Click to sign out';
-  a.onclick = (e) => {
-    e.preventDefault();
-    if (confirm('Sign out?')) {
-      API.setToken(null);
-      location.replace('/auth.html');
-    }
-  };
-  if (user.role === 'admin') $('adminLink').hidden = false;
-  if (user.role === 'admin' || user.role === 'teacher') $('uploadLink').hidden = false;
+  // Set user profile info in drawer
+  const firstName = (user.name || 'Student').split(' ')[0];
+  const initial = (user.name || 'M').charAt(0).toUpperCase();
+
+  $('drawerName').textContent = user.name || 'Student';
+  $('drawerEmail').textContent = user.email || '';
+  $('drawerAvatar').textContent = initial;
+
+  // Profile modal info
+  $('pmName').textContent = user.name || 'Student';
+  $('pmEmail').textContent = user.email || '';
+  $('pmAvatar').textContent = initial;
+  $('pmBadge').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+
+  // Desktop user button
+  $('userBtn').textContent = firstName;
+
+  // Role visibility gating:
+  // If user is STUDENT:
+  // - Students NEVER see Admin dashboard, Admin link, or Admin icon!
+  // - Students only see: download option, save option, profile, sign out, and upload to unlock!
+  const isAdmin = user.role === 'admin';
+  const isTeacher = user.role === 'teacher';
+  const isStudent = user.role === 'student';
+
+  if (isAdmin) {
+    // Admin: Prominent bright glowing Admin badge & highlighted Admin dashboard link
+    $('drawerAdminBadge').hidden = false;
+    $('drawerStudentBadge').hidden = true;
+    $('drawerTeacherBadge').hidden = true;
+    $('drawerAdminLink').hidden = false;
+    $('adminLink').hidden = false;
+    $('uploadLink').hidden = false;
+    $('uploadLink').href = '/admin.html';
+  } else if (isTeacher) {
+    // Teacher: Teacher badge & teacher upload link
+    $('drawerAdminBadge').hidden = true;
+    $('drawerStudentBadge').hidden = true;
+    $('drawerTeacherBadge').hidden = false;
+    $('drawerAdminLink').hidden = true;
+    $('adminLink').hidden = true;
+    $('uploadLink').hidden = false;
+    $('uploadLink').href = '/teacher.html';
+  } else {
+    // Student: Strictly NO admin dashboard and NO admin icon!
+    $('drawerAdminBadge').hidden = true;
+    $('drawerTeacherBadge').hidden = true;
+    $('drawerStudentBadge').hidden = false;
+    $('drawerAdminLink').hidden = true;
+    $('adminLink').hidden = true;
+    $('uploadLink').hidden = true; // Hidden from header for students; accessible via drawer / quota
+  }
+
+  // Update Quota UI
+  updateQuotaUI(user.quota);
+
   try {
     const m = await API.get('/search/mine');
     m.items.forEach((i) => savedSet.add(i._type + ':' + i.id));
@@ -127,6 +462,7 @@ $('themeBtn').addEventListener('click', () => {
     $('statBooks').textContent = s.books;
     $('statDl').textContent = s.downloads.toLocaleString();
   } catch (e) { /* ignore */ }
+
   await loadFacets();
   await load();
 })();

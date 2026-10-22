@@ -162,4 +162,12 @@ for (const t of ['papers', 'books']) {
   if (!cols.includes('status')) db.exec('ALTER TABLE ' + t + " ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'");
 }
 
+// Ensure users table has bonus_downloads column
+try {
+  const userCols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+  if (!userCols.includes('bonus_downloads')) {
+    db.exec('ALTER TABLE users ADD COLUMN bonus_downloads INTEGER NOT NULL DEFAULT 0');
+  }
+} catch (_) {}
+
 module.exports = db;

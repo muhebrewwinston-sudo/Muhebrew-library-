@@ -882,6 +882,493 @@ body.auth::after {
   z-index: 0;
 }
 
+/* ============ Left-Side Navigation Drawer ============ */
+.drawer-toggle {
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 8px;
+  margin-left: -6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drawer-toggle:hover {
+  background: var(--surface-2);
+  color: var(--primary);
+}
+
+.drawer-toggle svg {
+  width: 24px;
+  height: 24px;
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 24, 16, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 90;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.drawer-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.side-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(320px, 84vw);
+  max-width: var(--phone-width);
+  background: var(--surface);
+  border-right: 1.5px solid rgba(46, 207, 132, 0.4);
+  /* Glowing borders and soft subtle shadows around entire open drawer */
+  box-shadow: 0 0 35px rgba(27, 127, 75, 0.28), 8px 0 30px rgba(0, 0, 0, 0.18);
+  z-index: 100;
+  transform: translateX(-102%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+[data-theme="dark"] .side-drawer {
+  background: #0d1a14;
+  border-right: 1.5px solid rgba(62, 207, 132, 0.35);
+  box-shadow: 0 0 40px rgba(46, 207, 132, 0.18), 8px 0 32px rgba(0, 0, 0, 0.6);
+}
+
+.side-drawer.open {
+  transform: translateX(0);
+}
+
+.drawer-content {
+  padding: 18px 16px 28px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  position: relative;
+}
+
+.drawer-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drawer-close:hover {
+  color: var(--text);
+  background: var(--border);
+}
+
+/* Drawer Profile Header */
+.drawer-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+  margin-top: 4px;
+}
+
+.profile-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--grad);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 18px;
+  box-shadow: 0 4px 12px rgba(27, 127, 75, 0.25);
+  flex-shrink: 0;
+}
+
+.profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-email {
+  margin: 2px 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-badge-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Prominent glowing Admin badge */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.role-badge.badge-admin {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.65), 0 2px 6px rgba(5, 150, 105, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  animation: adminPulse 2.8s infinite ease-in-out;
+}
+
+@keyframes adminPulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.65), 0 2px 6px rgba(5, 150, 105, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(52, 211, 153, 0.9), 0 2px 10px rgba(16, 185, 129, 0.6);
+  }
+}
+
+.role-badge.badge-student {
+  background: var(--surface-2);
+  color: var(--primary);
+  border: 1px solid var(--border);
+}
+
+.role-badge.badge-teacher {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+/* Download Quota Card for Students */
+.drawer-quota-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.quota-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.quota-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.quota-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.quota-pill.empty {
+  background: var(--danger);
+}
+
+.quota-bar-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+[data-theme="dark"] .quota-bar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.quota-bar-fill {
+  height: 100%;
+  background: var(--grad);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.quota-bar-fill.empty {
+  background: var(--danger);
+}
+
+.quota-sub {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.quota-unlock-btn {
+  width: 100%;
+  font-size: 12px;
+  padding: 7px 10px;
+  border-radius: 8px;
+}
+
+/* Drawer Menu Items */
+.drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.drawer-item svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.drawer-item:hover {
+  background: var(--surface-2);
+  color: var(--primary);
+}
+
+.drawer-item:hover svg {
+  color: var(--primary);
+}
+
+.drawer-item:active {
+  transform: scale(0.98);
+}
+
+/* Highlighted "Admin dashboard" menu item */
+.drawer-item.admin-highlight {
+  background: rgba(27, 127, 75, 0.12);
+  border: 1px solid rgba(27, 127, 75, 0.28);
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.drawer-item.admin-highlight svg {
+  color: var(--primary);
+}
+
+[data-theme="dark"] .drawer-item.admin-highlight {
+  background: rgba(62, 207, 132, 0.16);
+  border: 1px solid rgba(62, 207, 132, 0.35);
+  color: #3ecf84;
+}
+
+[data-theme="dark"] .drawer-item.admin-highlight svg {
+  color: #3ecf84;
+}
+
+/* Small green "New" badge next to "Upload resources" */
+.badge-new {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
+}
+
+.drawer-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+/* Subtle red tint for Sign out */
+.drawer-item.signout {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  margin-top: auto;
+}
+
+.drawer-item.signout svg {
+  color: #dc2626;
+}
+
+.drawer-item.signout:hover {
+  background: rgba(220, 38, 38, 0.16);
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .drawer-item.signout {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+[data-theme="dark"] .drawer-item.signout svg {
+  color: #f87171;
+}
+
+/* Bottom navigation Profile tab with stronger green color & small indicator dot */
+.bottom-tabs .tab.profile-tab {
+  position: relative;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.bottom-tabs .tab.profile-tab svg {
+  color: var(--primary);
+}
+
+.bottom-tabs .tab.profile-tab .tab-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 6px var(--primary);
+  margin-top: 2px;
+}
+
+/* Modal styles for student upload & limit alert */
+.modal-dialog {
+  background: var(--surface);
+  border-radius: 16px;
+  width: 100%;
+  max-width: min(400px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  animation: rise 0.25s ease both;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.limit-banner {
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+
+.limit-banner h4 {
+  margin: 0 0 6px;
+  color: var(--danger);
+  font-size: 16px;
+}
+
+.limit-banner p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.unlock-perk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.unlock-perk .perk-ico {
+  font-size: 20px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;
