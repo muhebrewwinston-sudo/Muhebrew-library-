@@ -14,9 +14,9 @@ router.get('/', (req, res) => {
   const bw = ["status = 'approved'", '(title LIKE ? OR subject LIKE ? OR author LIKE ?)'], ba = [like, like, like];
   if (level) { pw.push('level = ?'); pa.push(level); bw.push('level = ?'); ba.push(level); }
 
-  const papers = db.prepare("SELECT id,title,subject,level,year,exam_board,downloads,'paper' AS type FROM papers WHERE " +
+  const papers = db.prepare("SELECT id,title,subject,level,year,exam_board,category,file_size,storage_provider,drime_url,downloads,'paper' AS type FROM papers WHERE " +
     pw.join(' AND ') + ' ORDER BY downloads DESC LIMIT ?').all(...pa, limit);
-  const books = db.prepare("SELECT id,title,subject,level,author,publisher,downloads,'book' AS type FROM books WHERE " +
+  const books = db.prepare("SELECT id,title,subject,level,author,publisher,category,cover_path,file_size,storage_provider,drime_url,downloads,'book' AS type FROM books WHERE " +
     bw.join(' AND ') + ' ORDER BY downloads DESC LIMIT ?').all(...ba, limit);
   res.json({ papers, books, total: papers.length + books.length });
 });

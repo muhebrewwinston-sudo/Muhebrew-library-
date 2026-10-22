@@ -123,8 +123,8 @@ const books = [
 ];
 
 const insBook = db.prepare(`
-  INSERT INTO books (title, author, publisher, subject, level, category, cover_path, file_path, file_name, file_size, mime_type, uploaded_by, status, downloads)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'application/pdf', ?, 'approved', ?)
+  INSERT INTO books (title, author, publisher, subject, level, category, cover_path, file_path, file_name, file_size, mime_type, storage_provider, drime_folder_id, drime_url, uploaded_by, status, downloads)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'application/pdf', 'drime', 'OymudINAwCDhPbnTH5Gt4oAIxo5mbC', 'https://dri.me/OymudINAwCDhPbnTH5Gt4oAIxo5mbC', ?, 'approved', ?)
 `);
 
 for (const b of books) {
@@ -335,8 +335,8 @@ const papers = [
 ];
 
 const insPaper = db.prepare(`
-  INSERT INTO papers (title, subject, level, category, year, exam_board, file_path, file_name, file_size, mime_type, uploaded_by, status, downloads)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'application/pdf', ?, 'approved', ?)
+  INSERT INTO papers (title, subject, level, category, year, exam_board, file_path, file_name, file_size, mime_type, storage_provider, drime_folder_id, drime_url, uploaded_by, status, downloads)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'application/pdf', 'drime', 'OymudINAwCDhPbnTH5Gt4oAIxo5mbC', 'https://dri.me/OymudINAwCDhPbnTH5Gt4oAIxo5mbC', ?, 'approved', ?)
 `);
 
 for (const p of papers) {
