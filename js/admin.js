@@ -94,6 +94,20 @@ document.addEventListener('change', async (e) => {
   catch (err) { toast(err.message, true); loadUsers(); }
 });
 
+$('grantTeacherForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('grantEmail').value.trim().toLowerCase();
+  const role = $('grantRole').value;
+  try {
+    const res = await API.post('/admin/grant-role', { email, role });
+    toast(res.message || 'Role updated');
+    $('grantEmail').value = '';
+    loadUsers();
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
 document.addEventListener('click', async (e) => {
   try {
     const del = e.target.closest('[data-del]');

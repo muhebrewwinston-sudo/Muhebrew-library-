@@ -58,6 +58,18 @@
   <div class="panel"><h3>Pending teacher uploads</h3><div id="pending"></div></div>
   <div class="panel"><h3>Reported files</h3><div id="reports"></div></div>
   <div class="panel"><h3>Recent uploads</h3><div id="recent"></div></div>
+  <div class="panel"><h3>Assign Teacher Access</h3>
+    <p style="color:var(--muted);margin:0 0 10px;font-size:12.5px">Public registration enrolls users as students. Only admins can grant teacher status to chosen emails.</p>
+    <form id="grantTeacherForm" style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="grantEmail" type="email" required placeholder="teacher@example.com" style="flex:1;min-width:180px">
+      <select id="grantRole" style="width:120px">
+        <option value="teacher">Teacher</option>
+        <option value="admin">Admin</option>
+        <option value="student">Student</option>
+      </select>
+      <button class="btn primary sm" type="submit">Assign Role</button>
+    </form>
+  </div>
   <div class="panel"><h3>Users</h3><div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table id="usersTable">
     <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>School</th><th>Joined</th></tr></thead><tbody></tbody></table></div></div>
   <div class="panel"><h3>Change my password</h3>

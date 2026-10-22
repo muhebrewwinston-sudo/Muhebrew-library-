@@ -35,16 +35,18 @@
 }
 
 html {
-  background: var(--desktop-bg);
+  background: var(--bg);
   min-height: 100vh;
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  width: 100%;
 }
 
-/* Mobile-only / mobile-app container centered on desktop */
+/* Mobile-first: native 100% full-width on mobile phones, clean phone container on desktop */
 body {
   margin: 0 auto;
   width: 100%;
-  max-width: var(--phone-width);
+  max-width: 100%;
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
@@ -53,15 +55,24 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: 0 0 35px rgba(15, 70, 40, 0.12), 0 0 0 1px var(--border);
   overflow-x: hidden;
 }
 
-@media (max-width: 430px) {
+/* On desktop / wide screens, center nicely with a soft frame */
+@media (min-width: 601px) {
+  html {
+    background: var(--desktop-bg);
+  }
+  body {
+    max-width: var(--phone-width);
+    box-shadow: 0 0 35px rgba(15, 70, 40, 0.12), 0 0 0 1px var(--border);
+  }
+}
+
+@media (max-width: 600px) {
   body {
     box-shadow: none;
-    border-left: none;
-    border-right: none;
+    border: none;
   }
 }
 
@@ -120,7 +131,56 @@ header.site .wrap {
   justify-content: space-between;
   gap: 8px;
   height: 56px;
-  padding: 0 14px;
+  padding: 0 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.header-icon-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.header-icon-btn:hover {
+  background: var(--border);
+  color: var(--primary);
+}
+
+.header-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.header-avatar-btn {
+  background: var(--grad);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(27, 127, 75, 0.3);
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.header-avatar-btn:active {
+  transform: scale(0.92);
 }
 
 .logo {
@@ -1039,7 +1099,7 @@ body.auth::after {
   align-items: center;
 }
 
-/* Prominent glowing Admin badge */
+/* Prominent glowing Admin badge & role badges */
 .role-badge {
   display: inline-flex;
   align-items: center;
@@ -1050,6 +1110,7 @@ body.auth::after {
   font-weight: 700;
   letter-spacing: 0.3px;
   text-transform: uppercase;
+  border: none;
 }
 
 .role-badge.badge-admin {
@@ -1079,6 +1140,53 @@ body.auth::after {
   background: rgba(37, 99, 235, 0.12);
   color: #2563eb;
   border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+/* Admin Interactive 3-Role Switcher Bar */
+.admin-role-switcher {
+  display: inline-flex;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.admin-role-switcher .role-badge {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.admin-role-switcher .role-badge:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.admin-role-switcher .role-badge.active.badge-admin {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.65);
+}
+
+.admin-role-switcher .role-badge.active.badge-teacher {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.45);
+}
+
+.admin-role-switcher .role-badge.active.badge-student {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(27, 127, 75, 0.35);
 }
 
 /* Download Quota Card for Students */
@@ -1240,12 +1348,12 @@ body.auth::after {
   margin: 8px 0;
 }
 
-/* Subtle red tint for Sign out */
+/* Subtle red tint for Sign out - positioned closer to Theme option */
 .drawer-item.signout {
   color: #dc2626;
   background: rgba(220, 38, 38, 0.08);
   border: 1px solid rgba(220, 38, 38, 0.18);
-  margin-top: auto;
+  margin-top: 6px;
 }
 
 .drawer-item.signout svg {

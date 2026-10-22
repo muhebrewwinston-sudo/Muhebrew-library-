@@ -50,6 +50,10 @@ $('bottomProfileTab')?.addEventListener('click', () => {
   openDrawer();
 });
 
+$('headerAvatarBtn')?.addEventListener('click', () => {
+  openDrawer();
+});
+
 $('userBtn')?.addEventListener('click', () => {
   openDrawer();
 });
@@ -409,46 +413,61 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
   $('pmAvatar').textContent = initial;
   $('pmBadge').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
 
-  // Desktop user button
-  $('userBtn').textContent = firstName;
+  // Desktop user button & mobile avatar initial
+  if ($('userBtn')) $('userBtn').textContent = firstName;
+  if ($('headerAvatarInitial')) $('headerAvatarInitial').textContent = initial;
 
-  // Role visibility gating:
-  // If user is STUDENT:
-  // - Students NEVER see Admin dashboard, Admin link, or Admin icon!
-  // - Students only see: download option, save option, profile, sign out, and upload to unlock!
-  const isAdmin = user.role === 'admin';
+  // Role visibility & switcher logic:
+  // - Admin (e.g. muhebrewwinston@gmail.com): has access to open all 3 areas (Admin, Teacher, Student)
+  // - Student: has access ONLY to student area (no admin icon, no teacher portal)
+  // - Teacher: has access ONLY to teacher area (no admin dashboard)
+  const email = (user.email || '').toLowerCase().trim();
+  const isAdmin = user.role === 'admin' || email === 'muhebrewwinston@gmail.com';
   const isTeacher = user.role === 'teacher';
-  const isStudent = user.role === 'student';
+  const isStudent = !isAdmin && !isTeacher;
+
+  const roleSwitcher = $('adminRoleSwitcher');
+  const studentBadge = $('drawerStudentBadge');
+  const teacherBadge = $('drawerTeacherBadge');
+  const adminLink = $('drawerAdminLink');
+  const teacherLink = $('drawerTeacherLink');
 
   if (isAdmin) {
-    // Admin: Prominent bright glowing Admin badge & highlighted Admin dashboard link
-    $('drawerAdminBadge').hidden = false;
-    $('drawerStudentBadge').hidden = true;
-    $('drawerTeacherBadge').hidden = true;
-    $('drawerAdminLink').hidden = false;
-    $('adminLink').hidden = false;
-    $('uploadLink').hidden = false;
-    $('uploadLink').href = '/admin.html';
+    // Admin: Interactive 3-badge switcher allowing Admin to open all areas
+    if (roleSwitcher) roleSwitcher.hidden = false;
+    if (studentBadge) studentBadge.hidden = true;
+    if (teacherBadge) teacherBadge.hidden = true;
+    if (adminLink) adminLink.hidden = false;
+    if (teacherLink) teacherLink.hidden = false;
+
+    // Attach role tab actions for Admin
+    $('roleTabAdmin')?.addEventListener('click', () => {
+      location.href = '/admin.html';
+    });
+    $('roleTabTeacher')?.addEventListener('click', () => {
+      location.href = '/teacher.html';
+    });
+    $('roleTabStudent')?.addEventListener('click', () => {
+      closeDrawer();
+      toast('Switched to Student Library view');
+    });
   } else if (isTeacher) {
-    // Teacher: Teacher badge & teacher upload link
-    $('drawerAdminBadge').hidden = true;
-    $('drawerStudentBadge').hidden = true;
-    $('drawerTeacherBadge').hidden = false;
-    $('drawerAdminLink').hidden = true;
-    $('adminLink').hidden = true;
-    $('uploadLink').hidden = false;
-    $('uploadLink').href = '/teacher.html';
+    // Teacher: Single Teacher badge and teacher uploads link
+    if (roleSwitcher) roleSwitcher.hidden = true;
+    if (studentBadge) studentBadge.hidden = true;
+    if (teacherBadge) teacherBadge.hidden = false;
+    if (adminLink) adminLink.hidden = true;
+    if (teacherLink) teacherLink.hidden = false;
   } else {
-    // Student: Strictly NO admin dashboard and NO admin icon!
-    $('drawerAdminBadge').hidden = true;
-    $('drawerTeacherBadge').hidden = true;
-    $('drawerStudentBadge').hidden = false;
-    $('drawerAdminLink').hidden = true;
-    $('adminLink').hidden = true;
-    $('uploadLink').hidden = true; // Hidden from header for students; accessible via drawer / quota
+    // Student: Single Student badge only. STRICTLY no Admin or Teacher icons/links!
+    if (roleSwitcher) roleSwitcher.hidden = true;
+    if (studentBadge) studentBadge.hidden = false;
+    if (teacherBadge) teacherBadge.hidden = true;
+    if (adminLink) adminLink.hidden = true;
+    if (teacherLink) teacherLink.hidden = true;
   }
 
-  // Update Quota UI
+  // Update Quota UI (students only; admins & teachers have unlimited downloads)
   updateQuotaUI(user.quota);
 
   try {
