@@ -322,6 +322,7 @@ function card(item) {
         '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap">' +
           '<span class="tag pdf">PDF</span>' +
           '<span class="tag size">💾 ' + esc(sizeStr) + '</span>' +
+          (item.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-weight:600">☁️ Drime Cloud</span>' : '') +
           (item.category ? '<span class="tag ok" style="font-weight:700">' + esc(item.category) + '</span>' : '') +
         '</div>' +
         '<h3>' + esc(item.title) + '</h3>' +

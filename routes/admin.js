@@ -3,27 +3,43 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../db/database');
 const { requireAdmin } = require('../middleware/auth');
+const drimeService = require('../services/drime');
 
 const router = express.Router();
 router.use(requireAdmin);
 const TABLES = { papers: 'papers', books: 'books' };
+
+router.get('/drime-status', (_req, res) => {
+  const one = (sql) => db.prepare(sql).get().c;
+  const cloudPapers = one("SELECT COUNT(*) c FROM papers WHERE storage_provider = 'drime'");
+  const cloudBooks = one("SELECT COUNT(*) c FROM books WHERE storage_provider = 'drime'");
+  res.json({
+    ...drimeService.getStatus(),
+    cloudPapers,
+    cloudBooks,
+    totalCloudFiles: cloudPapers + cloudBooks
+  });
+});
 
 router.get('/stats', (_req, res) => {
   const one = (sql) => db.prepare(sql).get().c;
   
   // Most favorite books that are mostly downloaded
   const favoriteBooks = db.prepare(`
-    SELECT id, title, subject, level, category, author, downloads, cover_path, file_size 
+    SELECT id, title, subject, level, category, author, downloads, cover_path, file_size, storage_provider, drime_url 
     FROM books WHERE status = 'approved' 
     ORDER BY downloads DESC, id ASC LIMIT 8
   `).all();
 
   // Most favorite papers that are mostly downloaded
   const favoritePapers = db.prepare(`
-    SELECT id, title, subject, level, category, exam_board, year, downloads, file_size 
+    SELECT id, title, subject, level, category, exam_board, year, downloads, file_size, storage_provider, drime_url 
     FROM papers WHERE status = 'approved' 
     ORDER BY downloads DESC, id ASC LIMIT 8
   `).all();
+
+  const cloudPapers = one("SELECT COUNT(*) c FROM papers WHERE storage_provider = 'drime'");
+  const cloudBooks = one("SELECT COUNT(*) c FROM books WHERE storage_provider = 'drime'");
 
   res.json({
     users: one('SELECT COUNT(*) c FROM users'),
@@ -34,7 +50,15 @@ router.get('/stats', (_req, res) => {
     downloads: one('SELECT COUNT(*) c FROM downloads'),
     last7: one("SELECT COUNT(*) c FROM downloads WHERE created_at >= datetime('now','-7 days')"),
     favoriteBooks,
-    favoritePapers
+    favoritePapers,
+    drime: {
+      enabled: true,
+      folderId: drimeService.DRIME_FOLDER_ID,
+      folderUrl: drimeService.DRIME_FOLDER_URL,
+      cloudPapers,
+      cloudBooks,
+      totalCloudFiles: cloudPapers + cloudBooks
+    }
   });
 });
 
@@ -63,8 +87,8 @@ router.get('/progression', (_req, res) => {
 
   // Recent resource uploads
   const uploads = [
-    ...db.prepare("SELECT id, title, subject, level, 'paper' AS t, created_at FROM papers ORDER BY id DESC LIMIT 8").all(),
-    ...db.prepare("SELECT id, title, subject, level, 'book' AS t, created_at FROM books ORDER BY id DESC LIMIT 8").all()
+    ...db.prepare("SELECT id, title, subject, level, 'paper' AS t, storage_provider, drime_url, created_at FROM papers ORDER BY id DESC LIMIT 8").all(),
+    ...db.prepare("SELECT id, title, subject, level, 'book' AS t, storage_provider, drime_url, created_at FROM books ORDER BY id DESC LIMIT 8").all()
   ].sort((a, b) => (b.created_at > a.created_at ? 1 : -1)).slice(0, 10);
 
   res.json({ signups, downloads, uploads });

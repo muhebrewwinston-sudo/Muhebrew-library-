@@ -59,6 +59,10 @@ async function loadStats() {
     $('sBooks').textContent = s.books.toLocaleString();
     $('s7').textContent = s.last7.toLocaleString() + ' downloads';
 
+    if (s.drime && $('drimeCloudCount')) {
+      $('drimeCloudCount').innerHTML = `☁️ <b>${s.drime.totalCloudFiles} files</b> backed up on Drime Cloud (Folder ID: <code>${esc(s.drime.folderId)}</code>)`;
+    }
+
     // Render Most Favorite Textbooks (Mostly Downloaded)
     const fbList = $('favoriteBooksList');
     if (fbList && s.favoriteBooks) {
@@ -75,7 +79,10 @@ async function loadStats() {
               <b style="font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.title)}</b>
               <span style="font-size:11.5px;color:var(--muted)">${esc(b.subject)} · ${esc(b.level)}</span>
             </div>
-            <span class="tag ok" style="font-size:11.5px;font-weight:700">🔥 ${b.downloads.toLocaleString()} dl</span>
+            <div style="display:flex;gap:4px;align-items:center">
+              ${b.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px">☁️ Drime</span>' : ''}
+              <span class="tag ok" style="font-size:11.5px;font-weight:700">🔥 ${b.downloads.toLocaleString()} dl</span>
+            </div>
           </div>
         `).join('');
       }
@@ -95,7 +102,10 @@ async function loadStats() {
               <b style="font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title)}</b>
               <span style="font-size:11.5px;color:var(--muted)">${esc(p.subject)} · ${esc(p.level)} · ${esc(p.category || p.exam_board || '')}</span>
             </div>
-            <span class="tag ok" style="font-size:11.5px;font-weight:700">🔥 ${p.downloads.toLocaleString()} dl</span>
+            <div style="display:flex;gap:4px;align-items:center">
+              ${p.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px">☁️ Drime</span>' : ''}
+              <span class="tag ok" style="font-size:11.5px;font-weight:700">🔥 ${p.downloads.toLocaleString()} dl</span>
+            </div>
           </div>
         `).join('');
       }
@@ -194,6 +204,7 @@ function renderProgression() {
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
         <div>
           <b>${esc(up.title)}</b> <span class="tag ok" style="font-size:10px">${esc(up.t)}</span>
+          ${up.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px">☁️ Drime Cloud</span>' : ''}
           <div style="font-size:11px;color:var(--muted)">${esc(up.subject)} · ${esc(up.level)}</div>
         </div>
         <span style="font-size:11px;color:var(--muted)">${new Date(up.created_at + 'Z').toLocaleDateString()}</span>
@@ -324,7 +335,7 @@ $('uploadForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('uSubmit');
   btn.disabled = true;
-  btn.textContent = 'Publishing to library...';
+  btn.textContent = 'Syncing to Drime Cloud & Publishing...';
 
   try {
     const fd = new FormData();
@@ -336,6 +347,11 @@ $('uploadForm')?.addEventListener('submit', async (e) => {
     fd.append('subject', $('uSubject').value.trim());
     fd.append('level', $('uLevel').value);
     fd.append('category', $('uCategory').value);
+    fd.append('storage', 'drime');
+
+    const drimeLink = $('uDrimeLink') ? $('uDrimeLink').value.trim() : '';
+    if (drimeLink) fd.append('drime_link', drimeLink);
+
     if ($('uDesc').value.trim()) fd.append('description', $('uDesc').value.trim());
 
     if (!isBook) {
@@ -353,8 +369,8 @@ $('uploadForm')?.addEventListener('submit', async (e) => {
       throw new Error('Please select a file to upload.');
     }
 
-    await API.upload(endpoint, fd);
-    toast('Resource published to library successfully!');
+    const res = await API.upload(endpoint, fd);
+    toast(res.message || 'Resource published and synced to Drime Cloud Storage!');
     $('uploadForm').reset();
     loadStats();
     loadProgression();
@@ -362,6 +378,6 @@ $('uploadForm')?.addEventListener('submit', async (e) => {
     toast(err.message, true);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Publish Resource to Library';
+    btn.textContent = 'Publish Resource to Library (Syncs to Drime Cloud)';
   }
 });

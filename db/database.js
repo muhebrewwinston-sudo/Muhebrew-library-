@@ -156,11 +156,15 @@ CREATE INDEX IF NOT EXISTS idx_reports_resolved ON reports(resolved);
 
 db.exec(schemaSql);
 
-// Older databases get the "status" and "category" columns
+// Older databases get the "status", "category", and Drime Cloud Storage columns
 for (const t of ['papers', 'books']) {
   const cols = db.prepare('PRAGMA table_info(' + t + ')').all().map((c) => c.name);
   if (!cols.includes('status')) db.exec('ALTER TABLE ' + t + " ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'");
   if (!cols.includes('category')) db.exec('ALTER TABLE ' + t + " ADD COLUMN category TEXT DEFAULT '" + (t === 'books' ? 'MSCE' : 'MANEB') + "'");
+  if (!cols.includes('storage_provider')) db.exec('ALTER TABLE ' + t + " ADD COLUMN storage_provider TEXT DEFAULT 'local'");
+  if (!cols.includes('drime_file_id')) db.exec('ALTER TABLE ' + t + ' ADD COLUMN drime_file_id TEXT');
+  if (!cols.includes('drime_url')) db.exec('ALTER TABLE ' + t + ' ADD COLUMN drime_url TEXT');
+  if (!cols.includes('drime_folder_id')) db.exec('ALTER TABLE ' + t + ' ADD COLUMN drime_folder_id TEXT');
 }
 
 // Ensure reports table has details and email columns

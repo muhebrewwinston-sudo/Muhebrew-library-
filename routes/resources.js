@@ -6,6 +6,7 @@ const db = require('../db/database');
 const { optionalAuth, requireAuth, requireAdmin, requireUploader } = require('../middleware/auth');
 const { upload } = require('../middleware/upload');
 const { calculateQuota } = require('../db/quota');
+const drimeService = require('../services/drime');
 
 const SORTS = { recent: 'created_at DESC', popular: 'downloads DESC', title: 'title ASC', year: 'year DESC' };
 const reportLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Too many reports. Try again later.' } });
@@ -201,7 +202,7 @@ function buildRouter(table, type) {
     requireUploader,
     (req, _res, next) => { req.uploadType = type; next(); },
     upload.fields([{ name: 'file', maxCount: 1 }, { name: 'cover', maxCount: 1 }]),
-    (req, res) => {
+    async (req, res) => {
       const body = req.body || {};
       const file = req.files && req.files.file && req.files.file[0];
       const cover = req.files && req.files.cover && req.files.cover[0];
@@ -219,15 +220,64 @@ function buildRouter(table, type) {
         });
       }
 
+      // Check Drime Cloud Storage configuration for Owner or Admin
+      const isOwnerOrAdmin = req.user && (req.user.role === 'admin' || req.user.email === 'muhebrewwinston@gmail.com');
+      let storageProvider = 'local';
+      let drimeFileId = null;
+      let drimeUrl = null;
+      let drimeFolderId = null;
+
+      if (isOwnerOrAdmin || body.storage === 'drime') {
+        storageProvider = 'drime';
+        try {
+          const drimeRes = await drimeService.uploadToDrime({
+            filePath: file.path,
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            folderId: body.drime_folder_id || drimeService.DRIME_FOLDER_ID
+          });
+          drimeFileId = drimeRes.fileId;
+          drimeUrl = body.drime_link ? body.drime_link.trim() : (drimeRes.url || drimeService.DRIME_FOLDER_URL);
+          drimeFolderId = drimeRes.folderId || drimeService.DRIME_FOLDER_ID;
+        } catch (err) {
+          console.error('[Drime Cloud Storage] Upload error:', err.message);
+          drimeUrl = body.drime_link ? body.drime_link.trim() : drimeService.DRIME_FOLDER_URL;
+          drimeFolderId = drimeService.DRIME_FOLDER_ID;
+        }
+      }
+
       const rel = (f) => path.relative(path.join(__dirname, '..'), f.path).split(path.sep).join('/');
-      const cols = [...fields, 'file_path', 'file_name', 'file_size', 'mime_type', 'uploaded_by', 'status'];
+      const cols = [
+        ...fields,
+        'file_path',
+        'file_name',
+        'file_size',
+        'mime_type',
+        'storage_provider',
+        'drime_file_id',
+        'drime_url',
+        'drime_folder_id',
+        'uploaded_by',
+        'status'
+      ];
       const defaultCategory = isBook ? 'MSCE' : 'MANEB';
       const vals = fields.map((f) => {
         if (f === 'year') return body[f] ? Number(body[f]) : null;
         if (f === 'category') return body[f] || defaultCategory;
         return body[f] || null;
       });
-      vals.push(rel(file), file.originalname, file.size, file.mimetype, req.user.id, req.user.role === 'admin' ? 'approved' : 'pending');
+      vals.push(
+        rel(file),
+        file.originalname,
+        file.size,
+        file.mimetype,
+        storageProvider,
+        drimeFileId,
+        drimeUrl,
+        drimeFolderId,
+        req.user.id,
+        req.user.role === 'admin' ? 'approved' : 'pending'
+      );
       if (isBook) { cols.push('cover_path'); vals.push(cover ? rel(cover) : null); }
 
       const info = db.prepare(
@@ -238,9 +288,15 @@ function buildRouter(table, type) {
 
       res.status(201).json({
         item: getRow(info.lastInsertRowid),
-        message: req.user.role === 'student'
-          ? 'Resource submitted successfully! You unlocked 5 more downloads.'
-          : 'Resource uploaded successfully.',
+        message: isOwnerOrAdmin
+          ? `Resource uploaded and synced to your Drime Cloud Storage (Folder: ${drimeService.DRIME_FOLDER_ID})!`
+          : (req.user.role === 'student' ? 'Resource submitted successfully! You unlocked 5 more downloads.' : 'Resource uploaded successfully.'),
+        storage: {
+          provider: storageProvider,
+          folderId: drimeFolderId,
+          folderUrl: drimeService.DRIME_FOLDER_URL,
+          fileId: drimeFileId
+        },
         unlockedDownloads: req.user.role === 'student' ? 5 : 0,
         quota
       });
