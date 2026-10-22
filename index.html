@@ -28,24 +28,38 @@
     
     <!-- Profile & Role Section -->
     <div class="drawer-profile">
-      <div class="profile-avatar" id="drawerAvatar">M</div>
+      <div class="profile-avatar" id="drawerAvatar">W</div>
       <div class="profile-info">
-        <h3 class="profile-name" id="drawerName">Student</h3>
-        <p class="profile-email" id="drawerEmail">student@library.mw</p>
-        <div class="profile-badge-row">
-          <!-- Admin Badge: Bright green with prominent soft glow (ADMIN ONLY) -->
-          <span class="role-badge badge-admin" id="drawerAdminBadge" hidden>
-            <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" aria-hidden="true"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-2.001A11.954 11.954 0 0110 1.944zM11 14a1 1 0 11-2 0 1 1 0 012 0zm0-7a1 1 0 10-2 0v3a1 1 0 102 0V7z" clip-rule="evenodd" /></svg>
-            Admin
-          </span>
-          <span class="role-badge badge-student" id="drawerStudentBadge">Student</span>
+        <h3 class="profile-name" id="drawerName">Winston kamiza</h3>
+        <p class="profile-email" id="drawerEmail">winstonmphatsokamiza@gmail.com</p>
+        
+        <!-- Role Badges & Switcher -->
+        <div class="profile-roles-container">
+          <!-- Admin Interactive 3-Badge Switcher (Admin has access to all 3 areas) -->
+          <div class="admin-role-switcher" id="adminRoleSwitcher" hidden>
+            <button type="button" class="role-badge badge-admin active" id="roleTabAdmin" title="Open Admin Dashboard">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11" aria-hidden="true"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-2.001A11.954 11.954 0 0110 1.944zM11 14a1 1 0 11-2 0 1 1 0 012 0zm0-7a1 1 0 10-2 0v3a1 1 0 102 0V7z" clip-rule="evenodd" /></svg>
+              Admin
+            </button>
+            <button type="button" class="role-badge badge-teacher" id="roleTabTeacher" title="Open Teacher Area">
+              Teacher
+            </button>
+            <button type="button" class="role-badge badge-student" id="roleTabStudent" title="Open Student Library">
+              Student
+            </button>
+          </div>
+
+          <!-- Single Student Badge (Student sees ONLY their area) -->
+          <span class="role-badge badge-student" id="drawerStudentBadge" hidden>Student</span>
+
+          <!-- Single Teacher Badge (Teacher sees ONLY their area) -->
           <span class="role-badge badge-teacher" id="drawerTeacherBadge" hidden>Teacher</span>
         </div>
       </div>
     </div>
 
-    <!-- Student Download Quota Widget -->
-    <div class="drawer-quota-card" id="drawerQuotaCard">
+    <!-- Student Download Quota Widget (Students only) -->
+    <div class="drawer-quota-card" id="drawerQuotaCard" hidden>
       <div class="quota-head">
         <span class="quota-title">Download Quota</span>
         <span class="quota-pill" id="quotaPill">5 left</span>
@@ -70,6 +84,15 @@
           <rect x="3" y="16" width="7" height="5"></rect>
         </svg>
         <span class="drawer-label">Admin dashboard</span>
+      </a>
+
+      <!-- Teacher Portal Menu Item (Admins & Teachers) -->
+      <a class="drawer-item" href="/teacher.html" id="drawerTeacherLink" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+        <span class="drawer-label">Teacher uploads</span>
       </a>
 
       <!-- Upload Resources Menu Item: with small green "New" badge -->
@@ -115,9 +138,7 @@
         <span class="drawer-label" id="drawerThemeText">Dark mode</span>
       </button>
 
-      <div class="drawer-divider"></div>
-
-      <!-- Sign Out Menu Item: subtle red tint for clear visibility -->
+      <!-- Sign Out Menu Item: positioned immediately below Theme with subtle red tint -->
       <button class="drawer-item signout" type="button" id="drawerSignOutBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         <span class="drawer-label">Sign out</span>
@@ -137,11 +158,14 @@
       <span>Muhebrew <b>Library</b></span>
     </a>
     <span class="spacer"></span>
-    <button class="btn sm" id="themeBtn">Theme</button>
-    <!-- Admin & Teacher desktop shortcuts (hidden for students) -->
-    <a class="btn sm" href="/teacher.html" id="uploadLink" hidden>Upload</a>
-    <a class="btn sm primary" href="/admin.html" id="adminLink" hidden>Admin</a>
-    <button class="btn sm" id="userBtn" title="Account & Profile">Account</button>
+    <!-- Compact theme toggle icon button -->
+    <button class="header-icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+    <!-- Compact user initial avatar button -->
+    <button class="header-avatar-btn" id="headerAvatarBtn" aria-label="My Account" title="My Account">
+      <span id="headerAvatarInitial">W</span>
+    </button>
   </div>
 </header>
 

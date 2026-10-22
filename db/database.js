@@ -162,12 +162,32 @@ for (const t of ['papers', 'books']) {
   if (!cols.includes('status')) db.exec('ALTER TABLE ' + t + " ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'");
 }
 
-// Ensure users table has bonus_downloads column
+// Ensure users table has bonus_downloads and email verification columns
 try {
   const userCols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
   if (!userCols.includes('bonus_downloads')) {
     db.exec('ALTER TABLE users ADD COLUMN bonus_downloads INTEGER NOT NULL DEFAULT 0');
   }
+  if (!userCols.includes('is_verified')) {
+    db.exec('ALTER TABLE users ADD COLUMN is_verified INTEGER NOT NULL DEFAULT 1');
+  }
+  if (!userCols.includes('verify_code')) {
+    db.exec('ALTER TABLE users ADD COLUMN verify_code TEXT');
+  }
+  if (!userCols.includes('verify_expires')) {
+    db.exec('ALTER TABLE users ADD COLUMN verify_expires TEXT');
+  }
+  if (!userCols.includes('reset_code')) {
+    db.exec('ALTER TABLE users ADD COLUMN reset_code TEXT');
+  }
+  if (!userCols.includes('reset_expires')) {
+    db.exec('ALTER TABLE users ADD COLUMN reset_expires TEXT');
+  }
+} catch (_) {}
+
+// Ensure muhebrewwinston@gmail.com is always role = 'admin' and verified
+try {
+  db.prepare("UPDATE users SET role = 'admin', is_verified = 1 WHERE LOWER(email) = 'muhebrewwinston@gmail.com'").run();
 } catch (_) {}
 
 module.exports = db;

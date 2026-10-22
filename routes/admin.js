@@ -33,6 +33,20 @@ router.patch('/users/:id/role', (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/grant-role', (req, res) => {
+  const { email, role } = req.body || {};
+  if (!email || !['student', 'teacher', 'admin'].includes(role)) {
+    return res.status(400).json({ error: 'Valid email and role (student, teacher, admin) are required.' });
+  }
+  const cleanEmail = String(email).trim().toLowerCase();
+  const user = db.prepare('SELECT id, name, role FROM users WHERE email = ?').get(cleanEmail);
+  if (!user) {
+    return res.status(404).json({ error: 'No user registered with that email.' });
+  }
+  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, user.id);
+  res.json({ success: true, message: `Updated ${user.name} (${cleanEmail}) to ${role}.` });
+});
+
 router.get('/pending', (_req, res) => {
   const q = (t) => db.prepare('SELECT x.id,x.title,x.subject,x.level,x.created_at,u.name AS uploader FROM ' + t +
     " x LEFT JOIN users u ON u.id = x.uploaded_by WHERE x.status = 'pending' ORDER BY x.id").all().map((r) => ({ ...r, t }));

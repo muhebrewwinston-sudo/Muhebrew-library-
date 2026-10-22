@@ -7,6 +7,11 @@ CREATE TABLE IF NOT EXISTS users (
   school TEXT,
   level TEXT,
   bonus_downloads INTEGER NOT NULL DEFAULT 0,
+  is_verified INTEGER NOT NULL DEFAULT 1,
+  verify_code TEXT,
+  verify_expires TEXT,
+  reset_code TEXT,
+  reset_expires TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
