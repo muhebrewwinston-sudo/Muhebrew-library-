@@ -1,4 +1,14 @@
 {
   "version": 2,
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://195.123.189.186:25692/api/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "http://195.123.189.186:25692/uploads/:path*"
+    }
+  ]
 }
