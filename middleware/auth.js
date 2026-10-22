@@ -39,6 +39,6 @@ function requireRole(...roles) {
 }
 
 const requireAdmin = requireRole('admin');
-const requireUploader = requireRole('teacher', 'admin');
+const requireUploader = requireRole('student', 'teacher', 'admin');
 
 module.exports = { sign, optionalAuth, requireAuth, requireAdmin, requireUploader };

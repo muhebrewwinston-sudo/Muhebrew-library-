@@ -17,19 +17,135 @@
 </script>
 </head>
 <body class="auth-protected has-bottom-tabs">
+
+<!-- Left Navigation Drawer Backdrop -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+<!-- Left Navigation Drawer -->
+<aside class="side-drawer" id="sideDrawer" aria-label="Navigation drawer" aria-hidden="true">
+  <div class="drawer-content">
+    <button class="drawer-close" id="drawerCloseBtn" aria-label="Close menu">&times;</button>
+    
+    <!-- Profile & Role Section -->
+    <div class="drawer-profile">
+      <div class="profile-avatar" id="drawerAvatar">M</div>
+      <div class="profile-info">
+        <h3 class="profile-name" id="drawerName">Student</h3>
+        <p class="profile-email" id="drawerEmail">student@library.mw</p>
+        <div class="profile-badge-row">
+          <!-- Admin Badge: Bright green with prominent soft glow (ADMIN ONLY) -->
+          <span class="role-badge badge-admin" id="drawerAdminBadge" hidden>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" aria-hidden="true"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-2.001A11.954 11.954 0 0110 1.944zM11 14a1 1 0 11-2 0 1 1 0 012 0zm0-7a1 1 0 10-2 0v3a1 1 0 102 0V7z" clip-rule="evenodd" /></svg>
+            Admin
+          </span>
+          <span class="role-badge badge-student" id="drawerStudentBadge">Student</span>
+          <span class="role-badge badge-teacher" id="drawerTeacherBadge" hidden>Teacher</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Student Download Quota Widget -->
+    <div class="drawer-quota-card" id="drawerQuotaCard">
+      <div class="quota-head">
+        <span class="quota-title">Download Quota</span>
+        <span class="quota-pill" id="quotaPill">5 left</span>
+      </div>
+      <div class="quota-bar-track">
+        <div class="quota-bar-fill" id="quotaFill" style="width: 100%;"></div>
+      </div>
+      <p class="quota-sub" id="quotaSub">5 of 5 free downloads remaining</p>
+      <button class="btn sm primary quota-unlock-btn" id="drawerUnlockBtn" type="button">
+        <span>⚡</span> Upload to unlock +5
+      </button>
+    </div>
+
+    <!-- Navigation Menu Items -->
+    <nav class="drawer-nav">
+      <!-- Admin Dashboard Menu Item: highlighted light green background & bold text (ADMIN ONLY) -->
+      <a class="drawer-item admin-highlight" href="/admin.html" id="drawerAdminLink" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="9"></rect>
+          <rect x="14" y="3" width="7" height="5"></rect>
+          <rect x="14" y="12" width="7" height="9"></rect>
+          <rect x="3" y="16" width="7" height="5"></rect>
+        </svg>
+        <span class="drawer-label">Admin dashboard</span>
+      </a>
+
+      <!-- Upload Resources Menu Item: with small green "New" badge -->
+      <a class="drawer-item" href="#" id="drawerUploadLink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span class="drawer-label">Upload resources</span>
+        <span class="badge-new">NEW</span>
+      </a>
+
+      <!-- Browse Past Papers -->
+      <button class="drawer-item" type="button" data-drawer-tab="papers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span class="drawer-label">Past papers</span>
+      </button>
+
+      <!-- Browse Textbooks -->
+      <button class="drawer-item" type="button" data-drawer-tab="books">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span class="drawer-label">Textbooks</span>
+      </button>
+
+      <!-- Saved Items -->
+      <button class="drawer-item" type="button" data-drawer-tab="saved">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span class="drawer-label">Saved resources</span>
+      </button>
+
+      <div class="drawer-divider"></div>
+
+      <!-- My Profile -->
+      <button class="drawer-item" type="button" id="drawerProfileBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="drawer-label">My profile</span>
+      </button>
+
+      <!-- Theme Switcher -->
+      <button class="drawer-item" type="button" id="drawerThemeBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <span class="drawer-label" id="drawerThemeText">Dark mode</span>
+      </button>
+
+      <div class="drawer-divider"></div>
+
+      <!-- Sign Out Menu Item: subtle red tint for clear visibility -->
+      <button class="drawer-item signout" type="button" id="drawerSignOutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span class="drawer-label">Sign out</span>
+      </button>
+    </nav>
+  </div>
+</aside>
+
+<!-- Top Site Header -->
 <header class="site">
   <div class="wrap">
+    <button class="drawer-toggle" id="drawerOpenBtn" aria-label="Open menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
     <a class="logo" href="/">
       <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg>
       <span>Muhebrew <b>Library</b></span>
     </a>
     <span class="spacer"></span>
     <button class="btn sm" id="themeBtn">Theme</button>
+    <!-- Admin & Teacher desktop shortcuts (hidden for students) -->
     <a class="btn sm" href="/teacher.html" id="uploadLink" hidden>Upload</a>
     <a class="btn sm primary" href="/admin.html" id="adminLink" hidden>Admin</a>
-    <a class="btn sm" href="/auth.html" id="authLink">Sign in</a>
+    <button class="btn sm" id="userBtn" title="Account & Profile">Account</button>
   </div>
 </header>
+
+<!-- Main Library View -->
 <main class="wrap">
   <section class="hero">
     <h1>Download Malawi secondary school resources.</h1>
@@ -40,6 +156,15 @@
       <div><b id="statDl">-</b><span>Downloads</span></div>
     </div>
   </section>
+
+  <!-- Student Quota Status Banner (when logged in as student) -->
+  <div id="quotaBanner" style="display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;align-items:center;justify-content:space-between;box-shadow:var(--shadow)">
+    <div style="font-size:12.5px;color:var(--text)">
+      <b style="color:var(--primary)">⚡ Downloads Quota:</b> <span id="bannerQuotaText">5 remaining</span>
+    </div>
+    <button class="btn sm primary" id="bannerUploadBtn" style="font-size:11.5px;padding:4px 10px;min-height:30px">Upload to unlock +5</button>
+  </div>
+
   <div class="searchbar">
     <input id="q" placeholder="Search by title, subject or exam board..." autocomplete="off">
     <select id="level"><option value="">All levels</option></select>
@@ -51,6 +176,8 @@
   <div class="grid" id="grid"></div>
   <div class="empty" id="empty" hidden>Nothing matched. Try clearing a filter.</div>
 </main>
+
+<!-- Bottom Native Navigation Tabs -->
 <nav class="bottom-tabs tabs" aria-label="Library navigation">
   <button class="tab active" data-type="papers" aria-label="Past papers">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -64,7 +191,168 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
     <span>Saved</span>
   </button>
+  <!-- Highlighted Profile Tab with stronger green color & indicator dot -->
+  <button class="tab profile-tab" id="bottomProfileTab" aria-label="Profile">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span>Profile</span>
+    <span class="tab-dot" aria-hidden="true"></span>
+  </button>
 </nav>
+
+<!-- Modal 1: Upload Resource to Unlock Downloads (Contribution-Gated) -->
+<div class="modal" id="uploadModal" hidden>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 id="uploadModalTitle">Upload Resource & Unlock Downloads</h3>
+      <button class="modal-close-btn" id="uploadModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="unlock-perk">
+        <span class="perk-ico">🎁</span>
+        <div>
+          <b>Earn +5 Downloads!</b>
+          <div style="font-size:12px;color:var(--muted)">Upload a new past paper or book not yet in the library. Duplicate resources will not be accepted.</div>
+        </div>
+      </div>
+      <form id="studentUploadForm" class="form-grid">
+        <div>
+          <label>Resource Type</label>
+          <select id="suType">
+            <option value="papers">Past paper</option>
+            <option value="books">Textbook</option>
+          </select>
+        </div>
+        <div>
+          <label>Subject</label>
+          <input id="suSubject" required placeholder="e.g. Mathematics, English, Biology">
+        </div>
+        <div>
+          <label>Title</label>
+          <input id="suTitle" required placeholder="e.g. MSCE Mathematics Paper 1">
+        </div>
+        <div>
+          <label>Class Level</label>
+          <select id="suLevel" required>
+            <option>Form 1</option>
+            <option>Form 2</option>
+            <option>Form 3</option>
+            <option>Form 4</option>
+          </select>
+        </div>
+        <div id="suYearWrap">
+          <label>Year</label>
+          <input id="suYear" type="number" min="1990" max="2100" placeholder="e.g. 2023">
+        </div>
+        <div id="suBoardWrap">
+          <label>Exam Board</label>
+          <input id="suBoard" placeholder="e.g. MANEB">
+        </div>
+        <div id="suAuthorWrap" hidden>
+          <label>Author</label>
+          <input id="suAuthor" placeholder="e.g. Ministry of Education">
+        </div>
+        <div>
+          <label>Description (optional)</label>
+          <textarea id="suDesc" rows="2" placeholder="Brief note about the file..."></textarea>
+        </div>
+        <div>
+          <label>Document File (PDF / DOC / Image)</label>
+          <input id="suFile" type="file" required accept=".pdf,.doc,.docx,.jpg,.png">
+        </div>
+        <div id="suCoverWrap" hidden>
+          <label>Book Cover Image (optional)</label>
+          <input id="suCover" type="file" accept="image/*">
+        </div>
+        <button class="btn primary" id="suSubmitBtn" type="submit" style="width:100%;margin-top:6px">
+          Submit & Unlock +5 Downloads
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: Quota Limit Reached Modal -->
+<div class="modal" id="limitModal" hidden>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Download Limit Reached</h3>
+      <button class="modal-close-btn" id="limitModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="limit-banner">
+        <h4>🔒 0 Downloads Remaining</h4>
+        <p>You have reached your download limit. To keep Muhebrew Library active and growing for all students, you must contribute a study resource to continue downloading.</p>
+      </div>
+      <div class="unlock-perk">
+        <span class="perk-ico">✨</span>
+        <div>
+          <b>How to unlock more downloads:</b>
+          <div style="font-size:12px;color:var(--muted)">Upload any past exam paper, mock test, or textbook that does not already exist in the library. Each new file grants you <b>5 additional downloads</b>!</div>
+        </div>
+      </div>
+      <button class="btn primary" id="limitUploadBtn" style="width:100%;padding:11px">
+        Upload a Resource to Unlock (+5)
+      </button>
+      <button class="btn" id="limitDismissBtn" style="width:100%">
+        Maybe Later
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 3: Profile & Account Details Modal -->
+<div class="modal" id="profileModal" hidden>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>My Profile</h3>
+      <button class="modal-close-btn" id="profileModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px">
+        <div class="profile-avatar" id="pmAvatar" style="width:48px;height:48px;font-size:20px">M</div>
+        <div style="flex:1;min-width:0">
+          <b id="pmName" style="font-size:15px;display:block">Student</b>
+          <span id="pmEmail" style="font-size:12px;color:var(--muted);display:block">email@library.mw</span>
+          <span id="pmBadge" class="role-badge badge-student" style="margin-top:4px">Student</span>
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px">
+        <h4 style="margin:0 0 8px;font-size:13.5px">Account Stats</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center">
+          <div style="background:var(--surface-2);border-radius:8px;padding:8px">
+            <b id="pmDownloadsUsed" style="font-size:18px;color:var(--primary)">0</b>
+            <span style="display:block;font-size:11px;color:var(--muted)">Files Downloaded</span>
+          </div>
+          <div style="background:var(--surface-2);border-radius:8px;padding:8px">
+            <b id="pmDownloadsLeft" style="font-size:18px;color:var(--primary)">5</b>
+            <span style="display:block;font-size:11px;color:var(--muted)">Downloads Left</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:0;padding:12px">
+        <h4 style="margin:0 0 8px;font-size:13.5px">Change Password</h4>
+        <form id="pmPwForm" class="form-grid">
+          <div>
+            <label for="pmCurrentPw" style="font-size:12px">Current password</label>
+            <input id="pmCurrentPw" type="password" required autocomplete="current-password" autocapitalize="none">
+          </div>
+          <div>
+            <label for="pmNewPw" style="font-size:12px">New password (6+ chars)</label>
+            <input id="pmNewPw" type="password" required minlength="6" autocomplete="new-password" autocapitalize="none">
+          </div>
+          <button class="btn sm primary" type="submit" style="width:100%">Update Password</button>
+        </form>
+      </div>
+
+      <button class="btn danger" id="pmSignOutBtn" style="width:100%;margin-top:4px">
+        Sign out
+      </button>
+    </div>
+  </div>
+</div>
+
 <footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
 <script src="/js/api.js"></script>
 <script src="/js/app.js"></script>

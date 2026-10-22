@@ -5,9 +5,48 @@ const rateLimit = require('express-rate-limit');
 const db = require('../db/database');
 const { optionalAuth, requireAuth, requireAdmin, requireUploader } = require('../middleware/auth');
 const { upload } = require('../middleware/upload');
+const { calculateQuota } = require('../db/quota');
 
 const SORTS = { recent: 'created_at DESC', popular: 'downloads DESC', title: 'title ASC', year: 'year DESC' };
 const reportLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Too many reports. Try again later.' } });
+
+function findDuplicate(table, type, body, file) {
+  const isBook = type === 'book';
+  const title = String(body.title || '').trim().toLowerCase();
+  const subject = String(body.subject || '').trim().toLowerCase();
+  const level = String(body.level || '').trim().toLowerCase();
+
+  // 1. Exact title check
+  let match = db.prepare('SELECT id, title FROM ' + table + ' WHERE LOWER(title) = ?').get(title);
+  if (match) return match;
+
+  if (!isBook) {
+    const year = body.year ? Number(body.year) : null;
+    const board = body.exam_board ? String(body.exam_board).trim().toLowerCase() : null;
+    if (subject && level && year) {
+      if (board) {
+        match = db.prepare('SELECT id, title FROM papers WHERE LOWER(subject) = ? AND LOWER(level) = ? AND year = ? AND LOWER(exam_board) = ?').get(subject, level, year, board);
+      } else {
+        match = db.prepare('SELECT id, title FROM papers WHERE LOWER(subject) = ? AND LOWER(level) = ? AND year = ?').get(subject, level, year);
+      }
+      if (match) return match;
+    }
+  } else {
+    const author = body.author ? String(body.author).trim().toLowerCase() : null;
+    if (subject && level && author) {
+      match = db.prepare('SELECT id, title FROM books WHERE LOWER(subject) = ? AND LOWER(level) = ? AND LOWER(author) = ?').get(subject, level, author);
+      if (match) return match;
+    }
+  }
+
+  // 2. Same original filename check
+  if (file && file.originalname) {
+    match = db.prepare('SELECT id, title FROM ' + table + ' WHERE LOWER(file_name) = ?').get(file.originalname.toLowerCase());
+    if (match) return match;
+  }
+
+  return null;
+}
 
 function buildRouter(table, type) {
   const router = express.Router();
@@ -18,7 +57,7 @@ function buildRouter(table, type) {
   const getRow = (id) => db.prepare('SELECT * FROM ' + table + ' WHERE id = ?').get(id);
   const absPath = (row) => path.join(__dirname, '..', row.file_path);
 
-  // Pending items are only visible to admins and to the teacher who uploaded them
+  // Pending items are only visible to admins and to the uploader who submitted them
   router.param('id', (req, res, next, id) => {
     optionalAuth(req, res, () => {
       const row = db.prepare('SELECT status, uploaded_by FROM ' + table + ' WHERE id = ?').get(id);
@@ -84,9 +123,36 @@ function buildRouter(table, type) {
     if (!row) return res.status(404).json({ error: 'Resource not found.' });
     const abs = absPath(row);
     if (!fs.existsSync(abs)) return res.status(410).json({ error: 'File missing on server.' });
+
+    // Download gating: require authentication
+    if (!req.user) {
+      return res.status(401).json({ error: 'Please sign in to download resources.' });
+    }
+
+    // Students have download limits unless unlocked via uploads
+    if (req.user.role === 'student') {
+      const alreadyDownloaded = db.prepare(
+        'SELECT 1 FROM downloads WHERE user_id = ? AND item_type = ? AND item_id = ?'
+      ).get(req.user.id, type, row.id);
+
+      if (!alreadyDownloaded) {
+        const quota = calculateQuota(req.user.id, 'student');
+        if (quota.remaining <= 0) {
+          return res.status(403).json({
+            error: 'Download limit reached (' + quota.usedDownloads + '/' + quota.totalAllowed + '). Please upload a new past paper or book to unlock more downloads!',
+            limitReached: true,
+            remaining: 0,
+            usedDownloads: quota.usedDownloads,
+            totalAllowed: quota.totalAllowed,
+            requiredAction: 'upload'
+          });
+        }
+      }
+    }
+
     db.prepare('UPDATE ' + table + ' SET downloads = downloads + 1 WHERE id = ?').run(row.id);
     db.prepare('INSERT INTO downloads (user_id,item_type,item_id) VALUES (?,?,?)')
-      .run(req.user ? req.user.id : null, type, row.id);
+      .run(req.user.id, type, row.id);
     res.download(abs, row.file_name || path.basename(abs));
   });
 
@@ -124,6 +190,16 @@ function buildRouter(table, type) {
       if (!file) { discard(); return res.status(400).json({ error: 'A file is required.' }); }
       if (!body.title || !body.subject || !body.level) { discard(); return res.status(400).json({ error: 'Title, subject and level are required.' }); }
 
+      // Check for duplicate uploads in the library ("which was not existing")
+      const dup = findDuplicate(table, type, body, file);
+      if (dup) {
+        discard();
+        return res.status(400).json({
+          error: 'This resource ("' + dup.title + '") already exists in the library. Please upload a resource that is not yet in the library to unlock downloads.',
+          isDuplicate: true
+        });
+      }
+
       const rel = (f) => path.relative(path.join(__dirname, '..'), f.path).split(path.sep).join('/');
       const cols = [...fields, 'file_path', 'file_name', 'file_size', 'mime_type', 'uploaded_by', 'status'];
       const vals = fields.map((f) => (f === 'year' ? (body[f] ? Number(body[f]) : null) : (body[f] || null)));
@@ -133,7 +209,17 @@ function buildRouter(table, type) {
       const info = db.prepare(
         'INSERT INTO ' + table + ' (' + cols.join(',') + ') VALUES (' + cols.map(() => '?').join(',') + ')'
       ).run(...vals);
-      res.status(201).json({ item: getRow(info.lastInsertRowid) });
+
+      const quota = calculateQuota(req.user.id, req.user.role);
+
+      res.status(201).json({
+        item: getRow(info.lastInsertRowid),
+        message: req.user.role === 'student'
+          ? 'Resource submitted successfully! You unlocked 5 more downloads.'
+          : 'Resource uploaded successfully.',
+        unlockedDownloads: req.user.role === 'student' ? 5 : 0,
+        quota
+      });
     }
   );
 
