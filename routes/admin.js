@@ -178,4 +178,13 @@ router.post('/reports/:id/resolve', (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/download-zip', (_req, res) => {
+  const zipPath = path.join(__dirname, '..', 'muhebrew-backend-updated.zip');
+  if (fs.existsSync(zipPath)) {
+    res.download(zipPath, 'muhebrew-backend-updated.zip');
+  } else {
+    res.status(404).json({ error: 'Zip file not found. Please generate it first.' });
+  }
+});
+
 module.exports = router;
