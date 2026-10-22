@@ -3,19 +3,40 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 
 (async () => {
   const u = await API.me();
-  if (!u) return (location.href = '/auth.html');
+  if (!u) return location.replace('/auth.html');
   if (!['teacher', 'admin'].includes(u.role)) {
-    document.querySelector('main').innerHTML = '<p style="padding:40px 0">Only teacher accounts can upload. Ask an admin to change your role.</p>';
-    return;
+    return location.replace('/');
   }
+  document.body.classList.remove('auth-protected');
+  document.body.classList.add('auth-ready');
+
+  const signOut = $('signOutBtn');
+  if (signOut) {
+    signOut.onclick = () => {
+      if (confirm('Sign out?')) {
+        API.setToken(null);
+        location.replace('/auth.html');
+      }
+    };
+  }
+
+  const themeBtn = $('themeBtn');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+      localStorage.setItem('ph_theme', dark ? 'light' : 'dark');
+    });
+  }
+
   loadMine();
 })();
 
 async function loadMine() {
   const { items } = await API.get('/search/my-uploads');
   $('mine').innerHTML = items.length
-    ? '<table><thead><tr><th>Title</th><th>Type</th><th>Status</th></tr></thead><tbody>' +
-      items.map((i) => '<tr><td>' + esc(i.title) + '</td><td>' + i.t + '</td><td><span class="tag ' + (i.status === 'approved' ? 'ok' : 'wait') + '">' + esc(i.status) + '</span></td></tr>').join('') + '</tbody></table>'
+    ? '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table><thead><tr><th>Title</th><th>Type</th><th>Status</th></tr></thead><tbody>' +
+      items.map((i) => '<tr><td>' + esc(i.title) + '</td><td>' + i.t + '</td><td><span class="tag ' + (i.status === 'approved' ? 'ok' : 'wait') + '">' + esc(i.status) + '</span></td></tr>').join('') + '</tbody></table></div>'
     : '<p style="color:var(--muted)">Nothing uploaded yet.</p>';
 }
 

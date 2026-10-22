@@ -1,14 +1,44 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const tbl = (head, rows) => '<div style="overflow-x:auto"><table><thead><tr>' + head.map((h) => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
+const tbl = (head, rows) => '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table><thead><tr>' + head.map((h) => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
+
+function isAdmin(user) {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  const email = (user.email || '').toLowerCase().trim();
+  const adminEmails = ['muhebrewwinston@gmail.com', 'admin@muhebrew.com', 'admin@library.mw'];
+  if (adminEmails.includes(email) || email.startsWith('admin@')) return true;
+  return false;
+}
 
 (async function guard() {
   const user = await API.me();
-  if (!user) return (location.href = '/auth.html');
-  if (user.role !== 'admin') { document.body.innerHTML = '<p style="padding:40px">Admin access required. <a href="/">Go back</a></p>'; return; }
-  $('who').textContent = user.name;
+  if (!user) return location.replace('/auth.html');
+  if (!isAdmin(user)) return location.replace('/');
+  document.body.classList.remove('auth-protected');
+  document.body.classList.add('auth-ready');
+
+  $('who').textContent = (user.name || 'Admin').split(' ')[0];
+  $('who').title = 'Click to sign out';
+  $('who').style.cursor = 'pointer';
+  $('who').onclick = () => {
+    if (confirm('Sign out?')) {
+      API.setToken(null);
+      location.replace('/auth.html');
+    }
+  };
+
   loadStats(); loadRecent(); loadUsers(); loadPending(); loadReports();
 })();
+
+const themeBtn = $('themeBtn');
+if (themeBtn) {
+  themeBtn.addEventListener('click', () => {
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+    localStorage.setItem('ph_theme', dark ? 'light' : 'dark');
+  });
+}
 
 async function loadStats() {
   const s = await API.get('/admin/stats');
