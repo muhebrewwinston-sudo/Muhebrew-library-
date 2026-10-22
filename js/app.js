@@ -13,11 +13,6 @@ function formatSize(bytes) {
   return (kb / 1024).toFixed(1) + ' MB';
 }
 
-const ICONS = [['math', '➗'], ['english', '📖'], ['chichewa', '🗣️'], ['physic', '⚛️'], ['chem', '🧪'], ['bio', '🧬'], ['agri', '🌱'],
-  ['geo', '🌍'], ['history', '🏛️'], ['bible', '✝️'], ['social', '🤝'], ['computer', '💻'], ['business', '💼'], ['account', '🧾'],
-  ['home', '🍳'], ['french', '🇫🇷'], ['life', '🧭'], ['science', '🔬']];
-const icon = (sub) => { const k = String(sub || '').toLowerCase(); const m = ICONS.find((i) => k.includes(i[0])); return m ? m[1] : '📚'; };
-
 const params = () => {
   const p = new URLSearchParams({
     q: $('q') ? $('q').value.trim() : '',
@@ -321,8 +316,8 @@ function card(item) {
       '<div style="flex:1;min-width:0">' +
         '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap">' +
           '<span class="tag pdf">PDF</span>' +
-          '<span class="tag size">💾 ' + esc(sizeStr) + '</span>' +
-          (item.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-weight:600">☁️ Drime Cloud</span>' : '') +
+          '<span class="tag size"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> ' + esc(sizeStr) + '</span>' +
+          (item.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-weight:600;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime Cloud</span>' : '') +
           (item.category ? '<span class="tag ok" style="font-weight:700">' + esc(item.category) + '</span>' : '') +
         '</div>' +
         '<h3>' + esc(item.title) + '</h3>' +
@@ -336,12 +331,12 @@ function card(item) {
       (!isPaper && item.author ? '<span class="tag">' + esc(item.author) + '</span>' : '') +
     '</div>' +
     '<div class="card-foot">' +
-      '<span class="dlcount">🔥 ' + item.downloads.toLocaleString() + ' dl</span>' +
+      '<span class="dlcount" style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ' + item.downloads.toLocaleString() + ' dl</span>' +
       '<span class="acts">' +
         '<button class="btn sm" data-save="' + key + '">' + (savedSet.has(key) ? 'Saved' : 'Save') + '</button>' +
         '<button class="btn sm" data-pv="' + ref + '">Preview</button>' +
-        '<button class="btn sm" data-rp="' + ref + '" title="Report broken file">⚠</button>' +
-        '<button class="btn sm primary" data-dl="' + ref + '">⬇ Download</button>' +
+        '<button class="btn sm" data-rp="' + ref + '" title="Report broken file" aria-label="Report broken file"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></button>' +
+        '<button class="btn sm primary" data-dl="' + ref + '" style="display:inline-flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>' +
       '</span>' +
     '</div>' +
   '</article>';

@@ -60,28 +60,28 @@ async function loadStats() {
     $('s7').textContent = s.last7.toLocaleString() + ' downloads';
 
     if (s.drime && $('drimeCloudCount')) {
-      $('drimeCloudCount').innerHTML = `☁️ <b>${s.drime.totalCloudFiles} files</b> backed up on Drime Cloud (Folder ID: <code>${esc(s.drime.folderId)}</code>)`;
+      $('drimeCloudCount').innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> <b>${s.drime.totalCloudFiles} files</b> backed up on Drime Cloud (Folder ID: <code>${esc(s.drime.folderId)}</code>)`;
     }
 
     // Render Most Favorite Textbooks (Mostly Downloaded)
     const fbList = $('favoriteBooksList');
     if (fbList && s.favoriteBooks) {
       if (!s.favoriteBooks.length) {
-        fbList.innerHTML = '<p style="color:var(--muted);font-size:13px">No textbooks downloaded yet.</p>';
+        fbList.innerHTML = '<p style="color:var(--muted);font-size:13px">No textbooks uploaded yet.</p>';
       } else {
         fbList.innerHTML = s.favoriteBooks.map((b, idx) => `
           <div style="display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
             <span style="font-weight:800;color:var(--primary);font-size:14px;width:20px;text-align:center">#${idx + 1}</span>
             <div style="width:36px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;display:grid;place-items:center">
-              ${b.cover_path ? `<img src="/${esc(b.cover_path)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '📖'}
+              ${b.cover_path ? `<img src="/${esc(b.cover_path)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>'}
             </div>
             <div style="flex:1;min-width:0">
               <b style="font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.title)}</b>
               <span style="font-size:11.5px;color:var(--muted)">${esc(b.subject)} · ${esc(b.level)}</span>
             </div>
             <div style="display:flex;gap:4px;align-items:center">
-              ${b.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px">☁️ Drime</span>' : ''}
-              <span class="tag ok" style="font-size:11.5px;font-weight:700">🔥 ${b.downloads.toLocaleString()} dl</span>
+              ${b.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime</span>' : ''}
+              <span class="tag ok" style="font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${b.downloads.toLocaleString()} dl</span>
             </div>
           </div>
         `).join('');
@@ -92,19 +92,21 @@ async function loadStats() {
     const fpList = $('favoritePapersList');
     if (fpList && s.favoritePapers) {
       if (!s.favoritePapers.length) {
-        fpList.innerHTML = '<p style="color:var(--muted);font-size:13px">No papers downloaded yet.</p>';
+        fpList.innerHTML = '<p style="color:var(--muted);font-size:13px">No papers uploaded yet.</p>';
       } else {
         fpList.innerHTML = s.favoritePapers.map((p, idx) => `
           <div style="display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
             <span style="font-weight:800;color:var(--primary);font-size:14px;width:20px;text-align:center">#${idx + 1}</span>
-            <span style="font-size:22px;flex-shrink:0">📜</span>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:44px;flex-shrink:0;color:var(--primary)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+            </span>
             <div style="flex:1;min-width:0">
               <b style="font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title)}</b>
               <span style="font-size:11.5px;color:var(--muted)">${esc(p.subject)} · ${esc(p.level)} · ${esc(p.category || p.exam_board || '')}</span>
             </div>
             <div style="display:flex;gap:4px;align-items:center">
-              ${p.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px">☁️ Drime</span>' : ''}
-              <span class="tag ok" style="font-size:11.5px;font-weight:700">🔥 ${p.downloads.toLocaleString()} dl</span>
+              ${p.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime</span>' : ''}
+              <span class="tag ok" style="font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${p.downloads.toLocaleString()} dl</span>
             </div>
           </div>
         `).join('');
@@ -180,7 +182,9 @@ function renderProgression() {
     container.innerHTML = list.length ? list.map((d) => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
         <div style="flex:1;min-width:0">
-          <span style="font-weight:700;color:var(--primary)">⚡ Downloaded:</span>
+          <span style="font-weight:700;color:var(--primary);display:inline-flex;align-items:center;gap:3px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Downloaded:
+          </span>
           <b>${esc(d.item_title)}</b>
           <div style="font-size:11px;color:var(--muted)">By ${esc(d.user_name || d.user_email || 'Student')}</div>
         </div>
@@ -204,7 +208,7 @@ function renderProgression() {
       <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
         <div>
           <b>${esc(up.title)}</b> <span class="tag ok" style="font-size:10px">${esc(up.t)}</span>
-          ${up.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px">☁️ Drime Cloud</span>' : ''}
+          ${up.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime Cloud</span>' : ''}
           <div style="font-size:11px;color:var(--muted)">${esc(up.subject)} · ${esc(up.level)}</div>
         </div>
         <span style="font-size:11px;color:var(--muted)">${new Date(up.created_at + 'Z').toLocaleDateString()}</span>
