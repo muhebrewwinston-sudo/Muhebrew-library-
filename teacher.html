@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Upload - Muhebrew Library</title>
+<meta name="theme-color" content="#1b7f4b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%231b7f4b' stroke-width='4' stroke-linejoin='round'%3E%3Cpath d='M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z'/%3E%3Cpath d='M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('ph_theme')||'light')</script>
+</head>
+<body class="">
+<header class="site"><div class="wrap"><a class="logo" href="/"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg><span>Muhebrew <b>Library</b></span></a><span class="spacer"></span><a class="btn sm" href="/">Browse</a></div></header>
+<main class="wrap" style="padding-bottom:30px">
+  <h1 style="margin:30px 0 4px">Upload a resource</h1>
+  <p style="color:var(--muted);margin:0">Teacher uploads are reviewed by an admin before they appear on the site.</p>
+  <div class="panel" style="margin-top:20px">
+    <form id="f" class="form-grid">
+      <div><label>Type</label><select id="type"><option value="papers">Past paper</option><option value="books">Book</option></select></div>
+      <div><label>Subject</label><input id="subject" required placeholder="Mathematics"></div>
+      <div class="span2"><label>Title</label><input id="title" required placeholder="Mathematics Paper 1"></div>
+      <div><label>Level</label><select id="level"><option>Form 1</option><option>Form 2</option><option>Form 3</option><option>Form 4</option></select></div>
+      <div id="yw"><label>Year</label><input id="year" type="number" min="1990" max="2100"></div>
+      <div id="bw"><label>Exam board</label><input id="board" placeholder="MANEB"></div>
+      <div id="aw" hidden><label>Author</label><input id="author"></div>
+      <div id="pw" hidden><label>Publisher</label><input id="publisher"></div>
+      <div class="span2"><label>Description</label><textarea id="desc" rows="2"></textarea></div>
+      <div class="span2"><label>File (PDF works best)</label><input id="file" type="file" required></div>
+      <div class="span2"><label>Cover image (books, optional)</label><input id="cover" type="file" accept="image/*"></div>
+      <div class="span2"><button class="btn primary" id="go" type="submit">Submit for review</button></div>
+    </form>
+  </div>
+  <div class="panel"><h3>My uploads</h3><div id="mine"></div></div>
+  <div class="panel"><h3>Change my password</h3>
+    <form id="pwForm" class="form-grid">
+      <div><label for="pwCurrent">Current password</label><input id="pwCurrent" type="password" required autocomplete="current-password" autocapitalize="none"></div>
+      <div><label for="pwNew">New password (6+ characters)</label><input id="pwNew" type="password" required minlength="6" autocomplete="new-password" autocapitalize="none"></div>
+      <div class="span2"><button class="btn primary" type="submit">Change password</button></div>
+    </form>
+  </div>
+</main>
+<footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
+<script src="/js/api.js"></script>
+<script src="/js/teacher.js"></script>
+<script src="/js/account.js"></script>
+</body>
+</html>

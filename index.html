@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Muhebrew Library - Malawi secondary school resources</title>
+<meta name="theme-color" content="#1b7f4b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%231b7f4b' stroke-width='4' stroke-linejoin='round'%3E%3Cpath d='M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z'/%3E%3Cpath d='M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('ph_theme')||'light')</script>
+</head>
+<body class="">
+<header class="site"><div class="wrap"><a class="logo" href="/"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg><span>Muhebrew <b>Library</b></span></a><span class="spacer"></span><button class="btn sm" id="themeBtn">Theme</button><a class="btn sm" href="/teacher.html" id="uploadLink" hidden>Upload</a><a class="btn sm" href="/auth.html" id="authLink">Sign in</a><a class="btn sm primary" href="/admin.html" id="adminLink" hidden>Admin</a></div></header>
+<main class="wrap">
+  <section class="hero">
+    <h1>Download Malawi secondary school resources.</h1>
+    <p>Free past papers and textbooks for Form 1 to Form 4. Search, preview and download in one tap.</p>
+    <div class="hero-stats">
+      <div><b id="statPapers">-</b><span>Past papers</span></div>
+      <div><b id="statBooks">-</b><span>Textbooks</span></div>
+      <div><b id="statDl">-</b><span>Downloads</span></div>
+    </div>
+  </section>
+  <div class="searchbar">
+    <input id="q" placeholder="Search by title, subject or exam board..." autocomplete="off">
+    <select id="level"><option value="">All levels</option></select>
+    <select id="subject"><option value="">All subjects</option></select>
+    <select id="year"><option value="">All years</option></select>
+    <select id="sort"><option value="recent">Newest</option><option value="popular">Most downloaded</option><option value="title">A-Z</option></select>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-type="papers">Past papers</button>
+    <button class="tab" data-type="books">Books</button>
+    <button class="tab" data-type="saved">Saved</button>
+  </div>
+  <div id="count" style="color:var(--muted);font-size:13px;margin-bottom:12px"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>Nothing matched. Try clearing a filter.</div>
+</main>
+<footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/preview.js"></script>
+<script src="/js/extras.js"></script>
+</body>
+</html>
