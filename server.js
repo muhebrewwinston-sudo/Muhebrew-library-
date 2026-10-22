@@ -57,7 +57,11 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(compression());
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));

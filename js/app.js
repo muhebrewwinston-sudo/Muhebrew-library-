@@ -72,7 +72,7 @@ grid.addEventListener('click', async (e) => {
     }
     if (dlBtn) {
       const [coll, id] = dlBtn.dataset.dl.split(':');
-      window.location.href = '/api/' + coll + '/' + id + '/download';
+      window.location.href = API.base + '/' + coll + '/' + id + '/download';
       toast('Download starting...');
     }
   } catch (err) { toast(err.message, true); }
