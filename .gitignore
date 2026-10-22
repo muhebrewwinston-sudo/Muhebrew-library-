@@ -1,0 +1,15 @@
+node_modules/
+.env
+*.env.bak
+db/*.db
+db/*.db-wal
+db/*.db-shm
+db/*.db-journal
+uploads/papers/*
+!uploads/papers/.gitkeep
+uploads/books/*
+!uploads/books/.gitkeep
+uploads/covers/*
+!uploads/covers/.gitkeep
+.DS_Store
+*.log

@@ -1,5 +1,9 @@
 const API = {
-  base: '/api',
+  get base() {
+    const meta = document.querySelector('meta[name="api-base"]');
+    const custom = (window.API_BASE_URL || (meta && meta.content) || localStorage.getItem('ph_api_base') || '').replace(/\/$/, '');
+    return custom ? custom + '/api' : '/api';
+  },
   token: () => localStorage.getItem('ph_token'),
   setToken(t) { t ? localStorage.setItem('ph_token', t) : localStorage.removeItem('ph_token'); },
 

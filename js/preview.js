@@ -14,7 +14,7 @@
     const b = e.target.closest('[data-pv]');
     if (!b) return;
     const [coll, id] = b.dataset.pv.split(':');
-    const url = '/api/' + coll + '/' + id + '/preview';
+    const url = API.base + '/' + coll + '/' + id + '/preview';
     document.getElementById('pvTitle').textContent = b.closest('.card').querySelector('h3').textContent;
     document.getElementById('pvOpen').href = url;
     document.getElementById('pvFrame').src = url;

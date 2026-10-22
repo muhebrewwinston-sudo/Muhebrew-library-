@@ -1,0 +1,30 @@
+{
+  "name": "muhebrew-library",
+  "version": "2.0.0",
+  "description": "Malawi secondary school past papers and books library",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "setup": "node db/setup.js",
+    "start": "node server.js",
+    "seed": "node db/seed.js",
+    "seed:samples": "node db/seed.js --samples",
+    "admin": "node db/tools.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}
