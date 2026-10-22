@@ -12,7 +12,16 @@
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('ph_theme')||'light')</script>
 </head>
 <body class="auth">
-<header class="site"><div class="wrap"><a class="logo" href="/"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg><span>Muhebrew <b>Library</b></span></a><span class="spacer"></span></div></header>
+<header class="site">
+  <div class="wrap">
+    <a class="logo" href="/auth.html">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg>
+      <span>Muhebrew <b>Library</b></span>
+    </a>
+    <span class="spacer"></span>
+    <button class="btn sm" id="themeBtn">Theme</button>
+  </div>
+</header>
 <main class="wrap">
   <div class="auth-card">
     <h2 id="title">Welcome <span>back</span></h2>
@@ -25,13 +34,13 @@
       <div class="field" id="extraFields" hidden><label for="school">School</label><div class="inp plain"><input id="school" placeholder="Your school (optional)"></div></div>
       <div class="field" id="roleField" hidden><label for="role">I am a</label><div class="inp plain"><select id="role"><option value="student">Student</option><option value="teacher">Teacher (uploads are reviewed)</option></select></div></div>
       <div class="field" id="levelField" hidden><label for="level">Class level</label><div class="inp plain"><select id="level"><option value="">Select...</option><option>Form 1</option><option>Form 2</option><option>Form 3</option><option>Form 4</option></select></div></div>
-      <button class="btn primary" id="submit">Sign in</button>
+      <button class="btn primary" id="submit" type="submit">Sign in</button>
     </form>
     <p class="hint"><span id="hintText">No account?</span> <a href="#" id="toggle">Create one</a></p>
   </div>
 </main>
 <svg class="leaf" viewBox="0 0 200 220" aria-hidden="true"><path d="M100 210C100 140 90 90 40 40 110 50 150 100 100 210Z" fill="#4caf7d"/><path d="M110 210C115 150 140 100 190 70 190 140 160 180 110 210Z" fill="#2e9e63"/><path d="M100 210C95 160 60 130 10 125 20 175 55 200 100 210Z" fill="#6cc497"/></svg>
-
+<footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
 <script src="/js/api.js"></script>
 <script src="/js/auth.js"></script>
 </body>

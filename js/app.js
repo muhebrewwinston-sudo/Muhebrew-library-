@@ -63,7 +63,7 @@ grid.addEventListener('click', async (e) => {
   const dlBtn = e.target.closest('[data-dl]');
   try {
     if (saveBtn) {
-      if (!user) return (location.href = '/auth.html');
+      if (!user) return location.replace('/auth.html');
       const [kind, id] = saveBtn.dataset.save.split(':');
       const r = await API.post('/' + (kind === 'paper' ? 'papers' : 'books') + '/' + id + '/bookmark');
       r.saved ? savedSet.add(saveBtn.dataset.save) : savedSet.delete(saveBtn.dataset.save);
@@ -96,15 +96,31 @@ $('themeBtn').addEventListener('click', () => {
 
 (async function init() {
   user = await API.me();
-  if (user) {
-    const a = $('authLink');
-    a.textContent = user.name.split(' ')[0];
-    a.href = '#';
-    a.onclick = (e) => { e.preventDefault(); if (confirm('Sign out?')) { API.setToken(null); location.reload(); } };
-    if (user.role === 'admin') $('adminLink').hidden = false;
-    if (user.role === 'admin' || user.role === 'teacher') $('uploadLink').hidden = false;
-    try { const m = await API.get('/search/mine'); m.items.forEach((i) => savedSet.add(i._type + ':' + i.id)); } catch (e) { /* ignore */ }
+  if (!user) {
+    location.replace('/auth.html');
+    return;
   }
+  document.body.classList.remove('auth-protected');
+  document.body.classList.add('auth-ready');
+
+  const a = $('authLink');
+  a.textContent = (user.name || 'Account').split(' ')[0];
+  a.href = '#';
+  a.title = 'Click to sign out';
+  a.onclick = (e) => {
+    e.preventDefault();
+    if (confirm('Sign out?')) {
+      API.setToken(null);
+      location.replace('/auth.html');
+    }
+  };
+  if (user.role === 'admin') $('adminLink').hidden = false;
+  if (user.role === 'admin' || user.role === 'teacher') $('uploadLink').hidden = false;
+  try {
+    const m = await API.get('/search/mine');
+    m.items.forEach((i) => savedSet.add(i._type + ':' + i.id));
+  } catch (e) { /* ignore */ }
+
   try {
     const s = await API.get('/search/stats');
     $('statPapers').textContent = s.papers;

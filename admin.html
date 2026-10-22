@@ -9,46 +9,62 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('ph_theme')||'light')</script>
+<script>
+  document.documentElement.setAttribute('data-theme', localStorage.getItem('ph_theme') || 'light');
+  if (!localStorage.getItem('ph_token')) {
+    location.replace('/auth.html');
+  }
+</script>
 </head>
-<body class="">
-<header class="site"><div class="wrap"><a class="logo" href="/"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg><span>Muhebrew <b>Library</b></span></a><span class="spacer"></span><a class="btn sm" href="/">Browse</a><span class="btn sm" id="who"></span></div></header>
+<body class="auth-protected">
+<header class="site">
+  <div class="wrap">
+    <a class="logo" href="/">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg>
+      <span>Muhebrew <b>Library</b></span>
+    </a>
+    <span class="spacer"></span>
+    <button class="btn sm" id="themeBtn">Theme</button>
+    <a class="btn sm" href="/">Browse</a>
+    <span class="btn sm" id="who"></span>
+  </div>
+</header>
 <main class="wrap" style="padding-bottom:30px">
-  <h1 style="margin:30px 0 4px">Admin dashboard</h1>
-  <p style="color:var(--muted);margin:0">Upload resources, review teacher uploads and manage users.</p>
+  <h1 style="margin:20px 0 4px;font-size:22px">Admin dashboard</h1>
+  <p style="color:var(--muted);margin:0 0 16px;font-size:13px">Upload resources, review teacher uploads and manage users.</p>
   <div class="stat-grid">
     <div class="stat"><b id="sUsers">-</b><span>Users</span></div>
     <div class="stat"><b id="sPapers">-</b><span>Past papers</span></div>
     <div class="stat"><b id="sBooks">-</b><span>Books</span></div>
     <div class="stat"><b id="sDl">-</b><span>Total downloads</span></div>
-    <div class="stat"><b id="s7">-</b><span>Downloads last 7 days</span></div>
+    <div class="stat" style="grid-column:1/-1"><b id="s7">-</b><span>Downloads last 7 days</span></div>
   </div>
   <div class="panel"><h3>Upload resource</h3>
     <form id="uploadForm" class="form-grid">
       <div><label>Type</label><select id="uType"><option value="papers">Past paper</option><option value="books">Book</option></select></div>
       <div><label>Subject</label><input id="uSubject" required placeholder="Mathematics"></div>
-      <div class="span2"><label>Title</label><input id="uTitle" required placeholder="Mathematics Paper 1"></div>
+      <div><label>Title</label><input id="uTitle" required placeholder="Mathematics Paper 1"></div>
       <div><label>Level</label><select id="uLevel" required><option>Form 1</option><option>Form 2</option><option>Form 3</option><option>Form 4</option></select></div>
       <div id="yearWrap"><label>Year</label><input id="uYear" type="number" min="1990" max="2100" placeholder="2024"></div>
       <div id="boardWrap"><label>Exam board</label><input id="uBoard" placeholder="MANEB"></div>
       <div id="authorWrap" hidden><label>Author</label><input id="uAuthor"></div>
       <div id="publisherWrap" hidden><label>Publisher</label><input id="uPublisher"></div>
-      <div class="span2"><label>Description</label><textarea id="uDesc" rows="2"></textarea></div>
-      <div class="span2"><label>File (PDF works best)</label><input id="uFile" type="file" required></div>
-      <div class="span2"><label>Cover image (books only, optional)</label><input id="uCover" type="file" accept="image/*"></div>
-      <div class="span2"><button class="btn primary" id="uSubmit" type="submit">Upload</button></div>
+      <div><label>Description</label><textarea id="uDesc" rows="2"></textarea></div>
+      <div><label>File (PDF works best)</label><input id="uFile" type="file" required></div>
+      <div><label>Cover image (books only, optional)</label><input id="uCover" type="file" accept="image/*"></div>
+      <div><button class="btn primary" id="uSubmit" type="submit" style="width:100%">Upload</button></div>
     </form>
   </div>
   <div class="panel"><h3>Pending teacher uploads</h3><div id="pending"></div></div>
   <div class="panel"><h3>Reported files</h3><div id="reports"></div></div>
   <div class="panel"><h3>Recent uploads</h3><div id="recent"></div></div>
-  <div class="panel"><h3>Users</h3><div style="overflow-x:auto"><table id="usersTable">
+  <div class="panel"><h3>Users</h3><div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table id="usersTable">
     <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>School</th><th>Joined</th></tr></thead><tbody></tbody></table></div></div>
   <div class="panel"><h3>Change my password</h3>
     <form id="pwForm" class="form-grid">
       <div><label for="pwCurrent">Current password</label><input id="pwCurrent" type="password" required autocomplete="current-password" autocapitalize="none"></div>
       <div><label for="pwNew">New password (6+ characters)</label><input id="pwNew" type="password" required minlength="6" autocomplete="new-password" autocapitalize="none"></div>
-      <div class="span2"><button class="btn primary" type="submit">Change password</button></div>
+      <div><button class="btn primary" type="submit" style="width:100%">Change password</button></div>
     </form>
   </div>
 </main>
