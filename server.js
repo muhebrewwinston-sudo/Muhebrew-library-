@@ -104,7 +104,7 @@ app.use('/uploads/covers', express.static(path.join(__dirname, 'uploads', 'cover
 // Direct download for complete backend package
 const { buildBackendZip } = require('./utils/zip');
 
-app.get('/muhebrew-backend-updated.zip', (_req, res) => {
+const handleZipDownload = (_req, res) => {
   const zipPath = path.join(__dirname, 'muhebrew-backend-updated.zip');
   if (!fs.existsSync(zipPath)) {
     buildBackendZip();
@@ -114,7 +114,11 @@ app.get('/muhebrew-backend-updated.zip', (_req, res) => {
   } else {
     res.status(500).send('Zip generation failed');
   }
-});
+};
+
+app.get('/muhebrew-backend-updated.zip', handleZipDownload);
+app.get('/backend.zip', handleZipDownload);
+app.get('/download-zip', handleZipDownload);
 
 // Determine static frontend directory (supports both public/ and root directory)
 const publicDir = fs.existsSync(path.join(__dirname, 'public'))
