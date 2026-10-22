@@ -178,12 +178,17 @@ router.post('/reports/:id/resolve', (req, res) => {
   res.json({ ok: true });
 });
 
+const { buildBackendZip } = require('../utils/zip');
+
 router.get('/download-zip', (_req, res) => {
   const zipPath = path.join(__dirname, '..', 'muhebrew-backend-updated.zip');
+  if (!fs.existsSync(zipPath)) {
+    buildBackendZip();
+  }
   if (fs.existsSync(zipPath)) {
     res.download(zipPath, 'muhebrew-backend-updated.zip');
   } else {
-    res.status(404).json({ error: 'Zip file not found. Please generate it first.' });
+    res.status(500).json({ error: 'Failed to generate backend zip archive.' });
   }
 });
 
