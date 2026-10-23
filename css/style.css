@@ -50,7 +50,7 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.55 'Inter', 'Poppins', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
@@ -383,7 +383,7 @@ input:focus, select:focus, textarea:focus {
   min-height: 38px;
 }
 
-/* Bottom Tabs - Fixed native app navigation */
+/* Bottom Tabs - Fixed native app navigation (Only 3 tabs: Past papers | Books | Saved) */
 .bottom-tabs {
   position: fixed;
   bottom: 0;
@@ -391,21 +391,20 @@ input:focus, select:focus, textarea:focus {
   transform: translateX(-50%);
   width: 100%;
   max-width: var(--phone-width);
-  height: 60px;
+  height: 62px;
   background: color-mix(in srgb, var(--surface) 96%, transparent);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-  display: flex;
-  justify-content: space-around;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   align-items: center;
   z-index: 40;
   padding: 0 8px calc(env(safe-area-inset-bottom, 0px) + 2px);
 }
 
 .bottom-tabs .tab {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -415,12 +414,13 @@ input:focus, select:focus, textarea:focus {
   border: none;
   border-bottom: none;
   color: var(--muted);
-  padding: 6px 4px;
+  padding: 8px 6px;
   font: inherit;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
   border-radius: 10px;
+  position: relative;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.15s, transform 0.1s;
@@ -431,11 +431,24 @@ input:focus, select:focus, textarea:focus {
 }
 
 .bottom-tabs .tab:active {
-  transform: scale(0.93);
+  transform: scale(0.94);
 }
 
 .bottom-tabs .tab.active {
   color: var(--primary);
+  font-weight: 700;
+}
+
+.bottom-tabs .tab.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  background: var(--primary);
+  border-radius: 999px;
 }
 
 .bottom-tabs .tab svg {
@@ -445,15 +458,15 @@ input:focus, select:focus, textarea:focus {
 }
 
 .bottom-tabs .tab.active svg {
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
 
 body.has-bottom-tabs main {
-  padding-bottom: 74px;
+  padding-bottom: 78px;
 }
 
 body.has-bottom-tabs footer.foot {
-  padding-bottom: 82px;
+  padding-bottom: 86px;
 }
 
 /* Fallback inline tabs if used */
@@ -486,12 +499,12 @@ body.has-bottom-tabs footer.foot {
   border-bottom-color: var(--primary);
 }
 
-/* Cards (single column mobile list) */
+/* Redesigned Resource Cards */
 .grid {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-bottom: 20px;
+  padding-bottom: 24px;
   position: relative;
   z-index: 1;
 }
@@ -499,100 +512,272 @@ body.has-bottom-tabs footer.foot {
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 13px;
+  border-radius: 14px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  box-shadow: var(--shadow);
-  transition: transform 0.15s, border-color 0.15s;
+  gap: 10px;
+  box-shadow: 0 2px 8px rgba(15, 70, 40, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   animation: rise 0.35s ease both;
+  position: relative;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(15, 70, 40, 0.09), 0 2px 6px rgba(0, 0, 0, 0.04);
+  border-color: rgba(27, 127, 75, 0.35);
 }
 
 .card:active {
   transform: scale(0.99);
 }
 
-.card h3 {
-  margin: 0;
-  font-size: 14.5px;
-  line-height: 1.35;
-  font-weight: 600;
-}
-
-.card-top {
+.card-header {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-start;
 }
 
-.ico {
-  flex: none;
-  width: 40px;
-  height: 40px;
+/* Red PDF icon badge on the left */
+.card-pdf-badge {
+  flex-shrink: 0;
+  width: 44px;
+  height: 48px;
   border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-size: 20px;
-  background: var(--surface-2);
-  overflow: hidden;
-  border: 1px solid var(--border);
+  background: rgba(220, 38, 38, 0.08);
+  border: 1.5px solid rgba(220, 38, 38, 0.22);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08);
 }
 
-.ico img {
+.card-pdf-badge .pdf-icon {
+  width: 22px;
+  height: 22px;
+  stroke: #dc2626;
+}
+
+.card-pdf-badge .pdf-tag {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #dc2626;
+  line-height: 1;
+}
+
+/* Textbook cover thumbnail with PDF pill */
+.card-cover-wrapper {
+  flex-shrink: 0;
+  width: 44px;
+  height: 58px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  background: var(--surface-2);
+}
+
+.card-cover-wrapper img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
-.tags {
+.card-cover-wrapper .cover-pdf-pill {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 7.5px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.4px;
+}
+
+.card-header-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-title {
+  margin: 0 0 5px 0;
+  font-size: 14.5px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.card-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.card-meta-row .meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-meta-row .meta-dot {
+  color: var(--border);
+  font-weight: bold;
+}
+
+.card-meta-row .drime-cloud-chip {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+[data-theme="dark"] .card-meta-row .drime-cloud-chip {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+
+/* Soft pills / chips */
+.card-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
 
-.tag {
-  font-size: 11px;
-  padding: 3px 8px;
+.chip {
+  font-size: 11.5px;
+  padding: 3px 9px;
   border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+}
+
+.chip.chip-subject {
+  background: rgba(27, 127, 75, 0.1);
+  color: var(--primary);
+  border: 1px solid rgba(27, 127, 75, 0.2);
+  font-weight: 600;
+}
+
+.chip.chip-level {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.chip.chip-year {
   background: var(--surface-2);
   color: var(--muted);
   font-weight: 500;
 }
 
-.tag.subject {
-  background: var(--grad);
-  color: var(--primary-fg);
+.chip.chip-board {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.2);
   font-weight: 600;
 }
 
-.tag.ok {
-  background: rgba(22, 163, 74, 0.15);
+.chip.chip-category {
+  background: rgba(22, 163, 74, 0.12);
   color: #16a34a;
+  font-weight: 600;
 }
 
-.tag.wait {
-  background: rgba(217, 119, 6, 0.15);
-  color: #d97706;
-}
-
-.card-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-  padding-top: 9px;
-  border-top: 1px solid var(--border);
-  font-size: 12px;
+.chip.chip-author {
+  background: var(--surface-2);
   color: var(--muted);
+  font-style: italic;
 }
 
-.acts {
+/* Card Action Buttons */
+.card-actions {
   display: flex;
-  gap: 5px;
+  align-items: center;
+  gap: 6px;
   flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.card-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  transition: all 0.15s ease;
+}
+
+.card-actions .btn:hover {
+  background: var(--border);
+}
+
+.card-actions .btn.act-save.is-saved {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: rgba(27, 127, 75, 0.08);
+}
+
+.card-actions .btn.act-report {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  padding: 6px 6px;
+}
+
+.card-actions .btn.act-report:hover {
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+/* Primary Green Download Button */
+.card-actions .btn.primary.act-download {
+  margin-left: auto;
+  background: var(--primary);
+  color: #ffffff;
+  border: 1px solid var(--primary);
+  font-weight: 700;
+  padding: 6px 12px;
+  box-shadow: 0 2px 6px rgba(27, 127, 75, 0.25);
+}
+
+.card-actions .btn.primary.act-download:hover {
+  background: #15663c;
+  box-shadow: 0 4px 12px rgba(27, 127, 75, 0.35);
+}
+
+[data-theme="dark"] .card-actions .btn.primary.act-download {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: #052e16;
+}
+
+[data-theme="dark"] .card-actions .btn.primary.act-download:hover {
+  background: #16a34a;
 }
 
 .empty {
@@ -984,17 +1169,17 @@ body.auth::after {
   pointer-events: auto;
 }
 
+/* Side Drawer (Student Menu): Clean white background with soft green accents */
 .side-drawer {
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
-  width: min(320px, 84vw);
+  width: min(340px, 86vw);
   max-width: var(--phone-width);
-  background: var(--surface);
-  border-right: 1.5px solid rgba(46, 207, 132, 0.4);
-  /* Glowing borders and soft subtle shadows around entire open drawer */
-  box-shadow: 0 0 35px rgba(27, 127, 75, 0.28), 8px 0 30px rgba(0, 0, 0, 0.18);
+  background: #ffffff;
+  border-right: 1px solid var(--border);
+  box-shadow: 0 0 35px rgba(27, 127, 75, 0.15), 10px 0 30px rgba(0, 0, 0, 0.12);
   z-index: 100;
   transform: translateX(-102%);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1006,8 +1191,8 @@ body.auth::after {
 
 [data-theme="dark"] .side-drawer {
   background: #0d1a14;
-  border-right: 1.5px solid rgba(62, 207, 132, 0.35);
-  box-shadow: 0 0 40px rgba(46, 207, 132, 0.18), 8px 0 32px rgba(0, 0, 0, 0.6);
+  border-right: 1px solid var(--border);
+  box-shadow: 0 0 40px rgba(46, 207, 132, 0.15), 10px 0 32px rgba(0, 0, 0, 0.6);
 }
 
 .side-drawer.open {
@@ -1015,7 +1200,7 @@ body.auth::after {
 }
 
 .drawer-content {
-  padding: 18px 16px 28px;
+  padding: 20px 16px 32px;
   display: flex;
   flex-direction: column;
   min-height: 100%;
@@ -1024,8 +1209,8 @@ body.auth::after {
 
 .drawer-close {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 16px;
+  right: 16px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--muted);
@@ -1045,28 +1230,27 @@ body.auth::after {
   background: var(--border);
 }
 
-/* Drawer Profile Header */
+/* Circular green avatar with initial, full name, email, and small "STUDENT" badge */
 .drawer-profile {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 0 16px;
+  padding: 4px 0 16px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 14px;
-  margin-top: 4px;
+  margin-bottom: 12px;
 }
 
 .profile-avatar {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: var(--grad);
+  background: linear-gradient(135deg, #1b7f4b, #2e9e63);
   color: #ffffff;
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 18px;
-  box-shadow: 0 4px 12px rgba(27, 127, 75, 0.25);
+  font-size: 20px;
+  box-shadow: 0 4px 14px rgba(27, 127, 75, 0.3);
   flex-shrink: 0;
 }
 
@@ -1075,17 +1259,25 @@ body.auth::after {
   min-width: 0;
 }
 
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
 .profile-name {
   margin: 0;
   font-size: 15px;
   font-weight: 700;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .profile-email {
-  margin: 2px 0 6px;
+  margin: 0;
   font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
@@ -1093,108 +1285,88 @@ body.auth::after {
   text-overflow: ellipsis;
 }
 
-.profile-badge-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-/* Prominent glowing Admin badge & role badges */
 .role-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  border: none;
+}
+
+.role-badge.badge-student {
+  background: rgba(27, 127, 75, 0.1);
+  color: #1b7f4b;
+  border: 1px solid rgba(27, 127, 75, 0.25);
+}
+
+.role-badge.badge-teacher {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.25);
 }
 
 .role-badge.badge-admin {
   background: linear-gradient(135deg, #10b981, #059669);
   color: #ffffff;
-  box-shadow: 0 0 14px rgba(16, 185, 129, 0.65), 0 2px 6px rgba(5, 150, 105, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  animation: adminPulse 2.8s infinite ease-in-out;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
 }
 
-@keyframes adminPulse {
-  0%, 100% {
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.65), 0 2px 6px rgba(5, 150, 105, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(52, 211, 153, 0.9), 0 2px 10px rgba(16, 185, 129, 0.6);
-  }
+/* Admin Quick Access Link (Only shown when admin/owner is logged in) */
+.admin-quick-access {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.role-badge.badge-student {
-  background: var(--surface-2);
+.admin-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(27, 127, 75, 0.1);
+  border: 1px solid rgba(27, 127, 75, 0.25);
   color: var(--primary);
-  border: 1px solid var(--border);
-}
-
-.role-badge.badge-teacher {
-  background: rgba(37, 99, 235, 0.12);
-  color: #2563eb;
-  border: 1px solid rgba(37, 99, 235, 0.25);
-}
-
-/* Admin Interactive 3-Role Switcher Bar */
-.admin-role-switcher {
-  display: inline-flex;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 2px;
-  gap: 3px;
-  margin-top: 4px;
-}
-
-.admin-role-switcher .role-badge {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 10px;
+  font-size: 12.5px;
   font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 0.15s ease;
   text-decoration: none;
+  transition: all 0.15s ease;
 }
 
-.admin-role-switcher .role-badge:hover {
-  color: var(--text);
-  background: rgba(0, 0, 0, 0.05);
+.admin-quick-btn:hover {
+  background: rgba(27, 127, 75, 0.18);
 }
 
-.admin-role-switcher .role-badge.active.badge-admin {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #ffffff;
-  box-shadow: 0 0 12px rgba(16, 185, 129, 0.65);
+.teacher-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(2, 132, 199, 0.1);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  color: #0284c7;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s ease;
 }
 
-.admin-role-switcher .role-badge.active.badge-teacher {
-  background: #2563eb;
-  color: #ffffff;
-  box-shadow: 0 0 10px rgba(37, 99, 235, 0.45);
+.teacher-quick-btn:hover {
+  background: rgba(2, 132, 199, 0.18);
 }
 
-.admin-role-switcher .role-badge.active.badge-student {
-  background: var(--primary);
-  color: #ffffff;
-  box-shadow: 0 0 10px rgba(27, 127, 75, 0.35);
-}
-
-/* Download Quota Card for Students */
+/* Download Quota Card with progress bar and "Upload to unlock +5" button */
 .drawer-quota-card {
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(27, 127, 75, 0.18);
   border-radius: 12px;
-  padding: 12px;
+  padding: 12px 14px;
   margin-bottom: 14px;
 }
 
@@ -1205,8 +1377,14 @@ body.auth::after {
   margin-bottom: 8px;
 }
 
+.quota-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .quota-title {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
 }
@@ -1226,7 +1404,7 @@ body.auth::after {
 
 .quota-bar-track {
   width: 100%;
-  height: 6px;
+  height: 7px;
   background: rgba(0, 0, 0, 0.08);
   border-radius: 999px;
   overflow: hidden;
@@ -1239,7 +1417,7 @@ body.auth::after {
 
 .quota-bar-fill {
   height: 100%;
-  background: var(--grad);
+  background: linear-gradient(90deg, #1b7f4b, #34d399);
   border-radius: 999px;
   transition: width 0.3s ease;
 }
@@ -1256,16 +1434,22 @@ body.auth::after {
 
 .quota-unlock-btn {
   width: 100%;
-  font-size: 12px;
-  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 12px;
   border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(27, 127, 75, 0.25);
 }
 
 /* Drawer Menu Items */
 .drawer-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
 }
 
@@ -1284,22 +1468,23 @@ body.auth::after {
   cursor: pointer;
   width: 100%;
   text-align: left;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.drawer-item svg {
+.drawer-item svg:not(.chevron-icon) {
   width: 19px;
   height: 19px;
   flex-shrink: 0;
   color: var(--muted);
+  transition: color 0.15s ease;
 }
 
 .drawer-item:hover {
-  background: var(--surface-2);
+  background: rgba(27, 127, 75, 0.08);
   color: var(--primary);
 }
 
-.drawer-item:hover svg {
+.drawer-item:hover svg:not(.chevron-icon) {
   color: var(--primary);
 }
 
@@ -1307,52 +1492,97 @@ body.auth::after {
   transform: scale(0.98);
 }
 
-/* Highlighted "Admin dashboard" menu item */
-.drawer-item.admin-highlight {
-  background: rgba(27, 127, 75, 0.12);
-  border: 1px solid rgba(27, 127, 75, 0.28);
-  font-weight: 700;
-  color: var(--primary);
-}
-
-.drawer-item.admin-highlight svg {
-  color: var(--primary);
-}
-
-[data-theme="dark"] .drawer-item.admin-highlight {
-  background: rgba(62, 207, 132, 0.16);
-  border: 1px solid rgba(62, 207, 132, 0.35);
-  color: #3ecf84;
-}
-
-[data-theme="dark"] .drawer-item.admin-highlight svg {
-  color: #3ecf84;
-}
-
-/* Small green "New" badge next to "Upload resources" */
 .badge-new {
   margin-left: auto;
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.5px;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 999px;
-  background: #10b981;
+  background: #1b7f4b;
   color: #ffffff;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
 }
 
 .drawer-divider {
   height: 1px;
   background: var(--border);
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
-/* Subtle red tint for Sign out - positioned closer to Theme option */
+/* Expandable Accordion Menu Items (Books, Papers, Marking keys) */
+.drawer-accordion-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative;
+}
+
+.drawer-accordion-trigger .chevron-icon {
+  margin-left: auto;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  transition: transform 0.25s ease, color 0.15s ease;
+}
+
+.drawer-accordion-group.expanded .chevron-icon {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.drawer-accordion-content {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 20px;
+  padding-top: 2px;
+  padding-bottom: 6px;
+}
+
+.drawer-accordion-group.expanded .drawer-accordion-content {
+  display: flex;
+}
+
+.drawer-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.drawer-sub-item:hover {
+  background: rgba(27, 127, 75, 0.08);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.drawer-sub-item .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  opacity: 0.7;
+}
+
+/* Log out (red text) */
 .drawer-item.signout {
   color: #dc2626;
-  background: rgba(220, 38, 38, 0.08);
-  border: 1px solid rgba(220, 38, 38, 0.18);
+  font-weight: 600;
   margin-top: 6px;
 }
 
@@ -1361,38 +1591,20 @@ body.auth::after {
 }
 
 .drawer-item.signout:hover {
-  background: rgba(220, 38, 38, 0.16);
+  background: rgba(220, 38, 38, 0.08);
   color: #b91c1c;
 }
 
 [data-theme="dark"] .drawer-item.signout {
   color: #f87171;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 [data-theme="dark"] .drawer-item.signout svg {
   color: #f87171;
 }
 
-/* Bottom navigation Profile tab with stronger green color & small indicator dot */
-.bottom-tabs .tab.profile-tab {
-  position: relative;
-  color: var(--primary);
-  font-weight: 700;
-}
-
-.bottom-tabs .tab.profile-tab svg {
-  color: var(--primary);
-}
-
-.bottom-tabs .tab.profile-tab .tab-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 6px var(--primary);
-  margin-top: 2px;
+[data-theme="dark"] .drawer-item.signout:hover {
+  background: rgba(239, 68, 68, 0.14);
 }
 
 /* ============ Trust Showcase: Verified Curriculum Resources ============ */

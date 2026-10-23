@@ -61,9 +61,29 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-$('bottomProfileTab')?.addEventListener('click', openDrawer);
 $('headerAvatarBtn')?.addEventListener('click', openDrawer);
 $('userBtn')?.addEventListener('click', openDrawer);
+
+// Drawer Accordion expandable menus (Books, Papers, Marking keys)
+document.querySelectorAll('.drawer-accordion-trigger').forEach((trigger) => {
+  trigger.addEventListener('click', (e) => {
+    e.preventDefault();
+    const group = trigger.closest('.drawer-accordion-group');
+    if (!group) return;
+    const isExpanded = group.classList.contains('expanded');
+
+    // Close any other open accordion groups
+    document.querySelectorAll('.drawer-accordion-group').forEach((g) => {
+      if (g !== group) {
+        g.classList.remove('expanded');
+        g.querySelector('.drawer-accordion-trigger')?.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    group.classList.toggle('expanded', !isExpanded);
+    trigger.setAttribute('aria-expanded', !isExpanded ? 'true' : 'false');
+  });
+});
 
 // Drawer tab switching
 document.querySelectorAll('[data-drawer-tab]').forEach((btn) => {
@@ -75,19 +95,25 @@ document.querySelectorAll('[data-drawer-tab]').forEach((btn) => {
   });
 });
 
-// Drawer Sub-category Filter buttons (Books JCE/MSCE, Papers MANEB/Mock, Notes, Marking Keys)
+// Drawer Sub-category Filter buttons (Books JCE/MSCE, Papers JCE/MSCE, Marking Keys JCE/MSCE, Notes)
 document.querySelectorAll('[data-drawer-filter]').forEach((btn) => {
   btn.addEventListener('click', () => {
     const parts = btn.dataset.drawerFilter.split(':');
-    const targetType = parts[0]; // 'papers' or 'books'
-    const category = parts[1] || '';
-    const levelSub = parts[2] || '';
+    const targetType = parts[0] || 'papers';
+    const catOrLevel = parts[1] || '';
+    const subLevel = parts[2] || '';
 
     closeDrawer();
     type = targetType;
 
-    if ($('categoryFilter')) $('categoryFilter').value = category;
-    if ($('level')) $('level').value = levelSub || '';
+    // Apply filters based on drawer selection
+    if (catOrLevel === 'JCE' || catOrLevel === 'MSCE') {
+      if ($('categoryFilter')) $('categoryFilter').value = '';
+      if ($('level')) $('level').value = catOrLevel;
+    } else {
+      if ($('categoryFilter')) $('categoryFilter').value = catOrLevel;
+      if ($('level')) $('level').value = subLevel;
+    }
     if ($('q')) $('q').value = '';
 
     document.querySelectorAll('.bottom-tabs .tab').forEach((x) => {
@@ -95,6 +121,18 @@ document.querySelectorAll('[data-drawer-filter]').forEach((btn) => {
     });
 
     load();
+  });
+});
+
+// Bottom tabs navigation click listener (3 tabs: Past papers | Books | Saved)
+document.querySelectorAll('.bottom-tabs .tab').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const targetType = btn.dataset.type;
+    if (targetType) {
+      if ($('categoryFilter')) $('categoryFilter').value = '';
+      if ($('level')) $('level').value = '';
+      switchTab(targetType);
+    }
   });
 });
 
@@ -295,49 +333,85 @@ async function loadFacets() {
   } catch (e) { /* filters stay empty */ }
 }
 
-const PDF_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>';
-
 function card(item) {
   const isPaper = item._type ? item._type === 'paper' : (item.year !== undefined || item.exam_board !== undefined);
   const coll = isPaper ? 'papers' : 'books';
   const kind = isPaper ? 'paper' : 'book';
   const key = kind + ':' + item.id;
   const ref = coll + ':' + item.id;
-
-  const art = !isPaper && item.cover_path
-    ? '<img src="/' + esc(item.cover_path) + '" alt="" loading="lazy">'
-    : PDF_SVG;
+  const isSaved = savedSet.has(key);
 
   const sizeStr = formatSize(item.file_size);
+  const dlCountStr = (item.downloads || 0).toLocaleString();
+
+  // Red PDF icon badge on the left
+  const redPdfBadge = 
+    '<div class="card-pdf-badge" aria-label="PDF Document">' +
+      '<svg class="pdf-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>' +
+        '<polyline points="14 2 14 8 20 8"/>' +
+        '<line x1="16" y1="13" x2="8" y2="13"/>' +
+        '<line x1="16" y1="17" x2="8" y2="17"/>' +
+        '<line x1="10" y1="9" x2="8" y2="9"/>' +
+      '</svg>' +
+      '<span class="pdf-tag">PDF</span>' +
+    '</div>';
+
+  const visualCol = !isPaper && item.cover_path
+    ? '<div class="card-cover-wrapper">' +
+        '<img src="/' + esc(item.cover_path) + '" alt="" loading="lazy">' +
+        '<span class="cover-pdf-pill">PDF</span>' +
+      '</div>'
+    : redPdfBadge;
 
   return '<article class="card">' +
-    '<div class="card-top">' +
-      '<span class="ico">' + art + '</span>' +
-      '<div style="flex:1;min-width:0">' +
-        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap">' +
-          '<span class="tag pdf">PDF</span>' +
-          '<span class="tag size"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:-1px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> ' + esc(sizeStr) + '</span>' +
-          (item.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-weight:600;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime Cloud</span>' : '') +
-          (item.category ? '<span class="tag ok" style="font-weight:700">' + esc(item.category) + '</span>' : '') +
+    '<div class="card-header">' +
+      visualCol +
+      '<div class="card-header-body">' +
+        '<h3 class="card-title">' + esc(item.title) + '</h3>' +
+        '<div class="card-meta-row">' +
+          '<span class="meta-item dlcount">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ' +
+            dlCountStr + ' dl' +
+          '</span>' +
+          '<span class="meta-dot">&middot;</span>' +
+          '<span class="meta-item">' +
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> ' +
+            esc(sizeStr) +
+          '</span>' +
+          (item.storage_provider === 'drime' ? 
+            '<span class="meta-dot">&middot;</span>' +
+            '<span class="meta-item drime-cloud-chip" title="Drime Cloud Hosted">' +
+              '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime Cloud' +
+            '</span>' : '') +
         '</div>' +
-        '<h3>' + esc(item.title) + '</h3>' +
       '</div>' +
     '</div>' +
-    '<div class="tags">' +
-      '<span class="tag subject">' + esc(item.subject) + '</span>' +
-      '<span class="tag">' + esc(item.level) + '</span>' +
-      (isPaper && item.year ? '<span class="tag">' + item.year + '</span>' : '') +
-      (isPaper && item.exam_board ? '<span class="tag">' + esc(item.exam_board) + '</span>' : '') +
-      (!isPaper && item.author ? '<span class="tag">' + esc(item.author) + '</span>' : '') +
+    '<div class="card-chips">' +
+      '<span class="chip chip-subject">' + esc(item.subject) + '</span>' +
+      '<span class="chip chip-level">' + esc(item.level) + '</span>' +
+      (isPaper && item.year ? '<span class="chip chip-year">' + item.year + '</span>' : '') +
+      (isPaper && item.exam_board ? '<span class="chip chip-board">' + esc(item.exam_board) + '</span>' : '') +
+      (item.category ? '<span class="chip chip-category">' + esc(item.category) + '</span>' : '') +
+      (!isPaper && item.author ? '<span class="chip chip-author">' + esc(item.author) + '</span>' : '') +
     '</div>' +
-    '<div class="card-foot">' +
-      '<span class="dlcount" style="display:inline-flex;align-items:center;gap:3px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ' + item.downloads.toLocaleString() + ' dl</span>' +
-      '<span class="acts">' +
-        '<button class="btn sm" data-save="' + key + '">' + (savedSet.has(key) ? 'Saved' : 'Save') + '</button>' +
-        '<button class="btn sm" data-pv="' + ref + '">Preview</button>' +
-        '<button class="btn sm" data-rp="' + ref + '" title="Report broken file" aria-label="Report broken file"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></button>' +
-        '<button class="btn sm primary" data-dl="' + ref + '" style="display:inline-flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download</button>' +
-      '</span>' +
+    '<div class="card-actions">' +
+      '<button class="btn sm act-save ' + (isSaved ? 'is-saved' : '') + '" data-save="' + key + '">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="' + (isSaved ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> ' +
+        '<span class="save-label">' + (isSaved ? 'Saved' : 'Save') + '</span>' +
+      '</button>' +
+      '<button class="btn sm act-preview" data-pv="' + ref + '">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> ' +
+        'Preview' +
+      '</button>' +
+      '<button class="btn sm act-report" data-rp="' + ref + '" title="Report broken file" aria-label="Report broken file">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> ' +
+        '<span>Report</span>' +
+      '</button>' +
+      '<button class="btn sm primary act-download" data-dl="' + ref + '">' +
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ' +
+        'Download' +
+      '</button>' +
     '</div>' +
   '</article>';
 }
@@ -429,7 +503,12 @@ grid.addEventListener('click', async (e) => {
       const [kind, id] = saveBtn.dataset.save.split(':');
       const r = await API.post('/' + (kind === 'paper' ? 'papers' : 'books') + '/' + id + '/bookmark');
       r.saved ? savedSet.add(saveBtn.dataset.save) : savedSet.delete(saveBtn.dataset.save);
-      saveBtn.textContent = r.saved ? 'Saved' : 'Save';
+      const label = saveBtn.querySelector('.save-label');
+      if (label) label.textContent = r.saved ? 'Saved' : 'Save';
+      else saveBtn.textContent = r.saved ? 'Saved' : 'Save';
+      const svg = saveBtn.querySelector('svg');
+      if (svg) svg.setAttribute('fill', r.saved ? 'currentColor' : 'none');
+      saveBtn.classList.toggle('is-saved', r.saved);
       toast(r.saved ? 'Saved to your list' : 'Removed from your list');
     }
 

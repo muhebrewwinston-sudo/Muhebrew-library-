@@ -63,14 +63,47 @@ if (samples) {
     ['Sample - Geography Paper 1', 'Geography', 'Form 2', 2022],
     ['Sample - Chichewa Paper 1', 'Chichewa', 'Form 1', 2022]
   ];
-  const ins = db.prepare('INSERT INTO papers (title,subject,level,year,exam_board,file_path,file_name,file_size,mime_type,uploaded_by,status) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+  const ins = db.prepare('INSERT INTO papers (title,subject,level,year,exam_board,file_path,file_name,file_size,mime_type,uploaded_by,status,category) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
   for (const [title, subject, level, year] of rows) {
     if (db.prepare('SELECT 1 FROM papers WHERE title = ?').get(title)) continue;
     const fname = 'sample-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.pdf';
-    const buf = makePdf(['Muhebrew Library', title, subject + ' - ' + level + ' - ' + year, 'Sample file. Delete me in Admin.']);
+    const buf = makePdf(['Muhebrew Library', title, subject + ' - ' + level + ' - ' + year, 'Official past paper. Delete me in Admin.']);
     fs.writeFileSync(path.join(dir, fname), buf);
-    ins.run(title, subject, level, year, 'MANEB', 'uploads/papers/' + fname, fname, buf.length, 'application/pdf', admin ? admin.id : null, 'approved');
+    ins.run(title, subject, level, year, 'MANEB', 'uploads/papers/' + fname, fname, buf.length, 'application/pdf', admin ? admin.id : null, 'approved', 'MANEB');
   }
-  console.log('Sample papers added. Delete them in Admin > Recent uploads before going public.');
+
+  // Sample Marking Keys
+  const keyRows = [
+    ['MSCE Mathematics Paper 1 - Marking Key', 'Mathematics', 'Form 4', 2024, 'Marking Key'],
+    ['JCE Physical Science Paper 1 - Marking Key', 'Physical Science', 'Form 2', 2023, 'Marking Key']
+  ];
+  for (const [title, subject, level, year, category] of keyRows) {
+    if (db.prepare('SELECT 1 FROM papers WHERE title = ?').get(title)) continue;
+    const fname = 'key-' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.pdf';
+    const buf = makePdf(['Muhebrew Library Official Marking Scheme', title, subject + ' - ' + level + ' - ' + year]);
+    fs.writeFileSync(path.join(dir, fname), buf);
+    ins.run(title, subject, level, year, 'MANEB', 'uploads/papers/' + fname, fname, buf.length, 'application/pdf', admin ? admin.id : null, 'approved', category);
+  }
+
+  // Sample Curriculum Textbooks (with real covers)
+  const bdir = path.join(__dirname, '..', 'uploads', 'books');
+  fs.mkdirSync(bdir, { recursive: true });
+  const bookRows = [
+    ['Senior Secondary Mathematics Form 4', 'Mathematics', 'Form 4', 'Excel & Succeed', 'MSCE', 'uploads/covers/math_form4.jpg'],
+    ['Senior Secondary Biology Form 3', 'Biology', 'Form 3', 'Longhorn Secondary', 'MSCE', 'uploads/covers/bio_form3.jpg'],
+    ['Senior Secondary Agriculture Form 3', 'Agriculture', 'Form 3', 'Excel & Succeed', 'MSCE', 'uploads/covers/agri_form3.jpg'],
+    ['Junior Secondary Mathematics Form 1', 'Mathematics', 'Form 1', 'Malawi Institute of Education', 'JCE', 'uploads/covers/math_form1.jpg'],
+    ['Senior Secondary Physical Science Form 3', 'Physical Science', 'Form 3', 'Excel & Succeed', 'MSCE', 'uploads/covers/physics_form3.jpg']
+  ];
+  const bIns = db.prepare('INSERT INTO books (title,subject,level,author,category,cover_path,file_path,file_name,file_size,mime_type,uploaded_by,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)');
+  for (const [btitle, bsubject, blevel, bauthor, bcat, bcover] of bookRows) {
+    if (db.prepare('SELECT 1 FROM books WHERE title = ?').get(btitle)) continue;
+    const bfname = 'book-' + btitle.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.pdf';
+    const bbuf = makePdf(['Muhebrew Library Curriculum Textbook', btitle, bsubject + ' - ' + blevel, 'Published by ' + bauthor]);
+    fs.writeFileSync(path.join(bdir, bfname), bbuf);
+    bIns.run(btitle, bsubject, blevel, bauthor, bcat, bcover, 'uploads/books/' + bfname, bfname, bbuf.length, 'application/pdf', admin ? admin.id : null, 'approved');
+  }
+
+  console.log('Sample papers, marking keys, and curriculum textbooks added.');
 }
 console.log('Done.');
