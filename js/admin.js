@@ -807,12 +807,33 @@ if (dropzone && fileInput) {
   $('bulkUploadAllBtn')?.addEventListener('click', executeBulkUpload);
 }
 
-// Single Upload Handler
+// Helper to format bytes nicely
+function fmtBytes(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// Single Upload Handler with Real-Time Progression
 $('uploadForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('uSubmit');
   btn.disabled = true;
   btn.textContent = 'Syncing to Drime Cloud & Publishing...';
+
+  const pWrap = $('uSingleProgressWrapper');
+  const pBar = $('uSingleProgressBar');
+  const pPct = $('uSingleProgressPercent');
+  const pTitle = $('uSingleProgressTitle');
+  const pSub = $('uSingleProgressSub');
+
+  if (pWrap) pWrap.hidden = false;
+  if (pBar) pBar.style.width = '0%';
+  if (pPct) pPct.textContent = '0%';
+  if (pTitle) pTitle.innerHTML = '<span>Uploading to Server &amp; Syncing to Drime Cloud...</span>';
+  if (pSub) pSub.textContent = 'Transferring document bytes...';
 
   try {
     const fd = new FormData();
@@ -846,12 +867,32 @@ $('uploadForm')?.addEventListener('submit', async (e) => {
       throw new Error('Please select a file to upload.');
     }
 
-    const res = await API.upload(endpoint, fd);
+    const res = await API.uploadWithProgress(endpoint, fd, (pct, loaded, total) => {
+      const displayPct = Math.min(95, pct);
+      if (pBar) pBar.style.width = displayPct + '%';
+      if (pPct) pPct.textContent = displayPct + '%';
+      if (pSub) pSub.textContent = `Uploading bytes: ${fmtBytes(loaded)} of ${fmtBytes(total)} (${pct}%)`;
+      if (pct >= 100) {
+        if (pTitle) pTitle.innerHTML = '<span>Syncing to Drime Cloud Storage...</span>';
+        if (pSub) pSub.textContent = 'Registering in Drime Cloud folder (OymudINAwCDhPbnTH5Gt4oAIxo5mbC)...';
+      }
+    });
+
+    if (pBar) pBar.style.width = '100%';
+    if (pPct) pPct.textContent = '100%';
+    if (pTitle) pTitle.innerHTML = '<span style="color:#16a34a">✓ Document Approved &amp; Published!</span>';
+    if (pSub) pSub.innerHTML = '<b style="color:#16a34a">✓ Resource published and synced to Drime Cloud Storage!</b>';
+
     toast(res.message || 'Resource published and synced to Drime Cloud Storage!');
     $('uploadForm').reset();
     loadStats();
     loadProgression();
+
+    setTimeout(() => {
+      if (pWrap) pWrap.hidden = true;
+    }, 3500);
   } catch (err) {
+    if (pWrap) pWrap.hidden = true;
     toast(err.message, true);
   } finally {
     btn.disabled = false;

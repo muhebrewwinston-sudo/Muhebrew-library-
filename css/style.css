@@ -2436,4 +2436,74 @@ body {
   color: #0f172a;
 }
 
+/* ==========================================================
+   DOWNLOAD PROGRESSION MODAL STYLES
+   ========================================================== */
+#downloadModal .modal-dialog {
+  max-width: 440px;
+  width: 92%;
+  border-radius: 16px;
+}
+
+/* ==========================================================
+   MOBILE-FIRST PHONE OPTIMIZATIONS & OVERFLOW ZERO TOLERANCE
+   ========================================================== */
+@media (max-width: 600px) {
+  /* 3-column top row for Save / Preview / Report, full-width row for Download */
+  .card-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .card-actions .act-save,
+  .card-actions .act-preview,
+  .card-actions .act-report {
+    justify-content: center;
+    width: 100%;
+    padding: 7px 4px;
+    font-size: 11.5px;
+    text-align: center;
+  }
+
+  .card-actions .btn.primary.act-download {
+    grid-column: 1 / -1;
+    margin-left: 0;
+    justify-content: center;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+
+  /* Modals on mobile: eliminate overflow and provide smooth touch scroll */
+  .modal-dialog,
+  .upload-modal-dialog {
+    max-height: 92vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 95%;
+    margin: auto;
+  }
+
+  /* Layer 2 fields stack comfortably on narrow screens */
+  .layer-fields-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Card padding and chips spacing */
+  .card {
+    padding: 12px;
+  }
+
+  .card-title {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+}
+
+
 

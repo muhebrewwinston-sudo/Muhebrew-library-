@@ -191,7 +191,7 @@ function closeModal(id) {
 }
 
 function closeAllModals() {
-  ['uploadModal', 'limitModal', 'profileModal', 'helpModal'].forEach(closeModal);
+  ['uploadModal', 'limitModal', 'profileModal', 'helpModal', 'downloadModal'].forEach(closeModal);
 }
 
 $('uploadModalClose')?.addEventListener('click', () => closeModal('uploadModal'));
@@ -199,6 +199,8 @@ $('limitModalClose')?.addEventListener('click', () => closeModal('limitModal'));
 $('limitDismissBtn')?.addEventListener('click', () => closeModal('limitModal'));
 $('profileModalClose')?.addEventListener('click', () => closeModal('profileModal'));
 $('helpModalClose')?.addEventListener('click', () => closeModal('helpModal'));
+$('downloadModalClose')?.addEventListener('click', () => closeModal('downloadModal'));
+$('dlModalDoneBtn')?.addEventListener('click', () => closeModal('downloadModal'));
 
 // Upload Modal open triggers
 function showUploadModal() {
@@ -343,7 +345,7 @@ function renderPagedItems() {
   if (allLoadedItems.length > visibleItemCount) {
     if (seeMoreWrap) seeMoreWrap.hidden = false;
     if (seeMoreBtnText) {
-      seeMoreBtnText.textContent = `See more resources (${visibleItemCount} of ${allLoadedItems.length} shown)`;
+      seeMoreBtnText.textContent = `(See more) (${visibleItemCount} of ${allLoadedItems.length} shown)`;
     }
   } else {
     if (seeMoreWrap) seeMoreWrap.hidden = true;
@@ -378,6 +380,24 @@ function card(item) {
 
   const sizeStr = formatSize(item.file_size);
   const dlCountStr = (item.downloads || 0).toLocaleString();
+
+  // Smart category chip filtering: suppress redundant duplicate chips (e.g. [Cluster Mock] and [Mock], or [MANEB] and [MANEB])
+  let showCategoryChip = false;
+  if (item.category) {
+    const catLower = String(item.category).trim().toLowerCase();
+    const boardLower = String(item.exam_board || '').trim().toLowerCase();
+    const isDupBoard = boardLower && (
+      boardLower === catLower ||
+      boardLower.includes(catLower) ||
+      catLower.includes(boardLower) ||
+      (catLower === 'mock' && boardLower.includes('mock')) ||
+      (catLower === 'maneb' && boardLower.includes('maneb'))
+    );
+    const isGenericPaper = isPaper && (catLower === 'past paper' || catLower === 'paper' || catLower === 'examination paper');
+    if (!isDupBoard && !isGenericPaper) {
+      showCategoryChip = true;
+    }
+  }
 
   // Red PDF icon badge on the left
   const redPdfBadge = 
@@ -427,7 +447,7 @@ function card(item) {
       '<span class="chip chip-level">' + esc(item.level) + '</span>' +
       (isPaper && item.year ? '<span class="chip chip-year">' + item.year + '</span>' : '') +
       (isPaper && item.exam_board ? '<span class="chip chip-board">' + esc(item.exam_board) + '</span>' : '') +
-      (item.category ? '<span class="chip chip-category">' + esc(item.category) + '</span>' : '') +
+      (showCategoryChip ? '<span class="chip chip-category">' + esc(item.category) + '</span>' : '') +
       (!isPaper && item.author ? '<span class="chip chip-author">' + esc(item.author) + '</span>' : '') +
     '</div>' +
     '<div class="card-actions">' +
@@ -552,11 +572,116 @@ grid.addEventListener('click', async (e) => {
         }
       }
 
+      // Identify item for title & size display
+      const isPaperCol = coll.startsWith('paper');
+      const item = allLoadedItems.find(it => String(it.id) === String(id) && (isPaperCol ? it._type !== 'book' : it._type === 'book')) || {};
+      const itemName = item.title || 'Document';
+      const itemSize = item.file_size || 0;
+
+      // Show real-time download progression modal
+      const dlTitle = $('dlModalTitle');
+      const dlFilename = $('dlModalFilename');
+      const dlStatus = $('dlModalStatus');
+      const dlPercent = $('dlModalPercent');
+      const dlBar = $('dlModalBar');
+      const dlBytes = $('dlModalBytes');
+      const dlSpeed = $('dlModalSpeed');
+      const dlDoneAction = $('dlModalDoneAction');
+
+      if (dlTitle) dlTitle.textContent = 'Downloading Resource...';
+      if (dlFilename) dlFilename.textContent = itemName;
+      if (dlStatus) dlStatus.textContent = 'Connecting to library cloud storage...';
+      if (dlPercent) dlPercent.textContent = '0%';
+      if (dlBar) dlBar.style.width = '0%';
+      if (dlBytes) dlBytes.textContent = '0 KB transferred';
+      if (dlSpeed) dlSpeed.textContent = 'Preparing...';
+      if (dlDoneAction) dlDoneAction.style.display = 'none';
+
+      openModal('downloadModal');
+
       const token = API.token();
       const downloadUrl = API.base + '/' + coll + '/' + id + '/download?t=' + encodeURIComponent(token);
 
-      window.location.href = downloadUrl;
-      toast('Download starting...');
+      // Perform streaming download with real-time byte progression
+      try {
+        const response = await fetch(downloadUrl);
+        if (!response.ok) {
+          const errData = await response.json().catch(() => null);
+          throw new Error((errData && errData.error) || 'Download failed with status ' + response.status);
+        }
+
+        const contentLength = +response.headers.get('Content-Length') || itemSize || 0;
+        const reader = response.body.getReader();
+        let receivedLength = 0;
+        let chunks = [];
+        const startTime = Date.now();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          receivedLength += value.length;
+
+          const pct = contentLength ? Math.min(99, Math.round((receivedLength / contentLength) * 100)) : Math.min(95, Math.round((receivedLength / (itemSize || 1024 * 1024)) * 100));
+          const elapsedSec = (Date.now() - startTime) / 1000 || 0.1;
+          const kbps = Math.round((receivedLength / 1024) / elapsedSec);
+
+          if (dlBar) dlBar.style.width = pct + '%';
+          if (dlPercent) dlPercent.textContent = pct + '%';
+          if (dlStatus) dlStatus.textContent = `Downloading document (${pct}%)...`;
+          if (dlBytes) {
+            dlBytes.textContent = `${formatSize(receivedLength)} ${contentLength ? '/ ' + formatSize(contentLength) : 'transferred'}`;
+          }
+          if (dlSpeed) dlSpeed.textContent = `${kbps} KB/s`;
+        }
+
+        // All chunks received
+        if (dlBar) dlBar.style.width = '100%';
+        if (dlPercent) dlPercent.textContent = '100%';
+        if (dlStatus) dlStatus.innerHTML = '<span style="color:#1b7f4b;font-weight:700">✓ Download Complete!</span>';
+        if (dlBytes) dlBytes.textContent = `${formatSize(receivedLength)} total transferred`;
+        if (dlSpeed) dlSpeed.textContent = 'Saved to device';
+
+        const mime = response.headers.get('Content-Type') || 'application/pdf';
+        const blob = new Blob(chunks, { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = item.file_name || `${itemName.replace(/[^a-zA-Z0-9_\-\.]/g, '_')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+        toast('✓ Download complete! Saved to your device.');
+
+        setTimeout(() => {
+          closeAllModals();
+        }, 1600);
+
+      } catch (dlErr) {
+        // Graceful fallback for cross-origin cloud redirects
+        console.warn('Direct stream fallback to browser download:', dlErr);
+        if (dlStatus) dlStatus.textContent = 'Syncing direct cloud download...';
+
+        let p = 20;
+        const interval = setInterval(() => {
+          p = Math.min(98, p + 15);
+          if (dlBar) dlBar.style.width = p + '%';
+          if (dlPercent) dlPercent.textContent = p + '%';
+        }, 140);
+
+        window.location.href = downloadUrl;
+
+        setTimeout(() => {
+          clearInterval(interval);
+          if (dlBar) dlBar.style.width = '100%';
+          if (dlPercent) dlPercent.textContent = '100%';
+          if (dlStatus) dlStatus.innerHTML = '<span style="color:#1b7f4b;font-weight:700">✓ Download Initiated!</span>';
+          toast('Download started successfully');
+          setTimeout(() => closeAllModals(), 1800);
+        }, 1200);
+      }
 
       setTimeout(async () => {
         try {
@@ -566,7 +691,7 @@ grid.addEventListener('click', async (e) => {
             updateQuotaUI(freshQuota);
           }
         } catch (_) {}
-      }, 1200);
+      }, 1500);
     }
   } catch (err) { toast(err.message, true); }
 });
@@ -690,25 +815,12 @@ function selectUploadType(t) {
     $(id)?.classList.remove('active');
   });
 
-  const yearWrap = $('suYearWrap');
-  const catWrap = $('suCategoryWrap');
-  const catSelect = $('suCategory');
-
   if (t === 'books') {
     $('btnTypeBook')?.classList.add('active');
-    if (yearWrap) yearWrap.hidden = true;
-    if (catSelect) catSelect.value = ($('suLevel')?.value === 'Form 1' || $('suLevel')?.value === 'Form 2') ? 'JCE' : 'MSCE';
-    if ($('suTitle') && !$('suTitle').value) $('suTitle').placeholder = 'e.g. Senior Secondary Mathematics Form 4';
   } else if (t === 'notes') {
     $('btnTypeNotes')?.classList.add('active');
-    if (yearWrap) yearWrap.hidden = true;
-    if (catSelect) catSelect.value = 'Notes';
-    if ($('suTitle') && !$('suTitle').value) $('suTitle').placeholder = 'e.g. Biology Form 3 Study Revision Notes';
   } else {
     $('btnTypePaper')?.classList.add('active');
-    if (yearWrap) yearWrap.hidden = false;
-    if (catSelect) catSelect.value = 'MANEB';
-    if ($('suTitle') && !$('suTitle').value) $('suTitle').placeholder = 'e.g. MANEB Mathematics Paper 1 (2024)';
   }
 }
 
@@ -732,8 +844,8 @@ $('suFile')?.addEventListener('change', (e) => {
 
   const traced = clientAutoTrace(file.name, file.size);
   if ($('suTitle')) $('suTitle').value = traced.title;
-  if ($('suSubject')) $('suSubject').value = traced.subject;
-  if ($('suLevel')) $('suLevel').value = traced.level;
+  if ($('suSubject') && traced.subject) $('suSubject').value = traced.subject;
+  if ($('suLevel') && traced.level) $('suLevel').value = traced.level;
   if ($('suYear') && traced.year) $('suYear').value = traced.year;
 
   if (traced.type === 'books') {
@@ -747,13 +859,31 @@ $('suFile')?.addEventListener('change', (e) => {
   toast(`Auto-traced: ${traced.subject} (${traced.level})`);
 });
 
-// Layer 3: Submit Button Handler
+// Layer 3: Submit Button Handler with Real-Time Progression Tracker
 $('studentUploadForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('suSubmitBtn');
   const btnText = $('suSubmitBtnText');
+  const file = $('suFile')?.files[0];
+  if (!file) {
+    toast('Please choose a document file to upload.', true);
+    return;
+  }
+
   btn.disabled = true;
   if (btnText) btnText.textContent = 'Uploading & unlocking +5...';
+
+  const pWrap = $('suProgressWrapper');
+  const pBar = $('suProgressBar');
+  const pPct = $('suProgressPercent');
+  const pTitle = $('suProgressTitle');
+  const pMsg = $('suProgressMsg');
+
+  if (pWrap) pWrap.hidden = false;
+  if (pBar) pBar.style.width = '0%';
+  if (pPct) pPct.textContent = '0%';
+  if (pTitle) pTitle.innerHTML = '<span>Uploading Document...</span>';
+  if (pMsg) pMsg.textContent = 'Transferring document bytes to server...';
 
   try {
     const fd = new FormData();
@@ -762,30 +892,56 @@ $('studentUploadForm')?.addEventListener('submit', async (e) => {
     const isNotes = typeValue === 'notes';
     const endpoint = isBook ? '/books' : '/papers';
 
-    fd.append('title', $('suTitle').value.trim());
+    // Auto-generate clean title from file or subject/level
+    let autoTitle = (file.name || '')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[\-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!autoTitle) {
+      autoTitle = `${$('suSubject').value} ${$('suLevel').value} ${isBook ? 'Textbook' : (isNotes ? 'Revision Notes' : 'Paper')}`;
+    }
+
+    fd.append('title', autoTitle);
     fd.append('subject', $('suSubject').value);
     fd.append('level', $('suLevel').value);
-    fd.append('category', isNotes ? 'Notes' : ($('suCategory') ? $('suCategory').value : (isBook ? 'MSCE' : 'MANEB')));
-
-    if ($('suYear') && !isBook && !isNotes && $('suYear').value) {
-      fd.append('year', $('suYear').value);
-    }
+    fd.append('category', isNotes ? 'Notes' : (isBook ? 'MSCE' : 'MANEB'));
     if (!isBook && !isNotes) {
-      fd.append('exam_board', $('suCategory')?.value === 'Mock' ? 'Cluster Mock' : 'MANEB');
+      fd.append('exam_board', 'MANEB');
     }
+    fd.append('file', file);
 
-    if ($('suFile').files[0]) {
-      fd.append('file', $('suFile').files[0]);
-    } else {
-      throw new Error('Please select a file to upload.');
+    const res = await API.uploadWithProgress(endpoint, fd, (pct, loaded, total) => {
+      const displayPct = Math.min(95, pct);
+      if (pBar) pBar.style.width = displayPct + '%';
+      if (pPct) pPct.textContent = displayPct + '%';
+      if (pMsg) {
+        pMsg.textContent = `Uploading bytes: ${formatSize(loaded)} of ${formatSize(total)} (${pct}%)`;
+      }
+      if (pct >= 100) {
+        if (pTitle) pTitle.innerHTML = '<span>Syncing to Drime Cloud Storage...</span>';
+        if (pMsg) pMsg.textContent = 'Processing and registering in Drime Cloud folder...';
+      }
+    });
+
+    if (pBar) pBar.style.width = '100%';
+    if (pPct) pPct.textContent = '100%';
+    if (pTitle) {
+      pTitle.innerHTML = '<span style="color:#1b7f4b">✓ Approved and Published!</span>';
     }
-
-    const res = await API.upload(endpoint, fd);
+    if (pMsg) {
+      pMsg.innerHTML = '<b style="color:#1b7f4b">✓ Document approved &amp; published! +5 downloads unlocked.</b>';
+    }
 
     toast(res.message || 'Resource submitted! +5 free downloads unlocked.');
+
+    // Wait 1.3s so student sees the 100% confirmation
+    await new Promise((r) => setTimeout(r, 1300));
+
     e.target.reset();
     if ($('suFileNameDisplay')) $('suFileNameDisplay').textContent = 'Tap to choose PDF document';
-    if ($('suFileSizeDisplay')) $('suFileSizeDisplay').textContent = 'Auto-traces title, subject, and form level';
+    if ($('suFileSizeDisplay')) $('suFileSizeDisplay').textContent = 'Auto-traces subject & level from filename';
+    if (pWrap) pWrap.hidden = true;
     closeAllModals();
 
     const q = await API.getQuota();
@@ -797,6 +953,7 @@ $('studentUploadForm')?.addEventListener('submit', async (e) => {
     await loadFacets();
     await load();
   } catch (err) {
+    if (pWrap) pWrap.hidden = true;
     toast(err.message, true);
   } finally {
     btn.disabled = false;
