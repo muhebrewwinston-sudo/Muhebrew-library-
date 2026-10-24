@@ -324,10 +324,10 @@
   <div class="grid" id="grid"></div>
   <div class="empty" id="empty" hidden>Nothing matched. Try clearing a filter.</div>
 
-  <!-- "See more" button below the few files displayed -->
+  <!-- "(See more)" button below the few files displayed -->
   <div class="see-more-wrap" id="seeMoreWrap" hidden style="margin:20px 0 28px;text-align:center">
     <button class="btn see-more-btn" id="seeMoreBtn" type="button">
-      <span id="seeMoreBtnText">See more resources</span>
+      <span id="seeMoreBtnText">(See more)</span>
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </button>
   </div>
@@ -429,38 +429,38 @@
                 <option value="Form 4" selected>Form 4</option>
               </select>
             </div>
-            <div class="layer-field full-width">
-              <label for="suTitle">Resource Title</label>
-              <input id="suTitle" required placeholder="e.g. MANEB Mathematics Paper 1 (2024)">
-            </div>
-            <div class="layer-field" id="suYearWrap">
-              <label for="suYear">Exam / Publication Year</label>
-              <input id="suYear" type="number" min="1990" max="2100" placeholder="2024">
-            </div>
-            <div class="layer-field" id="suCategoryWrap">
-              <label for="suCategory">Category</label>
-              <select id="suCategory">
-                <option value="MANEB">MANEB Official Exam</option>
-                <option value="Mock">Cluster / School Mock</option>
-                <option value="Marking Key">Marking Scheme / Key</option>
-                <option value="Notes">Study Notes</option>
-                <option value="MSCE">MSCE Textbook</option>
-                <option value="JCE">JCE Textbook</option>
-              </select>
-            </div>
+
+            <!-- Clean full-width Document File Selection Box -->
             <div class="layer-field full-width">
               <label for="suFile">Document File (PDF works best)</label>
               <div class="student-file-drop" id="suFileDropBox">
                 <input id="suFile" type="file" required accept=".pdf,.doc,.docx,.jpg,.png" style="display:none">
                 <div class="student-file-content">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                   <div>
                     <span id="suFileNameDisplay" style="font-size:13px;font-weight:600;color:var(--text);display:block">Tap to choose PDF document</span>
-                    <span id="suFileSizeDisplay" style="font-size:11px;color:var(--muted)">Auto-traces title, subject, and form level</span>
+                    <span id="suFileSizeDisplay" style="font-size:11.5px;color:var(--muted)">Auto-traces subject &amp; level from filename</span>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- UPLOAD PROGRESSION BAR (SHOWN DURING UPLOAD) -->
+        <div id="suProgressWrapper" hidden class="upload-progress-card" style="background:var(--surface-2);border:1px solid rgba(27,127,75,0.25);border-radius:12px;padding:12px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <b id="suProgressTitle" style="font-size:13px;color:var(--primary);display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Uploading &amp; Verifying...</span>
+            </b>
+            <span id="suProgressPercent" style="font-size:12.5px;font-weight:700;color:var(--primary)">0%</span>
+          </div>
+          <div style="width:100%;height:8px;background:rgba(0,0,0,0.08);border-radius:999px;overflow:hidden">
+            <div id="suProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#1b7f4b,#34d399);border-radius:999px;transition:width 0.2s ease"></div>
+          </div>
+          <div id="suProgressMsg" style="font-size:11.5px;color:var(--muted);margin-top:6px">
+            Uploading document bytes...
           </div>
         </div>
 
@@ -506,6 +506,40 @@
       <button class="btn" id="limitDismissBtn" style="width:100%">
         Maybe Later
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Download Progression Tracker (Real-Time Download Progress Modal) -->
+<div class="modal" id="downloadModal" hidden>
+  <div class="modal-dialog" style="max-width:440px">
+    <div class="modal-header" style="padding-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:38px;height:38px;border-radius:10px;background:rgba(27,127,75,0.12);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <div>
+          <h3 id="dlModalTitle" style="margin:0;font-size:16px;font-weight:700;color:var(--primary)">Downloading Resource...</h3>
+          <p id="dlModalFilename" style="margin:2px 0 0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px">Loading document...</p>
+        </div>
+      </div>
+      <button class="modal-close-btn" id="downloadModalClose" aria-label="Close" style="display:none">&times;</button>
+    </div>
+    <div class="modal-body" style="padding-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12.5px">
+        <span id="dlModalStatus" style="font-weight:600;color:var(--text)">Connecting to secure library storage...</span>
+        <span id="dlModalPercent" style="font-weight:700;color:var(--primary)">0%</span>
+      </div>
+      <div style="width:100%;height:10px;background:rgba(0,0,0,0.08);border-radius:999px;overflow:hidden">
+        <div id="dlModalBar" style="width:0%;height:100%;background:linear-gradient(90deg,#1b7f4b,#34d399);border-radius:999px;transition:width 0.2s ease"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;font-size:11.5px;color:var(--muted)">
+        <span id="dlModalBytes">0 KB transferred</span>
+        <span id="dlModalSpeed">✓ Fast download</span>
+      </div>
+      <div id="dlModalDoneAction" style="margin-top:14px;display:none;text-align:right">
+        <button class="btn sm primary" id="dlModalDoneBtn" type="button" style="padding:7px 18px">Done</button>
+      </div>
     </div>
   </div>
 </div>

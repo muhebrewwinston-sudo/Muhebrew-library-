@@ -38,6 +38,38 @@ const API = {
   patch: (p, b) => API.req(p, { method: 'PATCH', body: b }),
   del: (p) => API.req(p, { method: 'DELETE' }),
   upload: (p, fd) => API.req(p, { method: 'POST', body: fd, json: false }),
+  uploadWithProgress(p, fd, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', this.base + p);
+      const t = this.token();
+      if (t) xhr.setRequestHeader('Authorization', 'Bearer ' + t);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          onProgress(pct, e.loaded, e.total);
+        }
+      };
+
+      xhr.onload = () => {
+        try {
+          const data = JSON.parse(xhr.responseText || '{}');
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(data);
+          } else {
+            reject(new Error(data.error || 'Upload failed with status ' + xhr.status));
+          }
+        } catch (_) {
+          if (xhr.status >= 200 && xhr.status < 300) resolve({});
+          else reject(new Error('Upload failed'));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.send(fd);
+    });
+  },
 
   async me() {
     if (!this.token()) return null;

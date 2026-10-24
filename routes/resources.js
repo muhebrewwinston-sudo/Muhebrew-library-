@@ -222,7 +222,17 @@ function buildRouter(table, type) {
       const cover = req.files && req.files.cover && req.files.cover[0];
       const discard = () => [file, cover].forEach((f) => f && fs.promises.unlink(f.path).catch(() => {}));
       if (!file) { discard(); return res.status(400).json({ error: 'A file is required.' }); }
-      if (!body.title || !body.subject || !body.level) { discard(); return res.status(400).json({ error: 'Title, subject and level are required.' }); }
+
+      // Auto-generate title if not provided (e.g. from simplified student upload)
+      if (!body.title || !String(body.title).trim()) {
+        const baseName = path.parse(file.originalname).name
+          .replace(/[\-_]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        body.title = baseName || `${body.subject || 'Resource'} ${body.level || ''} ${isBook ? 'Textbook' : 'Paper'}`.trim();
+      }
+
+      if (!body.subject || !body.level) { discard(); return res.status(400).json({ error: 'Subject and class level are required.' }); }
 
       // Check for duplicate uploads in the library ("which was not existing")
       const dup = findDuplicate(table, type, body, file);
