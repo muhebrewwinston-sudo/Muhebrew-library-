@@ -147,15 +147,15 @@
   <!-- SECTION 4: THE LAST BAR - UPLOAD RESOURCES -->
   <!-- "The last bar on admin display should show upload button where I will use to upload resources." -->
   <section class="panel" style="border:2px solid var(--primary);box-shadow:0 0 18px rgba(27,127,75,0.18)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <h3 style="margin:0;font-size:17px;color:var(--primary);display:flex;align-items:center;gap:8px">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
-        <span>Upload Resource Bar</span>
+        <span>Upload Resource Bar &amp; Bulk Multi-Upload</span>
       </h3>
       <span class="badge-new">Owner Tool</span>
     </div>
     <p style="color:var(--muted);margin:0 0 14px;font-size:13px">
-      Directly publish verified past papers, textbooks, study notes, and marking keys to the library:
+      Directly publish verified past papers, textbooks, study notes, and marking keys to the library (supports uploading dozens of files at once with automatic detail tracing):
     </p>
 
     <!-- DRIME CLOUD STORAGE CONNECTED CARD -->
@@ -182,7 +182,112 @@
       </div>
     </div>
 
-    <form id="uploadForm" class="form-grid">
+    <!-- Upload Mode Switcher Tabs -->
+    <div class="upload-mode-tabs" style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px">
+      <button type="button" class="btn sm primary" id="modeTabBulk" style="display:inline-flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+        <span>Bulk Multi-Upload (Auto-Trace)</span>
+        <span style="background:#ffffff;color:var(--primary);font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;margin-left:4px">NEW</span>
+      </button>
+      <button type="button" class="btn sm" id="modeTabSingle" style="display:inline-flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Single File Upload</span>
+      </button>
+    </div>
+
+    <!-- ================= BULK MULTI-UPLOAD PANEL ================= -->
+    <div id="bulkUploadPanel">
+      <!-- Drag & Drop Zone -->
+      <div class="bulk-dropzone" id="bulkDropzone">
+        <input type="file" id="bulkFileInput" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.png" style="display:none">
+        <div class="dropzone-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
+            <path d="M12 12v9"/>
+            <path d="m16 16-4-4-4 4"/>
+          </svg>
+        </div>
+        <h4 style="margin:8px 0 4px;font-size:16px;color:var(--text)">Drag &amp; Drop Multiple Exam Papers &amp; Books Here</h4>
+        <p style="margin:0 0 12px;font-size:13px;color:var(--muted)">
+          Upload 2, 5, 10, or 50+ files at once. The system will automatically trace and extract the subject, class level, year, category, and title!
+        </p>
+        <button type="button" class="btn primary" id="bulkSelectBtn" style="font-size:13.5px;padding:9px 20px;display:inline-flex;align-items:center;gap:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Select Multiple Files to Upload</span>
+        </button>
+        <div style="margin-top:10px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-detection active: Mathematics, English, Biology, Physical Science, Form 1-4, MANEB, Mock, etc.</span>
+        </div>
+      </div>
+
+      <!-- Queue Container (shown after files are dropped/selected) -->
+      <div id="bulkQueueContainer" hidden style="margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+          <div>
+            <b style="font-size:14px;color:var(--text);display:flex;align-items:center;gap:6px">
+              <span id="bulkQueueCount">0</span> Files Traced &amp; Queued
+              <span class="tag ok" style="font-size:10px">READY FOR PUBLISHING</span>
+            </b>
+            <span style="font-size:12px;color:var(--muted)">Review the auto-detected details below. You can tweak any field before uploading.</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <!-- Quick Batch Level -->
+            <select id="bulkQuickLevel" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
+              <option value="">Quick: Set All Forms...</option>
+              <option value="Form 1">Form 1 (All)</option>
+              <option value="Form 2">Form 2 (All)</option>
+              <option value="Form 3">Form 3 (All)</option>
+              <option value="Form 4">Form 4 (All)</option>
+            </select>
+            <!-- Quick Batch Category -->
+            <select id="bulkQuickCategory" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
+              <option value="">Quick: Set All Categories...</option>
+              <option value="MANEB">MANEB Official</option>
+              <option value="Mock">Mock Exam</option>
+              <option value="Marking Key">Marking Key</option>
+              <option value="Notes">Study Notes</option>
+              <option value="MSCE">MSCE Textbook</option>
+              <option value="JCE">JCE Textbook</option>
+            </select>
+            <button type="button" class="btn sm" id="bulkAddMoreBtn">
+              + Add More Files
+            </button>
+            <button type="button" class="btn sm danger" id="bulkClearBtn">
+              Clear Queue
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress Tracker Bar -->
+        <div id="bulkProgressWrapper" hidden style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <b id="bulkProgressTitle" style="font-size:13px;color:var(--primary)">Publishing &amp; Syncing to Drime Cloud...</b>
+            <span id="bulkProgressPercent" style="font-size:12.5px;font-weight:700">0%</span>
+          </div>
+          <div style="width:100%;height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden">
+            <div id="bulkProgressBar" style="width:0%;height:100%;background:var(--grad);border-radius:999px;transition:width 0.2s ease"></div>
+          </div>
+          <div id="bulkProgressSub" style="font-size:11.5px;color:var(--muted);margin-top:6px">
+            Uploading files to Drime Cloud and publishing to student pages...
+          </div>
+        </div>
+
+        <!-- Traced Items Cards List -->
+        <div id="bulkItemsList" class="bulk-items-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>
+
+        <!-- Bulk Action Buttons -->
+        <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px">
+          <button type="button" class="btn primary" id="bulkUploadAllBtn" style="flex:1;padding:14px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+            <span id="bulkUploadBtnText">Upload All Files &amp; Publish to Student Pages</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= SINGLE FILE UPLOAD FORM ================= -->
+    <form id="uploadForm" class="form-grid" hidden>
       <div>
         <label>Resource Type</label>
         <select id="uType">
@@ -241,10 +346,10 @@
         <textarea id="uDesc" rows="2" placeholder="Brief overview of curriculum chapters or exam paper..."></textarea>
       </div>
       <div>
-        <label>Document File (PDF works best)</label>
+        <label>Document File (PDF works best - auto-traces metadata on select)</label>
         <input id="uFile" type="file" required accept=".pdf,.doc,.docx,.jpg,.png">
       </div>
-      <div id="coverWrap">
+      <div id="coverWrap" hidden>
         <label>Book Cover Image (optional)</label>
         <input id="uCover" type="file" accept="image/*">
       </div>
