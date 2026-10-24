@@ -1230,77 +1230,82 @@ body.auth::after {
   background: var(--border);
 }
 
-/* Circular green avatar with initial, full name, email, and small "STUDENT" badge */
+/* Circular green avatar with initial, name, email, and small "STUDENT" badge below email */
 .drawer-profile {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  padding: 4px 0 16px;
+  padding: 6px 4px 16px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  position: relative;
 }
 
 .profile-avatar {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1b7f4b, #2e9e63);
+  background: #1b7f4b;
   color: #ffffff;
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 20px;
-  box-shadow: 0 4px 14px rgba(27, 127, 75, 0.3);
+  font-size: 22px;
   flex-shrink: 0;
 }
 
 .profile-info {
   flex: 1;
   min-width: 0;
-}
-
-.profile-name-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 3px;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 1px;
 }
 
 .profile-name {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
 .profile-email {
-  margin: 0;
+  margin: 0 0 4px;
   font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.profile-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .role-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 10px;
+  gap: 5px;
+  padding: 2.5px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
 .role-badge.badge-student {
-  background: rgba(27, 127, 75, 0.1);
+  background: #eaf6ef;
   color: #1b7f4b;
-  border: 1px solid rgba(27, 127, 75, 0.25);
+  border: 1px solid rgba(27, 127, 75, 0.22);
 }
 
 .role-badge.badge-teacher {
@@ -1313,6 +1318,29 @@ body.auth::after {
   background: linear-gradient(135deg, #10b981, #059669);
   color: #ffffff;
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+}
+
+.drawer-close {
+  position: static;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #eef5f1;
+  border: 1px solid rgba(27, 127, 75, 0.15);
+  color: #334155;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.drawer-close:hover {
+  background: rgba(27, 127, 75, 0.15);
+  color: var(--primary);
+  transform: scale(1.05);
 }
 
 /* Admin Quick Access Link (Only shown when admin/owner is logged in) */
@@ -1361,13 +1389,18 @@ body.auth::after {
   background: rgba(2, 132, 199, 0.18);
 }
 
-/* Download Quota Card with progress bar and "Upload to unlock +5" button */
+/* Download Quota Card with progress bar and "Upload to unlock +5" button (matching screenshot) */
 .drawer-quota-card {
-  background: var(--surface-2);
+  background: #f2f8f4;
   border: 1px solid rgba(27, 127, 75, 0.18);
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin-bottom: 14px;
+  border-radius: 14px;
+  padding: 14px;
+  margin: 6px 0 12px;
+}
+
+[data-theme="dark"] .drawer-quota-card {
+  background: rgba(27, 127, 75, 0.1);
+  border-color: rgba(27, 127, 75, 0.3);
 }
 
 .quota-head {
@@ -1380,21 +1413,30 @@ body.auth::after {
 .quota-title-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  color: #0f172a;
+}
+
+[data-theme="dark"] .quota-title-wrap {
+  color: var(--text);
+}
+
+.quota-title-wrap svg {
+  color: #1b7f4b;
 }
 
 .quota-title {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--text);
+  color: inherit;
 }
 
 .quota-pill {
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2.5px 9px;
   border-radius: 999px;
-  background: var(--primary);
+  background: #1b7f4b;
   color: #ffffff;
 }
 
@@ -1417,7 +1459,7 @@ body.auth::after {
 
 .quota-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #1b7f4b, #34d399);
+  background: #1b7f4b;
   border-radius: 999px;
   transition: width 0.3s ease;
 }
@@ -1428,28 +1470,38 @@ body.auth::after {
 
 .quota-sub {
   margin: 0 0 10px;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .quota-unlock-btn {
   width: 100%;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
-  padding: 8px 12px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
+  background: #1b7f4b;
+  color: #ffffff;
+  border: none;
   box-shadow: 0 2px 8px rgba(27, 127, 75, 0.25);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-/* Drawer Menu Items */
+.quota-unlock-btn:hover {
+  background: #15663c;
+  transform: translateY(-1px);
+}
+
+/* Drawer Menu Items (matching screenshot card pill styling) */
 .drawer-nav {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   flex: 1;
 }
 
@@ -1457,92 +1509,92 @@ body.auth::after {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  color: var(--text);
+  padding: 11px 14px;
+  border-radius: 12px;
+  color: #1e293b;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
-  background: transparent;
-  border: 1px solid transparent;
+  background: #f2f7f4;
+  border: 1px solid rgba(27, 127, 75, 0.1);
   cursor: pointer;
   width: 100%;
   text-align: left;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  margin-bottom: 7px;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
-.drawer-item svg:not(.chevron-icon) {
+[data-theme="dark"] .drawer-item {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.drawer-item svg:not(.chevron-icon):not(.chevron-right) {
   width: 19px;
   height: 19px;
   flex-shrink: 0;
-  color: var(--muted);
+  color: #1b7f4b;
   transition: color 0.15s ease;
 }
 
-.drawer-item:hover {
-  background: rgba(27, 127, 75, 0.08);
-  color: var(--primary);
-}
-
-.drawer-item:hover svg:not(.chevron-icon) {
-  color: var(--primary);
-}
-
-.drawer-item:active {
-  transform: scale(0.98);
-}
-
-.badge-new {
+.drawer-item .chevron-right,
+.drawer-item .chevron-icon {
   margin-left: auto;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: #1b7f4b;
-  color: #ffffff;
+  width: 16px;
+  height: 16px;
+  color: #334155;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .drawer-item .chevron-right,
+[data-theme="dark"] .drawer-item .chevron-icon {
+  color: var(--muted);
+}
+
+.drawer-item:hover {
+  background: #e7f3ec;
+  border-color: rgba(27, 127, 75, 0.25);
+  transform: translateY(-1px);
 }
 
 .drawer-divider {
   height: 1px;
   background: var(--border);
-  margin: 6px 0;
+  margin: 4px 0 10px;
 }
 
-/* Expandable Accordion Menu Items (Books, Papers, Marking keys) */
+/* Expandable Accordion Menu Items (Books, Papers, Marking keys, Notes) */
 .drawer-accordion-group {
   display: flex;
   flex-direction: column;
 }
 
 .drawer-accordion-trigger {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  position: relative;
+  background: #eef6f2;
+  border: 1px solid rgba(27, 127, 75, 0.12);
+  border-radius: 12px;
+}
+
+[data-theme="dark"] .drawer-accordion-trigger {
+  background: rgba(27, 127, 75, 0.08);
 }
 
 .drawer-accordion-trigger .chevron-icon {
-  margin-left: auto;
-  width: 16px;
-  height: 16px;
-  color: var(--muted);
   transition: transform 0.25s ease, color 0.15s ease;
 }
 
 .drawer-accordion-group.expanded .chevron-icon {
   transform: rotate(180deg);
-  color: var(--primary);
+  color: #1b7f4b;
 }
 
 .drawer-accordion-content {
   display: none;
   flex-direction: column;
-  gap: 2px;
-  padding-left: 20px;
-  padding-top: 2px;
-  padding-bottom: 6px;
+  gap: 3px;
+  padding: 4px 6px 8px 18px;
 }
 
 .drawer-accordion-group.expanded .drawer-accordion-content {
@@ -1556,6 +1608,7 @@ body.auth::after {
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 13px;
+  font-weight: 500;
   color: var(--muted);
   background: transparent;
   border: none;
@@ -1579,32 +1632,37 @@ body.auth::after {
   opacity: 0.7;
 }
 
-/* Log out (red text) */
+/* Log out (matching screenshot soft red card) */
 .drawer-item.signout {
+  background: #fee8e8;
+  border: 1px solid #fecdd3;
   color: #dc2626;
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 6px;
 }
 
 .drawer-item.signout svg {
-  color: #dc2626;
+  color: #dc2626 !important;
 }
 
 .drawer-item.signout:hover {
-  background: rgba(220, 38, 38, 0.08);
+  background: #fecdd3;
   color: #b91c1c;
+  border-color: #fca5a5;
 }
 
 [data-theme="dark"] .drawer-item.signout {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
   color: #f87171;
 }
 
 [data-theme="dark"] .drawer-item.signout svg {
-  color: #f87171;
+  color: #f87171 !important;
 }
 
 [data-theme="dark"] .drawer-item.signout:hover {
-  background: rgba(239, 68, 68, 0.14);
+  background: rgba(239, 68, 68, 0.25);
 }
 
 /* ============ Trust Showcase: Verified Curriculum Resources ============ */
@@ -2138,4 +2196,244 @@ body {
   border-color: var(--primary);
   outline: none;
 }
+
+/* ==========================================================
+   STUDENT UPLOAD MODAL (3 DISTINCT WELL-HIGHLIGHTED LAYERS)
+   ========================================================== */
+.upload-modal-dialog {
+  max-width: 540px;
+  width: 95%;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.upload-layer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.upload-layer.layer-1 {
+  background: #f7faf8;
+  border-color: rgba(27, 127, 75, 0.2);
+}
+
+[data-theme="dark"] .upload-layer.layer-1 {
+  background: rgba(27, 127, 75, 0.06);
+}
+
+.layer-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.layer-pill {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1b7f4b;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Layer 1: Well-Highlighted Type Buttons (Book, Paper, Notes) */
+.type-highlight-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.type-highlight-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease-in-out;
+}
+
+.type-highlight-btn svg {
+  color: var(--muted);
+  transition: color 0.18s ease;
+}
+
+.type-highlight-btn:hover {
+  border-color: rgba(27, 127, 75, 0.4);
+  background: rgba(27, 127, 75, 0.05);
+  transform: translateY(-1px);
+}
+
+.type-highlight-btn.active {
+  background: #1b7f4b !important;
+  border-color: #1b7f4b !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(27, 127, 75, 0.35);
+  transform: translateY(-2px);
+}
+
+.type-highlight-btn.active svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Layer 2: Subject, Level & Document File Grid */
+.layer-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.layer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.layer-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.layer-field label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.2px;
+}
+
+.layer-field input,
+.layer-field select {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.layer-field input:focus,
+.layer-field select:focus {
+  border-color: #1b7f4b;
+  outline: none;
+}
+
+/* Layer 2: File Picker Drop Box */
+.student-file-drop {
+  border: 2px dashed rgba(27, 127, 75, 0.4);
+  border-radius: 10px;
+  padding: 14px 12px;
+  background: rgba(27, 127, 75, 0.03);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.student-file-drop:hover {
+  border-color: #1b7f4b;
+  background: rgba(27, 127, 75, 0.08);
+}
+
+.student-file-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Layer 3: Prominent Upload Button */
+.upload-layer.layer-3 {
+  padding: 0;
+  border: none;
+  background: transparent;
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.upload-action-btn {
+  width: 100%;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 12px;
+  background: #1b7f4b;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(27, 127, 75, 0.28);
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.upload-action-btn:hover {
+  background: #15663c;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(27, 127, 75, 0.35);
+}
+
+/* ==========================================================
+   DISPLAY PAGE "SEE MORE" BUTTON
+   ========================================================== */
+.see-more-wrap {
+  margin: 22px 0 32px;
+  text-align: center;
+}
+
+.see-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 26px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1b7f4b;
+  border: 1.8px solid #1b7f4b;
+  box-shadow: 0 2px 10px rgba(27, 127, 75, 0.12);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .see-more-btn {
+  background: var(--surface);
+  color: #34d399;
+  border-color: #34d399;
+}
+
+.see-more-btn:hover {
+  background: #1b7f4b;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(27, 127, 75, 0.28);
+}
+
+[data-theme="dark"] .see-more-btn:hover {
+  background: #34d399;
+  color: #0f172a;
+}
+
 
