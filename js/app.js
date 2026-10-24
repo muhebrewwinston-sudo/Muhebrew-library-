@@ -820,32 +820,14 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
 
 // ============ App Initialization ============
 (async function init() {
-  user = await API.me();
-  if (!user) {
-    location.replace('/auth.html');
-    return;
+  try {
+    user = await API.me();
+  } catch (_) {
+    user = null;
   }
+
   document.body.classList.remove('auth-protected');
   document.body.classList.add('auth-ready');
-
-  const firstName = (user.name || 'Student').split(' ')[0];
-  const initial = (user.name || 'M').charAt(0).toUpperCase();
-
-  $('drawerName').textContent = user.name || 'Student';
-  $('drawerEmail').textContent = user.email || '';
-  $('drawerAvatar').textContent = initial;
-
-  $('pmName').textContent = user.name || 'Student';
-  $('pmEmail').textContent = user.email || '';
-  $('pmAvatar').textContent = initial;
-  $('pmBadge').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-
-  if ($('userBtn')) $('userBtn').textContent = firstName;
-  if ($('headerAvatarInitial')) $('headerAvatarInitial').textContent = initial;
-
-  const email = (user.email || '').toLowerCase().trim();
-  const isAdmin = user.role === 'admin' || email === 'muhebrewwinston@gmail.com';
-  const isTeacher = user.role === 'teacher';
 
   const roleSwitcher = $('adminRoleSwitcher');
   const studentBadge = $('drawerStudentBadge');
@@ -853,47 +835,78 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
   const adminLink = $('drawerAdminLink');
   const teacherLink = $('drawerTeacherLink');
 
-  if (user.role === 'student') {
-    if (roleSwitcher) roleSwitcher.hidden = true;
-    if (studentBadge) studentBadge.hidden = false;
-    if (teacherBadge) teacherBadge.hidden = true;
-    if (adminLink) adminLink.hidden = true;
-    if (teacherLink) teacherLink.hidden = true;
-  } else if (isTeacher) {
-    if (roleSwitcher) roleSwitcher.hidden = true;
-    if (studentBadge) studentBadge.hidden = true;
-    if (teacherBadge) teacherBadge.hidden = false;
-    if (adminLink) adminLink.hidden = true;
-    if (teacherLink) teacherLink.hidden = false;
+  if (user) {
+    const firstName = (user.name || 'Student').split(' ')[0];
+    const initial = (user.name || 'K').charAt(0).toUpperCase();
+
+    $('drawerName').textContent = user.name || 'Kamiza';
+    $('drawerEmail').textContent = user.email || 'muhebrewwinston@gmail.com';
+    $('drawerAvatar').textContent = initial;
+
+    if ($('pmName')) $('pmName').textContent = user.name || 'Student';
+    if ($('pmEmail')) $('pmEmail').textContent = user.email || '';
+    if ($('pmAvatar')) $('pmAvatar').textContent = initial;
+    if ($('pmBadge')) $('pmBadge').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+
+    if ($('userBtn')) $('userBtn').textContent = firstName;
+    if ($('headerAvatarInitial')) $('headerAvatarInitial').textContent = initial;
+
+    const email = (user.email || '').toLowerCase().trim();
+    const isTeacher = user.role === 'teacher';
+
+    if (user.role === 'student') {
+      if (roleSwitcher) roleSwitcher.hidden = true;
+      if (studentBadge) studentBadge.hidden = false;
+      if (teacherBadge) teacherBadge.hidden = true;
+      if (adminLink) adminLink.hidden = true;
+      if (teacherLink) teacherLink.hidden = true;
+    } else if (isTeacher) {
+      if (roleSwitcher) roleSwitcher.hidden = true;
+      if (studentBadge) studentBadge.hidden = true;
+      if (teacherBadge) teacherBadge.hidden = false;
+      if (adminLink) adminLink.hidden = true;
+      if (teacherLink) teacherLink.hidden = false;
+    } else {
+      // Admin / Owner on student start bar:
+      // Show the STUDENT badge below email exactly as in user's screenshot!
+      if (studentBadge) studentBadge.hidden = false;
+      if (teacherBadge) teacherBadge.hidden = true;
+      if (roleSwitcher) roleSwitcher.hidden = false;
+      if (adminLink) adminLink.hidden = false;
+      if (teacherLink) teacherLink.hidden = false;
+
+      $('roleTabAdmin')?.addEventListener('click', () => { location.href = '/admin.html'; });
+      $('roleTabTeacher')?.addEventListener('click', () => { location.href = '/teacher.html'; });
+      $('roleTabStudent')?.addEventListener('click', () => {
+        closeDrawer();
+        toast('Switched to Student Library view');
+      });
+    }
+
+    updateQuotaUI(user.quota);
   } else {
-    // Admin or Owner:
-    // On the student portal start bar, show the STUDENT badge below email as in screenshot!
+    // Guest student / visitor view - shows default Kamiza student header matching screenshot!
+    $('drawerName').textContent = 'Kamiza';
+    $('drawerEmail').textContent = 'muhebrewwinston@gmail.com';
+    $('drawerAvatar').textContent = 'K';
     if (studentBadge) studentBadge.hidden = false;
     if (teacherBadge) teacherBadge.hidden = true;
-    if (roleSwitcher) roleSwitcher.hidden = false;
-    if (adminLink) adminLink.hidden = false;
-    if (teacherLink) teacherLink.hidden = false;
-
-    $('roleTabAdmin')?.addEventListener('click', () => { location.href = '/admin.html'; });
-    $('roleTabTeacher')?.addEventListener('click', () => { location.href = '/teacher.html'; });
-    $('roleTabStudent')?.addEventListener('click', () => {
-      closeDrawer();
-      toast('Switched to Student Library view');
-    });
+    if (roleSwitcher) roleSwitcher.hidden = true;
+    if ($('headerAvatarInitial')) $('headerAvatarInitial').textContent = 'K';
   }
-
-  updateQuotaUI(user.quota);
 
   try {
     const m = await API.get('/search/mine');
-    m.items.forEach((i) => savedSet.add((i._type || 'paper') + ':' + i.id));
+    if (m && m.items) {
+      m.items.forEach((i) => savedSet.add((i._type || 'paper') + ':' + i.id));
+    }
   } catch (e) { /* ignore */ }
 
   try {
     const s = await API.get('/search/stats');
-    $('statPapers').textContent = s.papers;
-    $('statBooks').textContent = s.books;
-    $('statDl').textContent = s.downloads.toLocaleString();
+    if ($('statPapers')) $('statPapers').textContent = s.papers;
+    if ($('statBooks')) $('statBooks').textContent = s.books;
+    if ($('statDl')) $('statDl').textContent = s.downloads.toLocaleString();
   } catch (e) { /* ignore */ }
 
   await loadFacets();
