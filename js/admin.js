@@ -315,7 +315,24 @@ document.addEventListener('click', async (e) => {
   } catch (err) { toast(err.message, true); }
 });
 
-// ============ SECTION 5: THE LAST BAR - UPLOAD RESOURCES ============
+// ============ SECTION 5: THE LAST BAR - UPLOAD RESOURCES (BULK & SINGLE) ============
+
+// Tab Switcher between Bulk and Single Mode
+$('modeTabBulk')?.addEventListener('click', () => {
+  $('modeTabBulk').classList.add('primary');
+  $('modeTabSingle')?.classList.remove('primary');
+  $('bulkUploadPanel').hidden = false;
+  $('uploadForm').hidden = true;
+});
+
+$('modeTabSingle')?.addEventListener('click', () => {
+  $('modeTabSingle').classList.add('primary');
+  $('modeTabBulk')?.classList.remove('primary');
+  $('bulkUploadPanel').hidden = true;
+  $('uploadForm').hidden = false;
+});
+
+// Single file type change
 $('uType')?.addEventListener('change', () => {
   const val = $('uType').value;
   const isBook = val === 'books';
@@ -335,6 +352,462 @@ $('uType')?.addEventListener('change', () => {
   }
 });
 
+// Auto-trace single file when picked in uFile
+$('uFile')?.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const traced = clientAutoTrace(file.name, file.size);
+  if ($('uTitle')) $('uTitle').value = traced.title;
+  if ($('uSubject')) $('uSubject').value = traced.subject;
+  if ($('uLevel')) $('uLevel').value = traced.level;
+  if ($('uCategory')) $('uCategory').value = traced.category;
+  if ($('uType')) {
+    $('uType').value = traced.type;
+    $('uType').dispatchEvent(new Event('change'));
+  }
+  if ($('uYear')) $('uYear').value = traced.year;
+  if ($('uBoard')) $('uBoard').value = traced.exam_board;
+  toast(`Auto-traced: ${traced.subject} (${traced.level}, ${traced.year})`);
+});
+
+// Client-side Auto Trace Engine (mirrors server utils/autotrace.js)
+function clientAutoTrace(filename, size = 0) {
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+  const cleanSpacing = nameWithoutExt.replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
+  const lower = cleanSpacing.toLowerCase();
+
+  const subjectPatterns = [
+    { name: 'Mathematics', regex: /\b(math|maths|mathematics|algebra|geometry)\b/i },
+    { name: 'English', regex: /\b(english|grammar|literature)\b/i },
+    { name: 'Chichewa', regex: /\b(chichewa|chi chewa)\b/i },
+    { name: 'Biology', regex: /\b(biology|bio)\b/i },
+    { name: 'Physical Science', regex: /\b(physical science|ps|phys-sci)\b/i },
+    { name: 'Physics', regex: /\b(physics)\b/i },
+    { name: 'Chemistry', regex: /\b(chemistry|chem)\b/i },
+    { name: 'Agriculture', regex: /\b(agriculture|agric)\b/i },
+    { name: 'Geography', regex: /\b(geography|geo)\b/i },
+    { name: 'History', regex: /\b(history|hist)\b/i },
+    { name: 'Social Studies', regex: /\b(social studies|social-studies)\b/i },
+    { name: 'Life Skills', regex: /\b(life skills|life-skills)\b/i },
+    { name: 'Computer Studies', regex: /\b(computer studies|computer science|ict|computing)\b/i },
+    { name: 'Bible Knowledge', regex: /\b(bible knowledge|bk|religious studies|cre)\b/i },
+    { name: 'Business Studies', regex: /\b(business studies|business)\b/i },
+    { name: 'Commerce', regex: /\b(commerce)\b/i },
+    { name: 'Home Economics', regex: /\b(home economics|nutrition)\b/i },
+    { name: 'French', regex: /\b(french)\b/i }
+  ];
+
+  let detectedSubject = 'General';
+  for (const item of subjectPatterns) {
+    if (item.regex.test(lower)) {
+      detectedSubject = item.name;
+      break;
+    }
+  }
+
+  let detectedLevel = 'Form 4';
+  if (/\b(form\s*1|f1|grade\s*9|junior)\b/i.test(lower)) detectedLevel = 'Form 1';
+  else if (/\b(form\s*2|f2|grade\s*10|jce)\b/i.test(lower)) detectedLevel = 'Form 2';
+  else if (/\b(form\s*3|f3|grade\s*11)\b/i.test(lower)) detectedLevel = 'Form 3';
+  else if (/\b(form\s*4|f4|grade\s*12|msce)\b/i.test(lower)) detectedLevel = 'Form 4';
+
+  const yearMatch = lower.match(/\b(19\d{2}|20\d{2})\b/);
+  const detectedYear = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
+
+  let detectedType = 'papers';
+  let detectedCategory = 'MANEB';
+  let examBoard = 'MANEB';
+
+  const isMarkingKey = /\b(marking\s*key|marking\s*scheme|answers|solution|key)\b/i.test(lower);
+  const isNotes = /\b(notes|revision|summary|guide|module|pamphlet)\b/i.test(lower);
+  const isMock = /\b(mock|cluster|division|zone|district)\b/i.test(lower);
+  const isTextbook = /\b(textbook|book|student\s*book|learners?\s*book|teachers?\s*guide)\b/i.test(lower);
+
+  if (isMarkingKey) {
+    detectedType = 'papers';
+    detectedCategory = 'Marking Key';
+  } else if (isNotes) {
+    detectedType = 'papers';
+    detectedCategory = 'Notes';
+  } else if (isMock) {
+    detectedType = 'papers';
+    detectedCategory = 'Mock';
+    examBoard = 'Cluster Mock';
+  } else if (isTextbook) {
+    detectedType = 'books';
+    detectedCategory = (detectedLevel === 'Form 1' || detectedLevel === 'Form 2') ? 'JCE' : 'MSCE';
+  } else if (/\bjce\b/i.test(lower)) {
+    detectedCategory = 'JCE';
+  } else if (/\bmsce\b/i.test(lower)) {
+    detectedCategory = 'MSCE';
+  }
+
+  let title = cleanSpacing;
+  const paperMatch = cleanSpacing.match(/\bpaper\s*([1-3]|i{1,3})\b/i);
+  const paperStr = paperMatch ? ` Paper ${paperMatch[1].toUpperCase()}` : '';
+
+  if (detectedCategory === 'Marking Key') {
+    title = `${detectedCategory} - ${detectedSubject}${paperStr} (${detectedLevel} ${detectedYear})`;
+  } else if (detectedCategory === 'Notes') {
+    title = `${detectedSubject} Study Revision Notes (${detectedLevel})`;
+  } else if (detectedType === 'books') {
+    title = `${detectedSubject} ${detectedLevel} Textbook`;
+  } else {
+    const prefix = isMock ? 'Cluster Mock' : 'MANEB';
+    title = `${prefix} ${detectedSubject}${paperStr} ${detectedYear} (${detectedLevel})`;
+  }
+
+  return {
+    rawName: filename,
+    fileSize: size,
+    type: detectedType,
+    title,
+    subject: detectedSubject,
+    level: detectedLevel,
+    category: detectedCategory,
+    year: detectedYear,
+    exam_board: examBoard,
+    author: detectedType === 'books' ? 'Ministry of Education' : ''
+  };
+}
+
+// Bulk Queue State & Functions
+let bulkQueue = [];
+
+window.updateBulkItem = function(idx, field, val) {
+  if (bulkQueue[idx]) {
+    bulkQueue[idx][field] = val;
+    if (field === 'category') {
+      if (val === 'MSCE' || val === 'JCE') bulkQueue[idx].type = 'books';
+      else bulkQueue[idx].type = 'papers';
+      const typeSelect = $(`bType_${idx}`);
+      if (typeSelect) typeSelect.value = bulkQueue[idx].type;
+    }
+  }
+};
+
+window.removeBulkItem = function(idx) {
+  bulkQueue.splice(idx, 1);
+  renderBulkQueue();
+  if (bulkQueue.length === 0) {
+    $('bulkProgressWrapper').hidden = true;
+  }
+};
+
+function renderBulkQueue() {
+  const container = $('bulkQueueContainer');
+  const list = $('bulkItemsList');
+  const countEl = $('bulkQueueCount');
+
+  if (!container || !list) return;
+
+  if (bulkQueue.length === 0) {
+    container.hidden = true;
+    list.innerHTML = '';
+    return;
+  }
+
+  container.hidden = false;
+  if (countEl) countEl.textContent = bulkQueue.length;
+
+  const subjectsList = [
+    'Mathematics', 'English', 'Chichewa', 'Biology', 'Physical Science',
+    'Physics', 'Chemistry', 'Agriculture', 'Geography', 'History',
+    'Social Studies', 'Life Skills', 'Computer Studies', 'Bible Knowledge',
+    'Business Studies', 'Commerce', 'Home Economics', 'French', 'General'
+  ];
+
+  list.innerHTML = bulkQueue.map((item, idx) => {
+    const isSuccess = item.status === 'success';
+    const isUploading = item.status === 'uploading';
+    const isError = item.status === 'error';
+    const cardClass = isSuccess ? 'bulk-item-card is-success' : isUploading ? 'bulk-item-card is-uploading' : isError ? 'bulk-item-card is-error' : 'bulk-item-card';
+
+    return `
+      <div class="${cardClass}" id="bulkCard_${idx}">
+        <div class="bulk-item-head">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="tag" style="background:var(--surface-2);color:var(--text);font-weight:700">#${idx + 1}</span>
+            <span style="font-size:12.5px;color:var(--text);font-weight:600;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(item.rawName)}">
+              ${esc(item.rawName)}
+            </span>
+            <span class="tag size" style="font-size:10px">${item.fileSize ? (item.fileSize / 1024 / 1024).toFixed(1) + ' MB' : 'PDF'}</span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px">
+            ${isSuccess ? '<span class="tag ok" style="font-size:11px;font-weight:700">✓ Published &amp; Live</span>' :
+              isUploading ? '<span class="tag info" style="font-size:11px">Uploading to Drime...</span>' :
+              isError ? `<span class="tag danger" style="font-size:11px">${esc(item.error || 'Failed')}</span>` :
+              '<span class="tag" style="font-size:11px">Auto-Traced</span>'}
+            ${!isSuccess ? `<button type="button" class="btn sm danger" onclick="removeBulkItem(${idx})" title="Remove item" style="padding:3px 8px;font-size:11px">✕</button>` : ''}
+          </div>
+        </div>
+
+        <div class="bulk-item-fields">
+          <div class="bulk-item-field">
+            <label>Title</label>
+            <input type="text" id="bTitle_${idx}" value="${esc(item.title)}" ${isSuccess ? 'disabled' : ''} onchange="updateBulkItem(${idx}, 'title', this.value)">
+          </div>
+
+          <div class="bulk-item-field">
+            <label>Subject</label>
+            <select id="bSubject_${idx}" ${isSuccess ? 'disabled' : ''} onchange="updateBulkItem(${idx}, 'subject', this.value)">
+              ${subjectsList.map(s => `<option value="${s}" ${s.toLowerCase() === (item.subject || '').toLowerCase() ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="bulk-item-field">
+            <label>Class Level</label>
+            <select id="bLevel_${idx}" ${isSuccess ? 'disabled' : ''} onchange="updateBulkItem(${idx}, 'level', this.value)">
+              <option value="Form 1" ${item.level === 'Form 1' ? 'selected' : ''}>Form 1</option>
+              <option value="Form 2" ${item.level === 'Form 2' ? 'selected' : ''}>Form 2</option>
+              <option value="Form 3" ${item.level === 'Form 3' ? 'selected' : ''}>Form 3</option>
+              <option value="Form 4" ${item.level === 'Form 4' ? 'selected' : ''}>Form 4</option>
+            </select>
+          </div>
+
+          <div class="bulk-item-field">
+            <label>Category</label>
+            <select id="bCategory_${idx}" ${isSuccess ? 'disabled' : ''} onchange="updateBulkItem(${idx}, 'category', this.value)">
+              <option value="MANEB" ${item.category === 'MANEB' ? 'selected' : ''}>MANEB</option>
+              <option value="Mock" ${item.category === 'Mock' ? 'selected' : ''}>Mock Exam</option>
+              <option value="Marking Key" ${item.category === 'Marking Key' ? 'selected' : ''}>Marking Key</option>
+              <option value="Notes" ${item.category === 'Notes' ? 'selected' : ''}>Study Notes</option>
+              <option value="MSCE" ${item.category === 'MSCE' ? 'selected' : ''}>MSCE Book</option>
+              <option value="JCE" ${item.category === 'JCE' ? 'selected' : ''}>JCE Book</option>
+            </select>
+          </div>
+
+          <div class="bulk-item-field">
+            <label>Year</label>
+            <input type="number" id="bYear_${idx}" value="${item.year || 2024}" min="1990" max="2100" ${isSuccess ? 'disabled' : ''} onchange="updateBulkItem(${idx}, 'year', this.value)">
+          </div>
+
+          <div class="bulk-item-field">
+            <label>Type</label>
+            <select id="bType_${idx}" ${isSuccess ? 'disabled' : ''} onchange="updateBulkItem(${idx}, 'type', this.value)">
+              <option value="papers" ${item.type === 'papers' ? 'selected' : ''}>Past Paper</option>
+              <option value="books" ${item.type === 'books' ? 'selected' : ''}>Textbook</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function addFilesToQueue(fileList) {
+  if (!fileList || !fileList.length) return;
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i];
+    const traced = clientAutoTrace(file.name, file.size);
+    bulkQueue.push({
+      file,
+      rawName: file.name,
+      fileSize: file.size,
+      title: traced.title,
+      subject: traced.subject,
+      level: traced.level,
+      category: traced.category,
+      year: traced.year,
+      exam_board: traced.exam_board,
+      author: traced.author,
+      type: traced.type,
+      status: 'ready',
+      error: null
+    });
+  }
+  renderBulkQueue();
+  toast(`Auto-traced and added ${fileList.length} files to queue!`);
+}
+
+async function executeBulkUpload() {
+  // Sync live inputs
+  bulkQueue.forEach((item, idx) => {
+    const t = $(`bTitle_${idx}`);
+    if (t) item.title = t.value.trim();
+    const s = $(`bSubject_${idx}`);
+    if (s) item.subject = s.value;
+    const l = $(`bLevel_${idx}`);
+    if (l) item.level = l.value;
+    const c = $(`bCategory_${idx}`);
+    if (c) item.category = c.value;
+    const y = $(`bYear_${idx}`);
+    if (y) item.year = parseInt(y.value, 10) || 2024;
+    const ty = $(`bType_${idx}`);
+    if (ty) item.type = ty.value;
+  });
+
+  const pending = bulkQueue.filter(item => item.status !== 'success');
+  if (pending.length === 0) {
+    return toast('All items in queue have already been published!');
+  }
+
+  const btn = $('bulkUploadAllBtn');
+  const btnText = $('bulkUploadBtnText');
+  const progressWrap = $('bulkProgressWrapper');
+  const progressBar = $('bulkProgressBar');
+  const progressPercent = $('bulkProgressPercent');
+  const progressTitle = $('bulkProgressTitle');
+  const progressSub = $('bulkProgressSub');
+
+  if (btn) btn.disabled = true;
+  if (progressWrap) progressWrap.hidden = false;
+
+  let uploadedCount = 0;
+  const totalToUpload = pending.length;
+
+  for (let i = 0; i < bulkQueue.length; i++) {
+    const item = bulkQueue[i];
+    if (item.status === 'success') continue;
+
+    item.status = 'uploading';
+    renderBulkQueue();
+
+    if (progressTitle) {
+      progressTitle.textContent = `Publishing ${uploadedCount + 1} of ${totalToUpload}: "${item.title}"...`;
+    }
+    if (progressSub) {
+      progressSub.textContent = `Syncing "${item.rawName}" to Drime Cloud Storage (OymudINAwCDhPbnTH5Gt4oAIxo5mbC)...`;
+    }
+
+    try {
+      const fd = new FormData();
+      fd.append('file', item.file);
+      fd.append('title', item.title);
+      fd.append('subject', item.subject);
+      fd.append('level', item.level);
+      fd.append('category', item.category);
+      fd.append('type', item.type);
+      fd.append('storage', 'drime');
+
+      if (item.type === 'books') {
+        fd.append('author', item.author || 'Ministry of Education');
+      } else {
+        fd.append('year', item.year);
+        fd.append('exam_board', item.exam_board || 'MANEB');
+      }
+
+      // Upload through /admin/upload-item with fallback
+      try {
+        await API.upload('/admin/upload-item', fd);
+      } catch (adminErr) {
+        const endpoint = item.type === 'books' ? '/books' : '/papers';
+        await API.upload(endpoint, fd);
+      }
+
+      item.status = 'success';
+      item.error = null;
+      uploadedCount++;
+    } catch (err) {
+      console.error('Failed to upload', item.rawName, err);
+      item.status = 'error';
+      item.error = err.message || 'Upload failed';
+    }
+
+    const pct = Math.round((uploadedCount / totalToUpload) * 100);
+    if (progressBar) progressBar.style.width = pct + '%';
+    if (progressPercent) progressPercent.textContent = pct + '%';
+    renderBulkQueue();
+  }
+
+  if (btn) btn.disabled = false;
+  if (btnText) {
+    btnText.textContent = uploadedCount === totalToUpload ? 'All Files Published Successfully ✓' : 'Retry Failed Uploads';
+  }
+  if (progressTitle) {
+    progressTitle.textContent = `Upload completed: ${uploadedCount} of ${totalToUpload} files published to library!`;
+  }
+  if (progressSub) {
+    progressSub.textContent = 'All published resources are instantly available on student pages (Past Papers & Books).';
+  }
+
+  toast(`Successfully published ${uploadedCount} resources!`);
+  loadStats();
+  loadProgression();
+}
+
+// Bulk Dropzone Setup
+const dropzone = $('bulkDropzone');
+const fileInput = $('bulkFileInput');
+
+if (dropzone && fileInput) {
+  dropzone.addEventListener('click', (e) => {
+    if (e.target.closest('#bulkSelectBtn') || e.target === dropzone || dropzone.contains(e.target)) {
+      fileInput.click();
+    }
+  });
+
+  ['dragenter', 'dragover'].forEach(ev => {
+    dropzone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add('dragover');
+    });
+  });
+
+  ['dragleave', 'dragend', 'drop'].forEach(ev => {
+    dropzone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('dragover');
+    });
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    if (dt && dt.files && dt.files.length) {
+      addFilesToQueue(dt.files);
+    }
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files.length) {
+      addFilesToQueue(e.target.files);
+      fileInput.value = '';
+    }
+  });
+
+  $('bulkAddMoreBtn')?.addEventListener('click', () => fileInput.click());
+
+  $('bulkClearBtn')?.addEventListener('click', () => {
+    if (bulkQueue.length && confirm('Clear all files from the upload queue?')) {
+      bulkQueue = [];
+      renderBulkQueue();
+      if ($('bulkProgressWrapper')) $('bulkProgressWrapper').hidden = true;
+    }
+  });
+
+  $('bulkQuickLevel')?.addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (!val) return;
+    bulkQueue.forEach(item => {
+      if (item.status !== 'success') item.level = val;
+    });
+    renderBulkQueue();
+    toast(`Set all pending items to ${val}`);
+    e.target.value = '';
+  });
+
+  $('bulkQuickCategory')?.addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (!val) return;
+    bulkQueue.forEach(item => {
+      if (item.status !== 'success') {
+        item.category = val;
+        if (val === 'MSCE' || val === 'JCE') item.type = 'books';
+        else item.type = 'papers';
+      }
+    });
+    renderBulkQueue();
+    toast(`Set all pending items to ${val}`);
+    e.target.value = '';
+  });
+
+  $('bulkUploadAllBtn')?.addEventListener('click', executeBulkUpload);
+}
+
+// Single Upload Handler
 $('uploadForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('uSubmit');

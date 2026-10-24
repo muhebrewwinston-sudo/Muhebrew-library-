@@ -2020,3 +2020,122 @@ body {
   border: 1px solid rgba(27, 127, 75, 0.2);
   background: linear-gradient(135deg, #f0faf4 0%, #ffffff 60%);
 }
+
+/* ==========================================================
+   ADMIN BULK MULTI-UPLOAD STYLES
+   ========================================================== */
+.bulk-dropzone {
+  border: 2px dashed rgba(27, 127, 75, 0.45);
+  border-radius: 14px;
+  background: var(--surface-2);
+  padding: 34px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  position: relative;
+}
+
+.bulk-dropzone:hover,
+.bulk-dropzone.dragover {
+  border-color: var(--primary);
+  background: rgba(27, 127, 75, 0.06);
+  box-shadow: 0 0 20px rgba(27, 127, 75, 0.15);
+  transform: translateY(-1px);
+}
+
+.bulk-dropzone .dropzone-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: rgba(27, 127, 75, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bulk-item-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+  transition: all 0.18s ease;
+}
+
+.bulk-item-card:hover {
+  border-color: rgba(27, 127, 75, 0.35);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.bulk-item-card.is-uploading {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.bulk-item-card.is-success {
+  border-color: var(--primary);
+  background: rgba(27, 127, 75, 0.04);
+}
+
+.bulk-item-card.is-error {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.04);
+}
+
+.bulk-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.bulk-item-fields {
+  display: grid;
+  grid-template-columns: 2.2fr 1.3fr 1fr 1.2fr 0.9fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+@media (max-width: 992px) {
+  .bulk-item-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .bulk-item-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bulk-item-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 3px;
+  letter-spacing: 0.3px;
+}
+
+.bulk-item-field input,
+.bulk-item-field select {
+  width: 100%;
+  font-size: 12.5px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.bulk-item-field input:focus,
+.bulk-item-field select:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
