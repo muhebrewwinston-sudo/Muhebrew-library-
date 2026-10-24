@@ -25,19 +25,22 @@
 <!-- Left Navigation Drawer (Clean white background with soft green accents) -->
 <aside class="side-drawer" id="sideDrawer" aria-label="Navigation drawer" aria-hidden="true">
   <div class="drawer-content">
-    <button class="drawer-close" id="drawerCloseBtn" aria-label="Close menu">&times;</button>
     
-    <!-- Top: Circular green avatar with initial, full name, email, and "STUDENT" badge -->
+    <!-- Top: Circular green avatar with initial, name, email, STUDENT badge, and close button -->
     <div class="drawer-profile">
-      <div class="profile-avatar" id="drawerAvatar">S</div>
+      <div class="profile-avatar" id="drawerAvatar">K</div>
       <div class="profile-info">
-        <div class="profile-name-row">
-          <h3 class="profile-name" id="drawerName">Student User</h3>
-          <span class="role-badge badge-student" id="drawerStudentBadge">STUDENT</span>
+        <h3 class="profile-name" id="drawerName">Kamiza</h3>
+        <p class="profile-email" id="drawerEmail">muhebrewwinston@gmail.com</p>
+        <div class="profile-badge-row">
+          <span class="role-badge badge-student" id="drawerStudentBadge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            <span>STUDENT</span>
+          </span>
           <span class="role-badge badge-teacher" id="drawerTeacherBadge" hidden>TEACHER</span>
         </div>
-        <p class="profile-email" id="drawerEmail">student@library.mw</p>
       </div>
+      <button class="drawer-close" id="drawerCloseBtn" aria-label="Close menu">&times;</button>
     </div>
 
     <!-- Admin / Teacher area switchers (discreetly visible only if owner or teacher) -->
@@ -55,43 +58,44 @@
     <div class="drawer-quota-card" id="drawerQuotaCard">
       <div class="quota-head">
         <div class="quota-title-wrap">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span class="quota-title">Download Quota</span>
         </div>
-        <span class="quota-pill" id="quotaPill">5 left</span>
+        <span class="quota-pill" id="quotaPill">3 left</span>
       </div>
       <div class="quota-bar-track">
-        <div class="quota-bar-fill" id="quotaFill" style="width: 100%;"></div>
+        <div class="quota-bar-fill" id="quotaFill" style="width: 60%;"></div>
       </div>
-      <p class="quota-sub" id="quotaSub">5 of 5 free downloads remaining</p>
+      <p class="quota-sub" id="quotaSub">3 of 5 downloads available</p>
       <button class="btn sm primary quota-unlock-btn" id="drawerUnlockBtn" type="button">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         <span>Upload to unlock +5</span>
       </button>
     </div>
 
-    <!-- Exact Student Menu Items Order:
+    <!-- Exact Student Menu Items Order (Matching User Screenshot + Notes):
       1. My profile
       2. Upload resources
       3. Books (expandable: Form 1 & 2, Form 3 & 4)
       4. Papers (expandable: Form 1 & 2, Form 3 & 4)
       5. Marking keys (expandable: JCE, MSCE)
-      6. Notes
+      6. Notes (expandable: Form 1 & 2, Form 3 & 4)
       7. Help & Report Issue
-      8. Log out (red text)
+      8. Log out (red card)
     -->
     <nav class="drawer-nav">
       <!-- 1. My profile -->
       <button class="drawer-item" type="button" id="drawerProfileBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span class="drawer-label">My profile</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
 
       <!-- 2. Upload resources -->
       <a class="drawer-item" href="#" id="drawerUploadLink">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span class="drawer-label">Upload resources</span>
-        <span class="badge-new">+5 DL</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </a>
 
       <div class="drawer-divider"></div>
@@ -101,7 +105,7 @@
         <button class="drawer-item drawer-accordion-trigger" type="button" aria-expanded="false" data-accordion="books">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           <span class="drawer-label">Books</span>
-          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="drawer-accordion-content" id="accordionContentBooks">
           <button class="drawer-sub-item" type="button" data-drawer-filter="books:JCE:JCE">
@@ -120,7 +124,7 @@
         <button class="drawer-item drawer-accordion-trigger" type="button" aria-expanded="false" data-accordion="papers">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <span class="drawer-label">Papers</span>
-          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="drawer-accordion-content" id="accordionContentPapers">
           <button class="drawer-sub-item" type="button" data-drawer-filter="papers:JCE:JCE">
@@ -139,7 +143,7 @@
         <button class="drawer-item drawer-accordion-trigger" type="button" aria-expanded="false" data-accordion="keys">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3"/></svg>
           <span class="drawer-label">Marking keys</span>
-          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </button>
         <div class="drawer-accordion-content" id="accordionContentKeys">
           <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Marking Key:JCE">
@@ -153,11 +157,28 @@
         </div>
       </div>
 
-      <!-- 6. Notes -->
-      <button class="drawer-item" type="button" data-drawer-filter="papers:Notes:">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        <span class="drawer-label">Notes</span>
-      </button>
+      <!-- 6. Notes (expandable: Form 1 & 2, Form 3 & 4) -->
+      <div class="drawer-accordion-group" id="drawerAccordionNotes">
+        <button class="drawer-item drawer-accordion-trigger" type="button" aria-expanded="false" data-accordion="notes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span class="drawer-label">Notes</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="drawer-accordion-content" id="accordionContentNotes">
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Notes:">
+            <span class="dot"></span>
+            <span>All Study Notes</span>
+          </button>
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Notes:JCE">
+            <span class="dot"></span>
+            <span>(JCE) Form 1 &amp; Form 2 Notes</span>
+          </button>
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Notes:MSCE">
+            <span class="dot"></span>
+            <span>(MSCE) Form 3 &amp; Form 4 Notes</span>
+          </button>
+        </div>
+      </div>
 
       <div class="drawer-divider"></div>
 
@@ -165,9 +186,10 @@
       <button class="drawer-item" type="button" id="drawerHelpBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         <span class="drawer-label">Help &amp; Report Issue</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
 
-      <!-- 8. Log out (red text) -->
+      <!-- 8. Log out (red card) -->
       <button class="drawer-item signout" type="button" id="drawerSignOutBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         <span class="drawer-label">Log out</span>
@@ -304,6 +326,14 @@
   <div id="count" style="color:var(--muted);font-size:13px;margin:8px 2px 10px"></div>
   <div class="grid" id="grid"></div>
   <div class="empty" id="empty" hidden>Nothing matched. Try clearing a filter.</div>
+
+  <!-- "See more" button below the few files displayed -->
+  <div class="see-more-wrap" id="seeMoreWrap" hidden style="margin:20px 0 28px;text-align:center">
+    <button class="btn see-more-btn" id="seeMoreBtn" type="button">
+      <span id="seeMoreBtnText">See more resources</span>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+  </div>
 </main>
 
 <!-- Bottom Native Navigation Tabs (Exactly 3 tabs: Past papers | Books | Saved) -->
@@ -322,75 +352,128 @@
   </button>
 </nav>
 
-<!-- Modal 1: Upload Resource to Unlock Downloads (Contribution-Gated) -->
+<!-- Modal 1: Upload Resource to Unlock Downloads (Contribution-Gated, 3 Distinct Layers) -->
 <div class="modal" id="uploadModal" hidden>
-  <div class="modal-dialog">
+  <div class="modal-dialog upload-modal-dialog">
     <div class="modal-header">
-      <h3 id="uploadModalTitle">Upload Resource & Unlock Downloads</h3>
-      <button class="modal-close-btn" id="uploadModalClose">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="unlock-perk">
-        <span class="perk-ico">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-        </span>
-        <div>
-          <b>Earn +5 Downloads!</b>
-          <div style="font-size:12px;color:var(--muted)">Upload a new past paper or book not yet in the library. Duplicate resources will not be accepted.</div>
-        </div>
+      <div>
+        <h3 id="uploadModalTitle" style="display:flex;align-items:center;gap:8px;margin:0;font-size:17px;color:var(--primary)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+          <span>Upload Student Resource</span>
+        </h3>
+        <p style="margin:2px 0 0;font-size:12.5px;color:var(--muted)">Contribute a study resource to unlock <b>+5 free downloads</b>!</p>
       </div>
-      <form id="studentUploadForm" class="form-grid">
-        <div>
-          <label>Resource Type</label>
-          <select id="suType">
-            <option value="papers">Past paper</option>
-            <option value="books">Textbook</option>
-          </select>
+      <button class="modal-close-btn" id="uploadModalClose" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <form id="studentUploadForm">
+        <!-- FIRST LAYER: THREE WELL-HIGHLIGHTED BUTTONS (BOOK)(PAPER)(NOTES) -->
+        <div class="upload-layer layer-1">
+          <label class="layer-title">
+            <span class="layer-pill">1</span>
+            <span>Select Resource Type</span>
+          </label>
+          <div class="type-highlight-group" id="studentTypeButtonGroup">
+            <button type="button" class="type-highlight-btn" data-type="books" id="btnTypeBook">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <span>Book</span>
+            </button>
+            <button type="button" class="type-highlight-btn active" data-type="papers" id="btnTypePaper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>Paper</span>
+            </button>
+            <button type="button" class="type-highlight-btn" data-type="notes" id="btnTypeNotes">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <span>Notes</span>
+            </button>
+          </div>
+          <!-- Hidden active type value -->
+          <input type="hidden" id="suType" value="papers">
         </div>
-        <div>
-          <label>Subject</label>
-          <input id="suSubject" required placeholder="e.g. Mathematics, English, Biology">
+
+        <!-- SECOND LAYER: SUBJECT OF THE DOCUMENT UPLOADED AND LEVEL (AND DOCUMENT FILE) -->
+        <div class="upload-layer layer-2">
+          <label class="layer-title">
+            <span class="layer-pill">2</span>
+            <span>Subject, Level &amp; Document File</span>
+          </label>
+          <div class="layer-fields-grid">
+            <div class="layer-field">
+              <label for="suSubject">Subject</label>
+              <select id="suSubject" required>
+                <option value="">Select subject...</option>
+                <option value="Mathematics">Mathematics</option>
+                <option value="English">English</option>
+                <option value="Chichewa">Chichewa</option>
+                <option value="Biology">Biology</option>
+                <option value="Physical Science">Physical Science</option>
+                <option value="Physics">Physics</option>
+                <option value="Chemistry">Chemistry</option>
+                <option value="Agriculture">Agriculture</option>
+                <option value="Geography">Geography</option>
+                <option value="History">History</option>
+                <option value="Social Studies">Social Studies</option>
+                <option value="Life Skills">Life Skills</option>
+                <option value="Computer Studies">Computer Studies</option>
+                <option value="Bible Knowledge">Bible Knowledge</option>
+                <option value="Business Studies">Business Studies</option>
+                <option value="Commerce">Commerce</option>
+                <option value="Home Economics">Home Economics</option>
+                <option value="French">French</option>
+              </select>
+            </div>
+            <div class="layer-field">
+              <label for="suLevel">Class Level</label>
+              <select id="suLevel" required>
+                <option value="Form 1">Form 1</option>
+                <option value="Form 2">Form 2</option>
+                <option value="Form 3">Form 3</option>
+                <option value="Form 4" selected>Form 4</option>
+              </select>
+            </div>
+            <div class="layer-field full-width">
+              <label for="suTitle">Resource Title</label>
+              <input id="suTitle" required placeholder="e.g. MANEB Mathematics Paper 1 (2024)">
+            </div>
+            <div class="layer-field" id="suYearWrap">
+              <label for="suYear">Exam / Publication Year</label>
+              <input id="suYear" type="number" min="1990" max="2100" placeholder="2024">
+            </div>
+            <div class="layer-field" id="suCategoryWrap">
+              <label for="suCategory">Category</label>
+              <select id="suCategory">
+                <option value="MANEB">MANEB Official Exam</option>
+                <option value="Mock">Cluster / School Mock</option>
+                <option value="Marking Key">Marking Scheme / Key</option>
+                <option value="Notes">Study Notes</option>
+                <option value="MSCE">MSCE Textbook</option>
+                <option value="JCE">JCE Textbook</option>
+              </select>
+            </div>
+            <div class="layer-field full-width">
+              <label for="suFile">Document File (PDF works best)</label>
+              <div class="student-file-drop" id="suFileDropBox">
+                <input id="suFile" type="file" required accept=".pdf,.doc,.docx,.jpg,.png" style="display:none">
+                <div class="student-file-content">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                  <div>
+                    <span id="suFileNameDisplay" style="font-size:13px;font-weight:600;color:var(--text);display:block">Tap to choose PDF document</span>
+                    <span id="suFileSizeDisplay" style="font-size:11px;color:var(--muted)">Auto-traces title, subject, and form level</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <label>Title</label>
-          <input id="suTitle" required placeholder="e.g. MSCE Mathematics Paper 1">
+
+        <!-- LAST LAYER: UPLOAD BUTTON -->
+        <div class="upload-layer layer-3">
+          <button class="btn primary upload-action-btn" id="suSubmitBtn" type="submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span id="suSubmitBtnText">Upload Resource &amp; Unlock +5 Downloads</span>
+          </button>
         </div>
-        <div>
-          <label>Class Level</label>
-          <select id="suLevel" required>
-            <option>Form 1</option>
-            <option>Form 2</option>
-            <option>Form 3</option>
-            <option>Form 4</option>
-          </select>
-        </div>
-        <div id="suYearWrap">
-          <label>Year</label>
-          <input id="suYear" type="number" min="1990" max="2100" placeholder="e.g. 2023">
-        </div>
-        <div id="suBoardWrap">
-          <label>Exam Board</label>
-          <input id="suBoard" placeholder="e.g. MANEB">
-        </div>
-        <div id="suAuthorWrap" hidden>
-          <label>Author</label>
-          <input id="suAuthor" placeholder="e.g. Ministry of Education">
-        </div>
-        <div>
-          <label>Description (optional)</label>
-          <textarea id="suDesc" rows="2" placeholder="Brief note about the file..."></textarea>
-        </div>
-        <div>
-          <label>Document File (PDF / DOC / Image)</label>
-          <input id="suFile" type="file" required accept=".pdf,.doc,.docx,.jpg,.png">
-        </div>
-        <div id="suCoverWrap" hidden>
-          <label>Book Cover Image (optional)</label>
-          <input id="suCover" type="file" accept="image/*">
-        </div>
-        <button class="btn primary" id="suSubmitBtn" type="submit" style="width:100%;margin-top:6px">
-          Submit & Unlock +5 Downloads
-        </button>
       </form>
     </div>
   </div>

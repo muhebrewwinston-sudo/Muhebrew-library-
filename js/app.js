@@ -320,6 +320,41 @@ document.querySelectorAll('.trust-card').forEach((cardEl) => {
 });
 
 // ============ Data Fetching & Rendering ============
+let allLoadedItems = [];
+let visibleItemCount = 6; // Show initial batch of 6 items on display page
+
+function renderPagedItems() {
+  const seeMoreWrap = $('seeMoreWrap');
+  const seeMoreBtn = $('seeMoreBtn');
+  const seeMoreBtnText = $('seeMoreBtnText');
+
+  if (!allLoadedItems || !allLoadedItems.length) {
+    grid.innerHTML = '';
+    empty.hidden = false;
+    empty.textContent = 'Nothing matched your search or category filter. Try clearing a filter.';
+    if (seeMoreWrap) seeMoreWrap.hidden = true;
+    return;
+  }
+
+  empty.hidden = true;
+  const currentBatch = allLoadedItems.slice(0, visibleItemCount);
+  grid.innerHTML = currentBatch.map(card).join('');
+
+  if (allLoadedItems.length > visibleItemCount) {
+    if (seeMoreWrap) seeMoreWrap.hidden = false;
+    if (seeMoreBtnText) {
+      seeMoreBtnText.textContent = `See more resources (${visibleItemCount} of ${allLoadedItems.length} shown)`;
+    }
+  } else {
+    if (seeMoreWrap) seeMoreWrap.hidden = true;
+  }
+}
+
+$('seeMoreBtn')?.addEventListener('click', () => {
+  visibleItemCount += 6;
+  renderPagedItems();
+});
+
 async function loadFacets() {
   try {
     const [p, b] = await Promise.all([API.get('/papers/facets'), API.get('/books/facets')]);
@@ -419,6 +454,7 @@ function card(item) {
 async function load() {
   empty.hidden = true;
   grid.innerHTML = Array.from({ length: 6 }, () => '<div class="skeleton"></div>').join('');
+  if ($('seeMoreWrap')) $('seeMoreWrap').hidden = true;
 
   try {
     if (type === 'saved') {
@@ -431,13 +467,9 @@ async function load() {
       }
       const { items } = await API.get('/search/mine');
       countEl.textContent = items.length + ' saved resource' + (items.length === 1 ? '' : 's');
-      if (!items.length) {
-        grid.innerHTML = '';
-        empty.hidden = false;
-        empty.textContent = 'Nothing saved yet.';
-        return;
-      }
-      grid.innerHTML = items.map(card).join('');
+      allLoadedItems = items;
+      visibleItemCount = 6;
+      renderPagedItems();
       return;
     }
 
@@ -479,17 +511,13 @@ async function load() {
 
     countEl.textContent = total + ' resource' + (total === 1 ? '' : 's') + ' available for download';
 
-    if (!items.length) {
-      grid.innerHTML = '';
-      empty.hidden = false;
-      empty.textContent = 'Nothing matched your search or category filter. Try clearing a filter.';
-      return;
-    }
-
-    grid.innerHTML = items.map(card).join('');
+    allLoadedItems = items;
+    visibleItemCount = 6; // Show initial batch of 6 items on display page
+    renderPagedItems();
   } catch (e) {
     toast(e.message, true);
     grid.innerHTML = '';
+    if ($('seeMoreWrap')) $('seeMoreWrap').hidden = true;
   }
 }
 
@@ -564,37 +592,186 @@ let dt;
   });
 });
 
-// ============ Student Upload Form Handling ============
-$('suType')?.addEventListener('change', () => {
-  const isBook = $('suType').value === 'books';
-  $('suYearWrap').hidden = isBook;
-  $('suBoardWrap').hidden = isBook;
-  $('suAuthorWrap').hidden = !isBook;
-  $('suCoverWrap').hidden = !isBook;
+// ============ Student Upload Form Handling (3 Layers) ============
+function clientAutoTrace(filename, size = 0) {
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+  const cleanSpacing = nameWithoutExt.replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
+  const lower = cleanSpacing.toLowerCase();
+
+  const subjectPatterns = [
+    { name: 'Mathematics', regex: /\b(math|maths|mathematics|algebra|geometry)\b/i },
+    { name: 'English', regex: /\b(english|grammar|literature)\b/i },
+    { name: 'Chichewa', regex: /\b(chichewa|chi chewa)\b/i },
+    { name: 'Biology', regex: /\b(biology|bio)\b/i },
+    { name: 'Physical Science', regex: /\b(physical science|ps|phys-sci)\b/i },
+    { name: 'Physics', regex: /\b(physics)\b/i },
+    { name: 'Chemistry', regex: /\b(chemistry|chem)\b/i },
+    { name: 'Agriculture', regex: /\b(agriculture|agric)\b/i },
+    { name: 'Geography', regex: /\b(geography|geo)\b/i },
+    { name: 'History', regex: /\b(history|hist)\b/i },
+    { name: 'Social Studies', regex: /\b(social studies|social-studies)\b/i },
+    { name: 'Life Skills', regex: /\b(life skills|life-skills)\b/i },
+    { name: 'Computer Studies', regex: /\b(computer studies|computer science|ict|computing)\b/i },
+    { name: 'Bible Knowledge', regex: /\b(bible knowledge|bk|religious studies|cre)\b/i },
+    { name: 'Business Studies', regex: /\b(business studies|business)\b/i },
+    { name: 'Commerce', regex: /\b(commerce)\b/i },
+    { name: 'Home Economics', regex: /\b(home economics|nutrition)\b/i },
+    { name: 'French', regex: /\b(french)\b/i }
+  ];
+
+  let detectedSubject = 'Mathematics';
+  for (const item of subjectPatterns) {
+    if (item.regex.test(lower)) {
+      detectedSubject = item.name;
+      break;
+    }
+  }
+
+  let detectedLevel = 'Form 4';
+  if (/\b(form\s*1|f1|grade\s*9|junior)\b/i.test(lower)) detectedLevel = 'Form 1';
+  else if (/\b(form\s*2|f2|grade\s*10|jce)\b/i.test(lower)) detectedLevel = 'Form 2';
+  else if (/\b(form\s*3|f3|grade\s*11)\b/i.test(lower)) detectedLevel = 'Form 3';
+  else if (/\b(form\s*4|f4|grade\s*12|msce)\b/i.test(lower)) detectedLevel = 'Form 4';
+
+  const yearMatch = lower.match(/\b(19\d{2}|20\d{2})\b/);
+  const detectedYear = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
+
+  let detectedType = 'papers';
+  let detectedCategory = 'MANEB';
+
+  const isMarkingKey = /\b(marking\s*key|marking\s*scheme|answers|solution|key)\b/i.test(lower);
+  const isNotes = /\b(notes|revision|summary|guide|module|pamphlet)\b/i.test(lower);
+  const isMock = /\b(mock|cluster|division|zone|district)\b/i.test(lower);
+  const isTextbook = /\b(textbook|book|student\s*book|learners?\s*book|teachers?\s*guide)\b/i.test(lower);
+
+  if (isMarkingKey) {
+    detectedCategory = 'Marking Key';
+  } else if (isNotes) {
+    detectedCategory = 'Notes';
+  } else if (isMock) {
+    detectedCategory = 'Mock';
+  } else if (isTextbook) {
+    detectedType = 'books';
+    detectedCategory = (detectedLevel === 'Form 1' || detectedLevel === 'Form 2') ? 'JCE' : 'MSCE';
+  }
+
+  let title = cleanSpacing;
+  const paperMatch = cleanSpacing.match(/\bpaper\s*([1-3]|i{1,3})\b/i);
+  const paperStr = paperMatch ? ` Paper ${paperMatch[1].toUpperCase()}` : '';
+
+  if (detectedCategory === 'Marking Key') {
+    title = `${detectedCategory} - ${detectedSubject}${paperStr} (${detectedLevel} ${detectedYear})`;
+  } else if (detectedCategory === 'Notes') {
+    title = `${detectedSubject} Study Revision Notes (${detectedLevel})`;
+  } else if (detectedType === 'books') {
+    title = `${detectedSubject} ${detectedLevel} Textbook`;
+  } else {
+    const prefix = isMock ? 'Cluster Mock' : 'MANEB';
+    title = `${prefix} ${detectedSubject}${paperStr} ${detectedYear} (${detectedLevel})`;
+  }
+
+  return {
+    rawName: filename,
+    fileSize: size,
+    type: detectedType,
+    title,
+    subject: detectedSubject,
+    level: detectedLevel,
+    category: detectedCategory,
+    year: detectedYear
+  };
+}
+
+// Layer 1 Button Switcher (Book, Paper, Notes)
+function selectUploadType(t) {
+  if ($('suType')) $('suType').value = t;
+
+  ['btnTypeBook', 'btnTypePaper', 'btnTypeNotes'].forEach((id) => {
+    $(id)?.classList.remove('active');
+  });
+
+  const yearWrap = $('suYearWrap');
+  const catWrap = $('suCategoryWrap');
+  const catSelect = $('suCategory');
+
+  if (t === 'books') {
+    $('btnTypeBook')?.classList.add('active');
+    if (yearWrap) yearWrap.hidden = true;
+    if (catSelect) catSelect.value = ($('suLevel')?.value === 'Form 1' || $('suLevel')?.value === 'Form 2') ? 'JCE' : 'MSCE';
+    if ($('suTitle') && !$('suTitle').value) $('suTitle').placeholder = 'e.g. Senior Secondary Mathematics Form 4';
+  } else if (t === 'notes') {
+    $('btnTypeNotes')?.classList.add('active');
+    if (yearWrap) yearWrap.hidden = true;
+    if (catSelect) catSelect.value = 'Notes';
+    if ($('suTitle') && !$('suTitle').value) $('suTitle').placeholder = 'e.g. Biology Form 3 Study Revision Notes';
+  } else {
+    $('btnTypePaper')?.classList.add('active');
+    if (yearWrap) yearWrap.hidden = false;
+    if (catSelect) catSelect.value = 'MANEB';
+    if ($('suTitle') && !$('suTitle').value) $('suTitle').placeholder = 'e.g. MANEB Mathematics Paper 1 (2024)';
+  }
+}
+
+$('btnTypeBook')?.addEventListener('click', () => selectUploadType('books'));
+$('btnTypePaper')?.addEventListener('click', () => selectUploadType('papers'));
+$('btnTypeNotes')?.addEventListener('click', () => selectUploadType('notes'));
+
+// Layer 2: File Picker & Auto-Trace
+$('suFileDropBox')?.addEventListener('click', () => {
+  $('suFile')?.click();
 });
 
+$('suFile')?.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  const nameEl = $('suFileNameDisplay');
+  const sizeEl = $('suFileSizeDisplay');
+  if (nameEl) nameEl.textContent = file.name;
+  if (sizeEl) sizeEl.textContent = formatSize(file.size);
+
+  const traced = clientAutoTrace(file.name, file.size);
+  if ($('suTitle')) $('suTitle').value = traced.title;
+  if ($('suSubject')) $('suSubject').value = traced.subject;
+  if ($('suLevel')) $('suLevel').value = traced.level;
+  if ($('suYear') && traced.year) $('suYear').value = traced.year;
+
+  if (traced.type === 'books') {
+    selectUploadType('books');
+  } else if (traced.category === 'Notes') {
+    selectUploadType('notes');
+  } else {
+    selectUploadType('papers');
+  }
+
+  toast(`Auto-traced: ${traced.subject} (${traced.level})`);
+});
+
+// Layer 3: Submit Button Handler
 $('studentUploadForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('suSubmitBtn');
+  const btnText = $('suSubmitBtnText');
   btn.disabled = true;
-  btn.textContent = 'Uploading & verifying...';
+  if (btnText) btnText.textContent = 'Uploading & unlocking +5...';
 
   try {
     const fd = new FormData();
-    const typeValue = $('suType').value;
+    const typeValue = $('suType') ? $('suType').value : 'papers';
     const isBook = typeValue === 'books';
+    const isNotes = typeValue === 'notes';
+    const endpoint = isBook ? '/books' : '/papers';
 
     fd.append('title', $('suTitle').value.trim());
-    fd.append('subject', $('suSubject').value.trim());
+    fd.append('subject', $('suSubject').value);
     fd.append('level', $('suLevel').value);
-    if ($('suDesc').value.trim()) fd.append('description', $('suDesc').value.trim());
+    fd.append('category', isNotes ? 'Notes' : ($('suCategory') ? $('suCategory').value : (isBook ? 'MSCE' : 'MANEB')));
 
-    if (!isBook) {
-      if ($('suYear').value) fd.append('year', $('suYear').value);
-      if ($('suBoard').value.trim()) fd.append('exam_board', $('suBoard').value.trim());
-    } else {
-      if ($('suAuthor').value.trim()) fd.append('author', $('suAuthor').value.trim());
-      if ($('suCover').files[0]) fd.append('cover', $('suCover').files[0]);
+    if ($('suYear') && !isBook && !isNotes && $('suYear').value) {
+      fd.append('year', $('suYear').value);
+    }
+    if (!isBook && !isNotes) {
+      fd.append('exam_board', $('suCategory')?.value === 'Mock' ? 'Cluster Mock' : 'MANEB');
     }
 
     if ($('suFile').files[0]) {
@@ -603,18 +780,18 @@ $('studentUploadForm')?.addEventListener('submit', async (e) => {
       throw new Error('Please select a file to upload.');
     }
 
-    const res = await API.upload('/' + typeValue, fd);
+    const res = await API.upload(endpoint, fd);
 
-    toast(res.message || 'Resource uploaded! +5 downloads unlocked.');
+    toast(res.message || 'Resource submitted! +5 free downloads unlocked.');
     e.target.reset();
+    if ($('suFileNameDisplay')) $('suFileNameDisplay').textContent = 'Tap to choose PDF document';
+    if ($('suFileSizeDisplay')) $('suFileSizeDisplay').textContent = 'Auto-traces title, subject, and form level';
     closeAllModals();
 
-    if (res.quota) {
-      user.quota = res.quota;
-      updateQuotaUI(res.quota);
-    } else {
-      const q = await API.getQuota();
-      if (q) { user.quota = q; updateQuotaUI(q); }
+    const q = await API.getQuota();
+    if (q) {
+      user.quota = q;
+      updateQuotaUI(q);
     }
 
     await loadFacets();
@@ -623,7 +800,7 @@ $('studentUploadForm')?.addEventListener('submit', async (e) => {
     toast(err.message, true);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Submit & Unlock +5 Downloads';
+    if (btnText) btnText.textContent = 'Upload Resource & Unlock +5 Downloads';
   }
 });
 
@@ -676,10 +853,24 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
   const adminLink = $('drawerAdminLink');
   const teacherLink = $('drawerTeacherLink');
 
-  if (isAdmin) {
-    if (roleSwitcher) roleSwitcher.hidden = false;
-    if (studentBadge) studentBadge.hidden = true;
+  if (user.role === 'student') {
+    if (roleSwitcher) roleSwitcher.hidden = true;
+    if (studentBadge) studentBadge.hidden = false;
     if (teacherBadge) teacherBadge.hidden = true;
+    if (adminLink) adminLink.hidden = true;
+    if (teacherLink) teacherLink.hidden = true;
+  } else if (isTeacher) {
+    if (roleSwitcher) roleSwitcher.hidden = true;
+    if (studentBadge) studentBadge.hidden = true;
+    if (teacherBadge) teacherBadge.hidden = false;
+    if (adminLink) adminLink.hidden = true;
+    if (teacherLink) teacherLink.hidden = false;
+  } else {
+    // Admin or Owner:
+    // On the student portal start bar, show the STUDENT badge below email as in screenshot!
+    if (studentBadge) studentBadge.hidden = false;
+    if (teacherBadge) teacherBadge.hidden = true;
+    if (roleSwitcher) roleSwitcher.hidden = false;
     if (adminLink) adminLink.hidden = false;
     if (teacherLink) teacherLink.hidden = false;
 
@@ -689,18 +880,6 @@ $('pmPwForm')?.addEventListener('submit', async (e) => {
       closeDrawer();
       toast('Switched to Student Library view');
     });
-  } else if (isTeacher) {
-    if (roleSwitcher) roleSwitcher.hidden = true;
-    if (studentBadge) studentBadge.hidden = true;
-    if (teacherBadge) teacherBadge.hidden = false;
-    if (adminLink) adminLink.hidden = true;
-    if (teacherLink) teacherLink.hidden = false;
-  } else {
-    if (roleSwitcher) roleSwitcher.hidden = true;
-    if (studentBadge) studentBadge.hidden = false;
-    if (teacherBadge) teacherBadge.hidden = true;
-    if (adminLink) adminLink.hidden = true;
-    if (teacherLink) teacherLink.hidden = true;
   }
 
   updateQuotaUI(user.quota);
