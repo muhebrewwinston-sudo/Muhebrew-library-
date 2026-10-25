@@ -1,0 +1,27 @@
+name: Auto-Deploy to Server
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  notify-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Server Auto-Deploy Webhook
+        env:
+          SERVER_URL: ${{ secrets.SERVER_WEBHOOK_URL }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          if [ -n "$SERVER_URL" ]; then
+            echo "Notifying server at $SERVER_URL..."
+            curl -s -X POST "$SERVER_URL" \
+              -H "Content-Type: application/json" \
+              -H "x-github-event: push" \
+              -H "x-webhook-token: $WEBHOOK_SECRET" \
+              -d '{"ref":"refs/heads/main","message":"Triggered from GitHub Actions push"}' || true
+            echo "Server notified."
+          else
+            echo "SERVER_WEBHOOK_URL secret not configured in GitHub repository secrets."
+            echo "Using direct GitHub Webhooks (Settings -> Webhooks) or Pterodactyl startup script instead."
+          fi

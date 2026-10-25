@@ -48,6 +48,8 @@ const authRoutes = require('./routes/auth');
 const resources = require('./routes/resources');
 const searchRoutes = require('./routes/search');
 const adminRoutes = require('./routes/admin');
+const webhookRoutes = require('./routes/webhook');
+const autoUpdater = require('./services/autoUpdater');
 
 // Ensure owner account muhebrewwinston@gmail.com exists
 try {
@@ -84,13 +86,19 @@ app.use(compression());
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+  limit: '2mb',
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 const browseLimit = rateLimit({ windowMs: 60 * 1000, max: 300 });
 const authLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: { error: 'Too many attempts. Try again shortly.' } });
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, name: 'Muhebrew Library' }));
+app.use('/api/webhook', webhookRoutes);
 app.use('/api/auth', authLimit, authRoutes);
 app.use('/api/papers', browseLimit, resources.papers);
 app.use('/api/books', browseLimit, resources.books);
@@ -165,6 +173,12 @@ app.use((err, _req, res, _next) => {
 // Bind to 0.0.0.0 so Pterodactyl container and proxy can reach it
 app.listen(PORT, '0.0.0.0', () => {
   console.log('Muhebrew Library running -> http://0.0.0.0:' + PORT);
+
+  // Initialize background auto-update if enabled via AUTO_UPDATE or AUTO_UPDATE_POLL
+  if (process.env.AUTO_UPDATE === 'true' || process.env.AUTO_UPDATE_POLL === 'true') {
+    const pollMin = parseInt(process.env.AUTO_UPDATE_POLL_INTERVAL, 10) || 5;
+    autoUpdater.startAutoPolling(pollMin);
+  }
 });
 
 process.on('uncaughtException', (err) => {

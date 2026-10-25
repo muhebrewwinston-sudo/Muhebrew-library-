@@ -7,6 +7,9 @@
   "scripts": {
     "setup": "node backend/db/setup.js",
     "start": "node server.js",
+    "start:auto": "bash startup.sh",
+    "update": "git pull origin main && npm install",
+    "git:pull": "git fetch origin main && git reset --hard origin/main && npm install",
     "seed": "node backend/db/seed.js",
     "seed:samples": "node backend/db/seed.js --samples",
     "admin": "node backend/db/tools.js",
