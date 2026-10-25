@@ -56,7 +56,25 @@ function buildRouter(table, type) {
     ? ['title', 'author', 'publisher', 'subject', 'level', 'category', 'edition', 'isbn', 'description']
     : ['title', 'subject', 'level', 'category', 'year', 'exam_board', 'paper_no', 'description'];
   const getRow = (id) => db.prepare('SELECT * FROM ' + table + ' WHERE id = ?').get(id);
-  const absPath = (row) => path.join(__dirname, '..', row.file_path);
+  const absPath = (row) => {
+    if (!row || !row.file_path) return '';
+    // Real local path
+    if (!String(row.file_path).startsWith('drime://')) {
+      return path.join(__dirname, '..', row.file_path);
+    }
+    // Legacy drime:// records: try to find local copy by file_name
+    if (row.file_name) {
+      const bucket = table === 'books' ? 'books' : 'papers';
+      const dir = path.join(__dirname, '..', 'uploads', bucket);
+      try {
+        if (fs.existsSync(dir)) {
+          const matches = fs.readdirSync(dir).filter((f) => f.endsWith(row.file_name) || f.includes(row.file_name.replace(/[^a-zA-Z0-9]/g, '_')));
+          if (matches.length) return path.join(dir, matches[0]);
+        }
+      } catch (_) {}
+    }
+    return '';
+  };
 
   // Pending items are only visible to admins and to the uploader who submitted them
   router.param('id', (req, res, next, id) => {
@@ -127,25 +145,34 @@ function buildRouter(table, type) {
     res.json({ item: row, saved });
   });
 
-  router.get('/:id/preview', (req, res) => {
+  router.get('/:id/preview', async (req, res) => {
     const row = getRow(req.params.id);
     if (!row) return res.status(404).json({ error: 'Resource not found.' });
 
-    // If stored on Drime Cloud, redirect to Drime link
-    if (row.storage_provider === 'drime' || row.drime_url) {
-      const redirectUrl = row.drime_url || drimeService.DRIME_FOLDER_URL;
-      return res.redirect(redirectUrl);
+    const abs = absPath(row);
+    if (abs && fs.existsSync(abs) && abs.toLowerCase().endsWith('.pdf')) {
+      res.setHeader('Content-Disposition', 'inline; filename="' + (row.file_name || 'preview.pdf') + '"');
+      res.type('application/pdf');
+      return res.sendFile(abs);
     }
 
-    const abs = absPath(row);
-    if (!abs.toLowerCase().endsWith('.pdf') || !fs.existsSync(abs))
-      return res.status(404).json({ error: 'No preview available for this file.' });
-    res.setHeader('Content-Disposition', 'inline');
-    res.type('application/pdf');
-    res.sendFile(abs);
+    if (row.drime_file_id) {
+      try {
+        const fromCloud = await drimeService.downloadFile(row.drime_file_id);
+        if (fromCloud.ok && fromCloud.buffer) {
+          res.setHeader('Content-Disposition', 'inline; filename="' + (row.file_name || 'preview.pdf') + '"');
+          res.type(fromCloud.contentType || 'application/pdf');
+          return res.send(fromCloud.buffer);
+        }
+      } catch (e) {
+        console.error('[Preview] Drime failed:', e.message);
+      }
+    }
+
+    return res.status(404).json({ error: 'No preview available for this file.' });
   });
 
-  router.get('/:id/download', optionalAuth, (req, res) => {
+  router.get('/:id/download', optionalAuth, async (req, res) => {
     const row = getRow(req.params.id);
     if (!row) return res.status(404).json({ error: 'Resource not found.' });
 
@@ -175,19 +202,72 @@ function buildRouter(table, type) {
       }
     }
 
+    const filename = row.file_name || (type + '-' + row.id + '.pdf');
+    const wantLink = String(req.query.prefer || '') === 'link';
+
+    // Prefer a direct file URL (reduces server load). Client downloads via JS blob — no page redirect.
+    const directUrl = row.drime_url
+      && String(row.drime_url).startsWith('http')
+      && !/dri\.me\/Oymud/i.test(String(row.drime_url))
+      ? row.drime_url
+      : null;
+
+    // prefer=link: if direct Drime URL, count once and let client pull file (low server load)
+    if (wantLink) {
+      if (directUrl) {
+        db.prepare('UPDATE ' + table + ' SET downloads = downloads + 1 WHERE id = ?').run(row.id);
+        db.prepare('INSERT INTO downloads (user_id,item_type,item_id) VALUES (?,?,?)')
+          .run(req.user.id, type, row.id);
+        return res.json({ mode: 'link', url: directUrl, fileName: filename, source: 'drime' });
+      }
+      return res.json({
+        mode: 'proxy',
+        url: req.originalUrl.split('?')[0],
+        fileName: filename,
+        source: absPath(row) && fs.existsSync(absPath(row)) ? 'local' : 'server-stream'
+      });
+    }
+
+    // Stream path: count when real file bytes are sent
     db.prepare('UPDATE ' + table + ' SET downloads = downloads + 1 WHERE id = ?').run(row.id);
     db.prepare('INSERT INTO downloads (user_id,item_type,item_id) VALUES (?,?,?)')
       .run(req.user.id, type, row.id);
 
-    // If stored on Drime Cloud, redirect download request straight to Drime
-    if (row.storage_provider === 'drime' || row.drime_url) {
-      const redirectUrl = row.drime_url || (row.drime_file_id ? `https://dri.me/file/${row.drime_file_id}` : drimeService.DRIME_FOLDER_URL);
-      return res.redirect(redirectUrl);
+    // Stream mode (default): file bytes through our server — page does not navigate if client uses fetch+blob
+    const abs = absPath(row);
+    if (abs && fs.existsSync(abs)) {
+      return res.download(abs, filename);
     }
 
-    const abs = absPath(row);
-    if (!fs.existsSync(abs)) return res.status(410).json({ error: 'File missing on server.' });
-    res.download(abs, row.file_name || path.basename(abs));
+    if (row.drime_file_id) {
+      try {
+        const fromCloud = await drimeService.downloadFile(row.drime_file_id);
+        if (fromCloud.ok && fromCloud.buffer) {
+          res.setHeader('Content-Disposition', 'attachment; filename="' + filename.replace(/"/g, '') + '"');
+          res.type(fromCloud.contentType || 'application/pdf');
+          return res.send(fromCloud.buffer);
+        }
+      } catch (e) {
+        console.error('[Download] Drime API stream failed:', e.message);
+      }
+    }
+
+    if (directUrl) {
+      try {
+        const upstream = await fetch(directUrl);
+        if (upstream.ok) {
+          res.setHeader('Content-Disposition', 'attachment; filename="' + filename.replace(/"/g, '') + '"');
+          res.type(upstream.headers.get('content-type') || 'application/pdf');
+          return res.send(Buffer.from(await upstream.arrayBuffer()));
+        }
+      } catch (e) {
+        console.error('[Download] URL proxy failed:', e.message);
+      }
+    }
+
+    return res.status(410).json({
+      error: 'File is in Drime cloud but could not be retrieved. Ask admin to Sync from Drime or re-upload the file.'
+    });
   });
 
   router.post('/:id/report', reportLimit, optionalAuth, (req, res) => {
@@ -252,11 +332,14 @@ function buildRouter(table, type) {
       let drimeFolderId = null;
 
       try {
+        const folderForType = drimeService.getFolderIdForType
+          ? drimeService.getFolderIdForType(isBook ? 'book' : (String(body.category || '').toLowerCase().includes('marking') ? 'marking' : 'paper'))
+          : drimeService.DRIME_FOLDER_ID;
         const drimeRes = await drimeService.uploadToDrime({
           filePath: file.path,
           originalName: file.originalname,
           mimeType: file.mimetype,
-          folderId: body.drime_folder_id || drimeService.DRIME_FOLDER_ID
+          folderId: body.drime_folder_id || folderForType || drimeService.DRIME_FOLDER_ID
         });
         drimeFileId = drimeRes.fileId;
         drimeUrl = body.drime_link ? body.drime_link.trim() : (drimeRes.url || drimeService.DRIME_FOLDER_URL);
@@ -267,16 +350,10 @@ function buildRouter(table, type) {
         drimeFolderId = drimeService.DRIME_FOLDER_ID;
       }
 
-      // Production requirement: Papers and books are stored in Drime Cloud folder, not on server disk.
-      // Unlink local temporary file immediately after cloud sync.
-      try {
-        await fs.promises.unlink(file.path);
-      } catch (unlinkErr) {
-        console.error('[Drime Cloud Storage] Local file unlink error:', unlinkErr.message);
-      }
-
+      // Keep LOCAL file so students can download through our website (no broken stream).
+      // Also sync a copy to Drime for backup / extra space.
       const rel = (f) => path.relative(path.join(__dirname, '..'), f.path).split(path.sep).join('/');
-      const storedPath = storageProvider === 'drime' ? `drime://${drimeFileId || file.originalname}` : rel(file);
+      const storedPath = rel(file);
       const cols = [
         ...fields,
         'file_path',

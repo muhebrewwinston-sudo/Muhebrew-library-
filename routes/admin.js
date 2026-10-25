@@ -4,6 +4,11 @@ const path = require('path');
 const db = require('../db/database');
 const { requireAdmin } = require('../middleware/auth');
 const drimeService = require('../services/drime');
+const { parseFilename } = require('../services/bulkUpload');
+const multer = require('multer');
+const { processBulkZip } = require('../services/bulkUpload');
+const pathMod = require('path');
+const fsMod = require('fs');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -66,7 +71,7 @@ router.get('/progression', (_req, res) => {
   // Recent user signups
   const signups = db.prepare(`
     SELECT id, name, email, role, school, level, created_at 
-    FROM users ORDER BY id DESC LIMIT 10
+    FROM users WHERE is_verified = 1 ORDER BY id DESC LIMIT 10
   `).all();
 
   // Recent downloads activity
@@ -95,7 +100,7 @@ router.get('/progression', (_req, res) => {
 });
 
 router.get('/users', (_req, res) => {
-  res.json({ users: db.prepare('SELECT id,name,email,role,school,level,created_at FROM users ORDER BY id DESC LIMIT 200').all() });
+  res.json({ users: db.prepare('SELECT id,name,email,role,school,level,created_at FROM users WHERE is_verified = 1 ORDER BY id DESC LIMIT 200').all() });
 });
 
 router.patch('/users/:id/role', (req, res) => {
@@ -179,6 +184,19 @@ router.post('/reports/:id/resolve', (req, res) => {
 });
 
 const { buildBackendZip } = require('../utils/zip');
+
+router.get('/download-zip', (_req, res) => {
+  const zipPath = path.join(__dirname, '..', 'muhebrew-backend-updated.zip');
+  if (!fs.existsSync(zipPath)) {
+    buildBackendZip();
+  }
+  if (fs.existsSync(zipPath)) {
+    res.download(zipPath, 'muhebrew-backend-updated.zip');
+  } else {
+    res.status(500).json({ error: 'Failed to generate backend zip archive.' });
+  }
+});
+
 const { autoTraceFile } = require('../utils/autotrace');
 const { upload } = require('../middleware/upload');
 
@@ -214,7 +232,6 @@ router.post('/upload-item', upload.single('file'), async (req, res) => {
     // Check duplicate
     const existing = db.prepare(`SELECT id, title FROM ${table} WHERE LOWER(title) = ?`).get(title.toLowerCase());
     if (existing) {
-      try { await fs.promises.unlink(file.path); } catch (_) {}
       return res.status(400).json({ error: `Resource with title "${existing.title}" already exists.` });
     }
 
@@ -225,27 +242,24 @@ router.post('/upload-item', upload.single('file'), async (req, res) => {
     let drimeFolderId = null;
 
     try {
+      const folderForType = drimeService.getFolderIdForType ? drimeService.getFolderIdForType(isBook ? 'book' : 'paper') : drimeService.DRIME_FOLDER_ID;
       const drimeRes = await drimeService.uploadToDrime({
         filePath: file.path,
         originalName: file.originalname,
         mimeType: file.mimetype,
-        folderId: body.drime_folder_id || drimeService.DRIME_FOLDER_ID
+        folderId: body.drime_folder_id || folderForType || drimeService.DRIME_FOLDER_ID
       });
       drimeFileId = drimeRes.fileId;
       drimeUrl = body.drime_link ? body.drime_link.trim() : (drimeRes.url || drimeService.DRIME_FOLDER_URL);
       drimeFolderId = drimeRes.folderId || drimeService.DRIME_FOLDER_ID;
     } catch (drimeErr) {
-      console.error('[Admin Bulk Upload] Drime sync error:', drimeErr.message);
+      console.error('[Admin Upload Item] Drime sync error:', drimeErr.message);
       drimeUrl = drimeService.DRIME_FOLDER_URL;
       drimeFolderId = drimeService.DRIME_FOLDER_ID;
     }
 
-    // Unlink local temp file in line with Drime cloud storage requirements
-    try {
-      await fs.promises.unlink(file.path);
-    } catch (_) {}
-
-    const storedPath = `drime://${drimeFileId || file.originalname}`;
+    const relPath = path.relative(path.join(__dirname, '..'), file.path).split(path.sep).join('/');
+    const storedPath = relPath;
 
     let info;
     if (isBook) {
@@ -273,123 +287,130 @@ router.post('/upload-item', upload.single('file'), async (req, res) => {
   }
 });
 
-// 3. Batch Bulk Upload Endpoint (Uploads multiple files at once)
-router.post('/bulk-upload', upload.array('files', 100), async (req, res) => {
-  const files = req.files || [];
-  if (!files.length) return res.status(400).json({ error: 'No files provided for bulk upload.' });
 
-  let metaMap = {};
-  if (req.body.metadata) {
-    try {
-      const parsed = JSON.parse(req.body.metadata);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((m, idx) => {
-          if (m.rawName) metaMap[m.rawName] = m;
-          metaMap['idx_' + idx] = m;
-        });
-      }
-    } catch (_) {}
+// Bulk ZIP upload – auto-detect subject/level/year from filenames
+const bulkStorage = multer.diskStorage({
+  destination(_req, _file, cb) {
+    const dir = pathMod.join(__dirname, '..', 'uploads', 'temp');
+    fsMod.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename(_req, file, cb) {
+    cb(null, 'bulk-' + Date.now() + '-' + (file.originalname || 'upload.zip').replace(/[^a-zA-Z0-9._-]/g, '_'));
   }
-
-  const results = [];
-  const errors = [];
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    try {
-      const traced = autoTraceFile(file.originalname, file.size);
-      const meta = metaMap[file.originalname] || metaMap['idx_' + i] || {};
-
-      const type = meta.type === 'books' || (!meta.type && traced.type === 'books') ? 'books' : 'papers';
-      const isBook = type === 'books';
-      const table = isBook ? 'books' : 'papers';
-
-      const title = (meta.title || traced.title || file.originalname).trim();
-      const subject = (meta.subject || traced.subject || 'General Studies').trim();
-      const level = (meta.level || traced.level || 'Form 4').trim();
-      const category = (meta.category || traced.category || (isBook ? 'MSCE' : 'MANEB')).trim();
-      const year = !isBook && (meta.year || traced.year) ? Number(meta.year || traced.year) : null;
-      const exam_board = !isBook ? (meta.exam_board || traced.exam_board || 'MANEB').trim() : null;
-      const author = isBook ? (meta.author || traced.author || '').trim() : null;
-      const description = (meta.description || traced.description || '').trim();
-
-      // Check duplicate
-      const existing = db.prepare(`SELECT id, title FROM ${table} WHERE LOWER(title) = ?`).get(title.toLowerCase());
-      if (existing) {
-        try { await fs.promises.unlink(file.path); } catch (_) {}
-        errors.push({ filename: file.originalname, error: `Skipped duplicate: "${title}" is already in the library.` });
-        continue;
-      }
-
-      // Sync to Drime Cloud Storage
-      let storageProvider = 'drime';
-      let drimeFileId = null;
-      let drimeUrl = null;
-      let drimeFolderId = null;
-
-      try {
-        const drimeRes = await drimeService.uploadToDrime({
-          filePath: file.path,
-          originalName: file.originalname,
-          mimeType: file.mimetype,
-          folderId: drimeService.DRIME_FOLDER_ID
-        });
-        drimeFileId = drimeRes.fileId;
-        drimeUrl = drimeRes.url || drimeService.DRIME_FOLDER_URL;
-        drimeFolderId = drimeRes.folderId || drimeService.DRIME_FOLDER_ID;
-      } catch (err) {
-        drimeUrl = drimeService.DRIME_FOLDER_URL;
-        drimeFolderId = drimeService.DRIME_FOLDER_ID;
-      }
-
-      // Unlink temp file
-      try {
-        await fs.promises.unlink(file.path);
-      } catch (_) {}
-
-      const storedPath = `drime://${drimeFileId || file.originalname}`;
-
-      let info;
-      if (isBook) {
-        info = db.prepare(`
-          INSERT INTO books (title, subject, level, category, author, description, file_path, file_name, file_size, mime_type, storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')
-        `).run(title, subject, level, category, author, description, storedPath, file.originalname, file.size, file.mimetype, storageProvider, drimeFileId, drimeUrl, drimeFolderId, req.user.id);
-      } else {
-        info = db.prepare(`
-          INSERT INTO papers (title, subject, level, category, year, exam_board, description, file_path, file_name, file_size, mime_type, storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')
-        `).run(title, subject, level, category, year, exam_board, description, storedPath, file.originalname, file.size, file.mimetype, storageProvider, drimeFileId, drimeUrl, drimeFolderId, req.user.id);
-      }
-
-      const created = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(info.lastInsertRowid);
-      results.push({ ...created, _type: type });
-    } catch (fileErr) {
-      console.error('[Bulk upload file error]', file.originalname, fileErr.message);
-      errors.push({ filename: file.originalname, error: fileErr.message });
-      try { await fs.promises.unlink(file.path); } catch (_) {}
+});
+const bulkUploadMw = multer({
+  storage: bulkStorage,
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB zip
+  fileFilter(_req, file, cb) {
+    if (!/\.zip$/i.test(file.originalname || '')) {
+      return cb(Object.assign(new Error('Please upload a .zip file'), { status: 400 }));
     }
+    cb(null, true);
+  }
+});
+
+router.post('/bulk-upload', bulkUploadMw.single('zip'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Please select a ZIP file containing PDFs.' });
+  }
+  try {
+    const result = await processBulkZip({
+      zipPath: req.file.path,
+      uploadedBy: req.user ? req.user.id : null,
+      defaultStatus: 'approved'
+    });
+    if (!result.ok) {
+      return res.status(400).json({ error: result.error || 'Bulk upload failed.' });
+    }
+    res.json({
+      success: true,
+      message: `Uploaded ${result.uploaded} of ${result.total} files. Skipped ${result.skipped}, failed ${result.failed}.`,
+      ...result
+    });
+  } catch (err) {
+    console.error('[BulkUpload]', err);
+    res.status(500).json({ error: err.message || 'Bulk upload failed.' });
+  }
+});
+
+
+
+// Sync files that were uploaded directly on Drime into the library database
+// Student search uses the database; files are served from Drime via the server
+router.post('/sync-from-drime', async (req, res) => {
+  const typeHint = String((req.body || {}).type || 'paper').toLowerCase(); // paper | book | marking
+  const folderId = (req.body || {}).folderId || drimeService.getFolderIdForType(typeHint);
+
+  const listed = await drimeService.listFiles(folderId);
+  if (!listed.ok) {
+    return res.status(502).json({
+      error: listed.error || 'Could not list files from Drime. Check DRIME_API_KEY and folder IDs.',
+      status: drimeService.getStatus()
+    });
   }
 
-  res.status(201).json({
+  const imported = [];
+  const skipped = [];
+
+  for (const f of listed.files) {
+    const name = f.name || 'file.pdf';
+    if (!/\.(pdf|doc|docx)$/i.test(name)) {
+      skipped.push({ name, reason: 'Not a document' });
+      continue;
+    }
+
+    const meta = parseFilename(name);
+    const isBook = typeHint === 'book' || meta.type === 'book';
+    const table = isBook ? 'books' : 'papers';
+
+    const exists = db.prepare(
+      'SELECT id FROM ' + table + ' WHERE drime_file_id = ? OR LOWER(file_name) = ?'
+    ).get(f.id, name.toLowerCase());
+    if (exists) {
+      skipped.push({ name, reason: 'Already in library' });
+      continue;
+    }
+
+    if (isBook) {
+      db.prepare(`
+        INSERT INTO books (title, subject, level, category, file_path, file_name, file_size, mime_type,
+          storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, NULL, 'approved')
+      `).run(
+        meta.title, meta.subject, meta.level, meta.category || 'Textbook',
+        'drime://' + (f.id || name), name, f.size || 0, f.mime || 'application/pdf',
+        f.id || null, f.url || drimeService.DRIME_FOLDER_URL, folderId
+      );
+    } else {
+      db.prepare(`
+        INSERT INTO papers (title, subject, level, category, year, file_path, file_name, file_size, mime_type,
+          storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, NULL, 'approved')
+      `).run(
+        meta.title, meta.subject, meta.level, meta.category || 'MANEB', meta.year,
+        'drime://' + (f.id || name), name, f.size || 0, f.mime || 'application/pdf',
+        f.id || null, f.url || drimeService.DRIME_FOLDER_URL, folderId
+      );
+    }
+    imported.push({ name, title: meta.title, subject: meta.subject, level: meta.level });
+  }
+
+  res.json({
     success: true,
-    count: results.length,
-    items: results,
-    errors,
-    message: `Successfully processed ${results.length} files. All resources are now published and visible to students.`
+    message: 'Synced from Drime: ' + imported.length + ' new, ' + skipped.length + ' skipped.',
+    imported: imported.length,
+    skipped: skipped.length,
+    details: { imported, skipped },
+    folderId
   });
 });
 
-router.get('/download-zip', (_req, res) => {
-  const zipPath = path.join(__dirname, '..', 'muhebrew-backend-updated.zip');
-  if (!fs.existsSync(zipPath)) {
-    buildBackendZip();
-  }
-  if (fs.existsSync(zipPath)) {
-    res.download(zipPath, 'muhebrew-backend-updated.zip');
-  } else {
-    res.status(500).json({ error: 'Failed to generate backend zip archive.' });
-  }
+router.get('/drime-files', async (req, res) => {
+  const folderId = req.query.folderId || drimeService.DRIME_FOLDER_ID;
+  const listed = await drimeService.listFiles(folderId);
+  res.json({ ...listed, status: drimeService.getStatus() });
 });
+
 
 module.exports = router;
