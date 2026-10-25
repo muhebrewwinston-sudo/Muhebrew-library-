@@ -5,11 +5,12 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "setup": "node db/setup.js",
+    "setup": "node backend/db/setup.js",
     "start": "node server.js",
-    "seed": "node db/seed.js",
-    "seed:samples": "node db/seed.js --samples",
-    "admin": "node db/tools.js"
+    "seed": "node backend/db/seed.js",
+    "seed:samples": "node backend/db/seed.js --samples",
+    "admin": "node backend/db/tools.js",
+    "backend": "cd backend && npm start"
   },
   "engines": {
     "node": ">=18.0.0"

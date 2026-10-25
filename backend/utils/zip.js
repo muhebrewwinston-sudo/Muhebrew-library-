@@ -3,7 +3,9 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 function buildBackendZip() {
-  const rootDir = path.join(__dirname, '..');
+  const rootDir = fs.existsSync(path.join(__dirname, '..', '..', 'backend'))
+    ? path.join(__dirname, '..', '..')
+    : path.join(__dirname, '..');
   const zipPath = path.join(rootDir, 'muhebrew-backend-updated.zip');
 
   const pyScript = `

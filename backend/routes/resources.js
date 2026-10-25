@@ -60,18 +60,27 @@ function buildRouter(table, type) {
     if (!row || !row.file_path) return '';
     // Real local path
     if (!String(row.file_path).startsWith('drime://')) {
-      return path.join(__dirname, '..', row.file_path);
+      const p1 = path.join(__dirname, '..', row.file_path);
+      if (fs.existsSync(p1)) return p1;
+      const p2 = path.join(__dirname, '..', '..', row.file_path);
+      if (fs.existsSync(p2)) return p2;
+      return p1;
     }
     // Legacy drime:// records: try to find local copy by file_name
     if (row.file_name) {
       const bucket = table === 'books' ? 'books' : 'papers';
-      const dir = path.join(__dirname, '..', 'uploads', bucket);
-      try {
-        if (fs.existsSync(dir)) {
-          const matches = fs.readdirSync(dir).filter((f) => f.endsWith(row.file_name) || f.includes(row.file_name.replace(/[^a-zA-Z0-9]/g, '_')));
-          if (matches.length) return path.join(dir, matches[0]);
-        }
-      } catch (_) {}
+      const dirs = [
+        path.join(__dirname, '..', 'uploads', bucket),
+        path.join(__dirname, '..', '..', 'uploads', bucket)
+      ];
+      for (const dir of dirs) {
+        try {
+          if (fs.existsSync(dir)) {
+            const matches = fs.readdirSync(dir).filter((f) => f.endsWith(row.file_name) || f.includes(row.file_name.replace(/[^a-zA-Z0-9]/g, '_')));
+            if (matches.length) return path.join(dir, matches[0]);
+          }
+        } catch (_) {}
+      }
     }
     return '';
   };
