@@ -156,6 +156,9 @@ app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found.' }));
 app.use((_req, res) => {
   const indexFile = path.join(publicDir, 'index.html');
   if (fs.existsSync(indexFile)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(indexFile);
   } else {
     res.status(404).send('Not found');
