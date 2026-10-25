@@ -304,22 +304,20 @@ function updateQuotaUI(quota) {
   if (pmLeft) pmLeft.textContent = quota.remaining;
 }
 
-// ============ Trust Carousel Click Handling ============
-document.querySelectorAll('.trust-card').forEach((cardEl) => {
-  cardEl.addEventListener('click', () => {
-    const raw = cardEl.dataset.trust;
-    if (!raw) return;
-    const [sub, lvl] = raw.split(':');
-    type = 'books';
-    if ($('subject')) $('subject').value = sub;
-    if ($('level')) $('level').value = lvl;
-    if ($('categoryFilter')) $('categoryFilter').value = '';
-    if ($('q')) $('q').value = '';
-    load();
-    grid.scrollIntoView({ behavior: 'smooth' });
-    toast(`Filtered to ${sub} (${lvl})`);
+// ============ Search Bar Interactions ============
+const qInput = $('q');
+const qClear = $('searchClearBtn');
+if (qInput && qClear) {
+  qInput.addEventListener('input', () => {
+    qClear.hidden = !qInput.value.trim();
   });
-});
+  qClear.addEventListener('click', () => {
+    qInput.value = '';
+    qClear.hidden = true;
+    qInput.focus();
+    load();
+  });
+}
 
 // ============ Data Fetching & Rendering ============
 let allLoadedItems = [];
@@ -399,7 +397,7 @@ function card(item) {
     }
   }
 
-  // Red PDF icon badge on the left
+  // Red PDF icon badge for exam papers
   const redPdfBadge = 
     '<div class="card-pdf-badge" aria-label="PDF Document">' +
       '<svg class="pdf-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -412,12 +410,17 @@ function card(item) {
       '<span class="pdf-tag">PDF</span>' +
     '</div>';
 
-  const visualCol = !isPaper && item.cover_path
-    ? '<div class="card-cover-wrapper">' +
-        '<img src="/' + esc(item.cover_path) + '" alt="" loading="lazy">' +
-        '<span class="cover-pdf-pill">PDF</span>' +
-      '</div>'
-    : redPdfBadge;
+  // Deep forest Book badge for textbooks (no raster book images)
+  const bookDocBadge = 
+    '<div class="card-pdf-badge book-badge" aria-label="Curriculum Book">' +
+      '<svg class="pdf-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#14532d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>' +
+        '<path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' +
+      '</svg>' +
+      '<span class="pdf-tag book-tag">BOOK</span>' +
+    '</div>';
+
+  const visualCol = isPaper ? redPdfBadge : bookDocBadge;
 
   return '<article class="card">' +
     '<div class="card-header">' +
@@ -434,11 +437,6 @@ function card(item) {
             '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> ' +
             esc(sizeStr) +
           '</span>' +
-          (item.storage_provider === 'drime' ? 
-            '<span class="meta-dot">&middot;</span>' +
-            '<span class="meta-item drime-cloud-chip" title="Drime Cloud Hosted">' +
-              '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime Cloud' +
-            '</span>' : '') +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -590,7 +588,7 @@ grid.addEventListener('click', async (e) => {
 
       if (dlTitle) dlTitle.textContent = 'Downloading Resource...';
       if (dlFilename) dlFilename.textContent = itemName;
-      if (dlStatus) dlStatus.textContent = 'Connecting to library cloud storage...';
+      if (dlStatus) dlStatus.textContent = 'Connecting to library storage...';
       if (dlPercent) dlPercent.textContent = '0%';
       if (dlBar) dlBar.style.width = '0%';
       if (dlBytes) dlBytes.textContent = '0 KB transferred';
@@ -638,7 +636,7 @@ grid.addEventListener('click', async (e) => {
         // All chunks received
         if (dlBar) dlBar.style.width = '100%';
         if (dlPercent) dlPercent.textContent = '100%';
-        if (dlStatus) dlStatus.innerHTML = '<span style="color:#1b7f4b;font-weight:700">✓ Download Complete!</span>';
+        if (dlStatus) dlStatus.innerHTML = '<span style="color:#14532d;font-weight:700">✓ Download Complete!</span>';
         if (dlBytes) dlBytes.textContent = `${formatSize(receivedLength)} total transferred`;
         if (dlSpeed) dlSpeed.textContent = 'Saved to device';
 
@@ -660,9 +658,9 @@ grid.addEventListener('click', async (e) => {
         }, 1600);
 
       } catch (dlErr) {
-        // Graceful fallback for cross-origin cloud redirects
+        // Graceful fallback for cross-origin redirects
         console.warn('Direct stream fallback to browser download:', dlErr);
-        if (dlStatus) dlStatus.textContent = 'Syncing direct cloud download...';
+        if (dlStatus) dlStatus.textContent = 'Starting direct download...';
 
         let p = 20;
         const interval = setInterval(() => {
@@ -677,7 +675,7 @@ grid.addEventListener('click', async (e) => {
           clearInterval(interval);
           if (dlBar) dlBar.style.width = '100%';
           if (dlPercent) dlPercent.textContent = '100%';
-          if (dlStatus) dlStatus.innerHTML = '<span style="color:#1b7f4b;font-weight:700">✓ Download Initiated!</span>';
+          if (dlStatus) dlStatus.innerHTML = '<span style="color:#14532d;font-weight:700">✓ Download Initiated!</span>';
           toast('Download started successfully');
           setTimeout(() => closeAllModals(), 1800);
         }, 1200);
@@ -919,18 +917,18 @@ $('studentUploadForm')?.addEventListener('submit', async (e) => {
         pMsg.textContent = `Uploading bytes: ${formatSize(loaded)} of ${formatSize(total)} (${pct}%)`;
       }
       if (pct >= 100) {
-        if (pTitle) pTitle.innerHTML = '<span>Syncing to Drime Cloud Storage...</span>';
-        if (pMsg) pMsg.textContent = 'Processing and registering in Drime Cloud folder...';
+        if (pTitle) pTitle.innerHTML = '<span>Processing &amp; Publishing Resource...</span>';
+        if (pMsg) pMsg.textContent = 'Verifying document and saving to library...';
       }
     });
 
     if (pBar) pBar.style.width = '100%';
     if (pPct) pPct.textContent = '100%';
     if (pTitle) {
-      pTitle.innerHTML = '<span style="color:#1b7f4b">✓ Approved and Published!</span>';
+      pTitle.innerHTML = '<span style="color:#14532d">✓ Approved and Published!</span>';
     }
     if (pMsg) {
-      pMsg.innerHTML = '<b style="color:#1b7f4b">✓ Document approved &amp; published! +5 downloads unlocked.</b>';
+      pMsg.innerHTML = '<b style="color:#14532d">✓ Document approved &amp; published! +5 downloads unlocked.</b>';
     }
 
     toast(res.message || 'Resource submitted! +5 free downloads unlocked.');
