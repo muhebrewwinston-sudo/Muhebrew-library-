@@ -38,6 +38,7 @@ function isAdmin(user) {
   loadProgression();
   loadPending();
   loadUsers();
+  loadGitStatus();
 })();
 
 const themeBtn = $('themeBtn');
@@ -898,4 +899,95 @@ $('uploadForm')?.addEventListener('submit', async (e) => {
     btn.disabled = false;
     btn.textContent = 'Publish Resource to Library (Syncs to Drime Cloud)';
   }
+});
+
+// ============ SECTION: GitHub Auto-Deployment & Server Sync ============
+async function loadGitStatus() {
+  try {
+    const res = await API.get('/admin/git-status');
+    if ($('gitCommitHash')) {
+      $('gitCommitHash').textContent = res.current?.shortHash || 'v2.0.0';
+    }
+    if ($('gitCommitDesc')) {
+      const msg = res.current?.message || 'Updated';
+      $('gitCommitDesc').textContent = msg.length > 40 ? msg.substring(0, 37) + '...' : msg;
+    }
+    if ($('webhookUrlInput')) {
+      $('webhookUrlInput').value = res.webhookUrl || `${location.origin}/api/webhook/github`;
+    }
+    if ($('gitStatusBadge')) {
+      if (res.hasUpdate) {
+        $('gitStatusBadge').textContent = 'UPDATE AVAILABLE';
+        $('gitStatusBadge').className = 'tag';
+        $('gitStatusBadge').style.background = '#fef3c7';
+        $('gitStatusBadge').style.color = '#b45309';
+      } else {
+        $('gitStatusBadge').textContent = 'UP TO DATE';
+        $('gitStatusBadge').className = 'tag ok';
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load git status:', err.message);
+  }
+}
+
+// Toggle Webhook Info Details
+$('btnToggleWebhookInfo')?.addEventListener('click', () => {
+  const panel = $('gitWebhookDetails');
+  if (panel) {
+    const isHidden = panel.style.display === 'none' || !panel.style.display;
+    panel.style.display = isHidden ? 'block' : 'none';
+    $('btnToggleWebhookInfo').textContent = isHidden ? 'Auto-Sync Settings ▴' : 'Auto-Sync Settings ▾';
+  }
+});
+
+// Copy Webhook URL
+$('btnCopyWebhookUrl')?.addEventListener('click', () => {
+  const input = $('webhookUrlInput');
+  if (input) {
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+      toast('✓ Webhook URL copied to clipboard!');
+    }).catch(() => {
+      document.execCommand('copy');
+      toast('✓ Webhook URL copied!');
+    });
+  }
+});
+
+// Sync from GitHub Now
+$('btnGitPull')?.addEventListener('click', async () => {
+  const modal = $('gitPullModal');
+  const statusEl = $('gitPullStatusText');
+  const logEl = $('gitPullLogOutput');
+  const reloadBtn = $('btnReloadAfterGit');
+
+  if (modal) modal.hidden = false;
+  if (statusEl) statusEl.textContent = 'Contacting GitHub repository & pulling latest code...';
+  if (logEl) logEl.textContent = 'Executing: git fetch origin main && git reset --hard origin/main...';
+  if (reloadBtn) reloadBtn.style.display = 'none';
+
+  try {
+    const res = await API.post('/admin/git-pull', { restart: false });
+    if (res.ok) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:#14532d;font-weight:700">✓ Server synced with GitHub successfully!</span>';
+      if (logEl) logEl.textContent = res.logs || 'Git pull completed cleanly.';
+      if (reloadBtn) reloadBtn.style.display = 'inline-flex';
+      toast('✓ Server synced with GitHub!');
+      loadGitStatus();
+    } else {
+      if (statusEl) statusEl.innerHTML = '<span style="color:#dc2626">Sync failed: ' + esc(res.error || 'Unknown error') + '</span>';
+      if (logEl) logEl.textContent = res.logs || res.error || 'Check server console for details.';
+    }
+  } catch (err) {
+    if (statusEl) statusEl.innerHTML = '<span style="color:#dc2626">Error: ' + esc(err.message) + '</span>';
+  }
+});
+
+$('btnCloseGitModal')?.addEventListener('click', () => {
+  if ($('gitPullModal')) $('gitPullModal').hidden = true;
+});
+
+$('btnReloadAfterGit')?.addEventListener('click', () => {
+  location.reload();
 });

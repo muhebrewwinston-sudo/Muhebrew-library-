@@ -17,17 +17,23 @@ Download Malawi secondary school resources. A complete website (frontend + backe
 | `routes/` | Backend route controllers (auth, papers, books, search, admin) |
 | `middleware/` | JWT auth checks and file upload rules |
 | `db/` | Database driver, schema, setup, seed and admin tools |
-| `public/` | The frontend (pages, CSS, JavaScript) |
+| `backend/` | Backend Node.js API server, database, uploads, and services |
+| `frontend/` | The web client (HTML, CSS, JavaScript) |
+| `startup.sh` | Auto-updating startup script for X Systems Hosting / Pterodactyl |
 | `uploads/` | Uploaded PDFs and covers (created automatically) |
 
-## Hosting on X Systems Hosting / Pterodactyl
-1. Upload the project files to your server directory.
-2. In the Startup / Settings tab:
-   - Make sure the startup command is `npm start` (or `node server.js`).
+## Hosting on X Systems Hosting / Pterodactyl (Auto-Updated from GitHub)
+1. In the **Startup** tab in your X Systems Hosting Panel:
+   - Set the startup command to:
+     ```bash
+     bash startup.sh
+     ```
+     *(This automatically checks GitHub on every boot and updates your backend without manual file uploads).*
    - The server automatically detects Pterodactyl's allocated port (`SERVER_PORT` or `PORT`) and binds to `0.0.0.0`.
-   - The server automatically creates a secure `.env` file with `JWT_SECRET` if one does not exist.
-3. Run `npm install` in the Console tab.
-4. (Optional) Run `npm run seed -- admin@email.com AdminPassword123` to create your initial admin account.
+   - The server automatically creates a secure `.env` file with `JWT_SECRET` and `WEBHOOK_SECRET` if one does not exist.
+2. (Optional for Instant Zero-Touch Auto-Deploy): Add a GitHub Webhook in your repo settings (`https://github.com/muhebrewwinston-sudo/Muhebrew-library-/settings/hooks`) pointing to `http://YOUR-SERVER:PORT/api/webhook/github`. Whenever code is pushed to `main`, GitHub tells your server to pull and restart automatically!
+3. For full details and 1-click admin sync, see [XSYSTEMS_AUTO_UPDATE.md](./XSYSTEMS_AUTO_UPDATE.md).
+4. Run `npm install` in the Console tab if needed.
 5. Click **Start**.
 
 ## Local / Termux Setup

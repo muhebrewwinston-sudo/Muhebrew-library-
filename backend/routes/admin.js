@@ -412,5 +412,39 @@ router.get('/drime-files', async (req, res) => {
   res.json({ ...listed, status: drimeService.getStatus() });
 });
 
+// ============ GitHub Auto-Deployment & Git Sync ============
+const autoUpdater = require('../services/autoUpdater');
+
+router.get('/git-status', async (req, res) => {
+  try {
+    const current = autoUpdater.getCurrentCommit();
+    const remote = await autoUpdater.getRemoteCommit().catch(() => null);
+    const host = req.get('host');
+    const proto = req.protocol;
+
+    res.json({
+      ok: true,
+      repo: autoUpdater.REPO_URL,
+      branch: autoUpdater.DEFAULT_BRANCH,
+      current,
+      remote,
+      hasUpdate: Boolean(remote?.hash && current?.hash && remote.hash !== current.hash),
+      webhookUrl: `${proto}://${host}/api/webhook/github`,
+      autoPolling: Boolean(process.env.AUTO_UPDATE_POLL === 'true' || process.env.AUTO_UPDATE === 'true')
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/git-pull', async (req, res) => {
+  try {
+    const restartAfter = req.body?.restart !== false;
+    const result = await autoUpdater.pullLatest({ restartAfter });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
