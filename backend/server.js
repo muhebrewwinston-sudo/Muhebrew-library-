@@ -105,7 +105,11 @@ app.use('/uploads/covers', express.static(path.join(__dirname, 'uploads', 'cover
 const { buildBackendZip } = require('./utils/zip');
 
 const handleZipDownload = (_req, res) => {
-  const zipPath = path.join(__dirname, 'muhebrew-backend-updated.zip');
+  const rootDir = path.join(__dirname, '..');
+  let zipPath = path.join(rootDir, 'muhebrew-backend-updated.zip');
+  if (!fs.existsSync(zipPath)) {
+    zipPath = path.join(__dirname, 'muhebrew-backend-updated.zip');
+  }
   if (!fs.existsSync(zipPath)) {
     buildBackendZip();
   }
@@ -120,10 +124,13 @@ app.get('/muhebrew-backend-updated.zip', handleZipDownload);
 app.get('/backend.zip', handleZipDownload);
 app.get('/download-zip', handleZipDownload);
 
-// Determine static frontend directory (supports public/, parent folder, or current directory)
-const publicDir = fs.existsSync(path.join(__dirname, 'public'))
-  ? path.join(__dirname, 'public')
-  : (fs.existsSync(path.join(__dirname, '..', 'index.html')) ? path.join(__dirname, '..') : __dirname);
+// Determine static frontend directory (supports frontend/, public/, parent folder, or current directory)
+const frontendDir = path.join(__dirname, '..', 'frontend');
+const publicDir = fs.existsSync(frontendDir)
+  ? frontendDir
+  : (fs.existsSync(path.join(__dirname, 'public'))
+    ? path.join(__dirname, 'public')
+    : (fs.existsSync(path.join(__dirname, '..', 'index.html')) ? path.join(__dirname, '..') : __dirname));
 
 app.use(express.static(publicDir, {
   etag: false,
