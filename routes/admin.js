@@ -197,6 +197,96 @@ router.get('/download-zip', (_req, res) => {
   }
 });
 
+const { autoTraceFile } = require('../utils/autotrace');
+const { upload } = require('../middleware/upload');
+
+// 1. Auto-Trace Single or Multiple Filename Details
+router.post('/trace-file', (req, res) => {
+  const { filename, fileSize } = req.body || {};
+  if (!filename) return res.status(400).json({ error: 'Filename is required.' });
+  const traced = autoTraceFile(filename, fileSize);
+  res.json({ success: true, ...traced, traced });
+});
+
+// 2. Upload Single Auto-Traced Item (used by interactive bulk queue or single-upload)
+router.post('/upload-item', upload.single('file'), async (req, res) => {
+  const file = req.file;
+  if (!file) return res.status(400).json({ error: 'File is required.' });
+
+  try {
+    const body = req.body || {};
+    const traced = autoTraceFile(file.originalname, file.size);
+    const type = body.type === 'books' || (!body.type && traced.type === 'books') ? 'books' : 'papers';
+    const isBook = type === 'books';
+    const table = isBook ? 'books' : 'papers';
+
+    const title = (body.title || traced.title || file.originalname).trim();
+    const subject = (body.subject || traced.subject || 'General Studies').trim();
+    const level = (body.level || traced.level || 'Form 4').trim();
+    const category = (body.category || traced.category || (isBook ? 'MSCE' : 'MANEB')).trim();
+    const year = !isBook && (body.year || traced.year) ? Number(body.year || traced.year) : null;
+    const exam_board = !isBook ? (body.exam_board || traced.exam_board || 'MANEB').trim() : null;
+    const author = isBook ? (body.author || traced.author || '').trim() : null;
+    const description = (body.description || traced.description || '').trim();
+
+    // Check duplicate
+    const existing = db.prepare(`SELECT id, title FROM ${table} WHERE LOWER(title) = ?`).get(title.toLowerCase());
+    if (existing) {
+      return res.status(400).json({ error: `Resource with title "${existing.title}" already exists.` });
+    }
+
+    // Sync to Drime Cloud Storage
+    let storageProvider = 'drime';
+    let drimeFileId = null;
+    let drimeUrl = null;
+    let drimeFolderId = null;
+
+    try {
+      const folderForType = drimeService.getFolderIdForType ? drimeService.getFolderIdForType(isBook ? 'book' : 'paper') : drimeService.DRIME_FOLDER_ID;
+      const drimeRes = await drimeService.uploadToDrime({
+        filePath: file.path,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        folderId: body.drime_folder_id || folderForType || drimeService.DRIME_FOLDER_ID
+      });
+      drimeFileId = drimeRes.fileId;
+      drimeUrl = body.drime_link ? body.drime_link.trim() : (drimeRes.url || drimeService.DRIME_FOLDER_URL);
+      drimeFolderId = drimeRes.folderId || drimeService.DRIME_FOLDER_ID;
+    } catch (drimeErr) {
+      console.error('[Admin Upload Item] Drime sync error:', drimeErr.message);
+      drimeUrl = drimeService.DRIME_FOLDER_URL;
+      drimeFolderId = drimeService.DRIME_FOLDER_ID;
+    }
+
+    const relPath = path.relative(path.join(__dirname, '..'), file.path).split(path.sep).join('/');
+    const storedPath = relPath;
+
+    let info;
+    if (isBook) {
+      info = db.prepare(`
+        INSERT INTO books (title, subject, level, category, author, description, file_path, file_name, file_size, mime_type, storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')
+      `).run(title, subject, level, category, author, description, storedPath, file.originalname, file.size, file.mimetype, storageProvider, drimeFileId, drimeUrl, drimeFolderId, req.user.id);
+    } else {
+      info = db.prepare(`
+        INSERT INTO papers (title, subject, level, category, year, exam_board, description, file_path, file_name, file_size, mime_type, storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')
+      `).run(title, subject, level, category, year, exam_board, description, storedPath, file.originalname, file.size, file.mimetype, storageProvider, drimeFileId, drimeUrl, drimeFolderId, req.user.id);
+    }
+
+    const createdItem = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(info.lastInsertRowid);
+    res.status(201).json({
+      success: true,
+      type,
+      item: createdItem,
+      message: `Published "${title}" (${type === 'books' ? 'Textbook' : 'Past Paper'}) to Muhebrew Library.`
+    });
+  } catch (err) {
+    console.error('[Admin Upload Item Error]', err);
+    res.status(500).json({ error: err.message || 'Failed to publish resource.' });
+  }
+});
+
 
 // Bulk ZIP upload – auto-detect subject/level/year from filenames
 const bulkStorage = multer.diskStorage({
