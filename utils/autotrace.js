@@ -1,128 +1,136 @@
 /**
- * Auto-Trace File Details Utility for Malawi Secondary Educational Resources
- * Intelligently extracts: Title, Type (paper/book), Subject, Level, Category, Year, Exam Board, Author
+ * Accurate auto-trace for Malawi secondary school resources
+ * Reads clues from filename (and optional title text) — does NOT guess Form 4 for everything.
  */
-
 function autoTraceFile(filename, fileSize = 0) {
-  const ext = filename.lastIndexOf('.') !== -1 ? filename.slice(filename.lastIndexOf('.')).toLowerCase() : '';
-  const base = filename.slice(0, filename.length - ext.length);
-  // Clean separators: replace underscores, hyphens, and multiple spaces
-  const cleanName = base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-  const lower = cleanName.toLowerCase();
+  const ext = filename.includes('.') ? filename.slice(filename.lastIndexOf('.')).toLowerCase() : '';
+  const base = filename.slice(0, filename.length - (ext.length || 0));
+  const clean = base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const lower = clean.toLowerCase();
 
-  // 1. Detect Year (4 digits: 1990 - 2030)
-  const yearMatch = cleanName.match(/\b(199\d|20[0-3]\d)\b/);
-  const year = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
+  // Year: prefer 1990–2035
+  let year = null;
+  const yearMatch = clean.match(/\b(19[9]\d|20[0-3]\d)\b/);
+  if (yearMatch) year = parseInt(yearMatch[1], 10);
 
-  // 2. Detect Resource Type (papers vs books)
-  const isBook = /\b(textbook|book|guide|handbook|syllabus|curriculum|module)\b/i.test(lower) && 
-                 !/\b(paper|exam|marking key|marking scheme|mock|scheme|test)\b/i.test(lower);
+  // Type: book vs paper
+  const isMarking = /\b(marking\s*key|marking\s*scheme|mark\s*scheme|ms\b|answers?)\b/i.test(lower);
+  const isBook = !isMarking && /\b(textbook|student'?s?\s*book|pupils?\s*book|handbook|module|notes?)\b/i.test(lower)
+    && !/\b(paper|exam|mock|test|maneb)\b/i.test(lower);
   const type = isBook ? 'books' : 'papers';
 
-  // 3. Detect Malawi Secondary School Subject
-  const subjects = [
-    { name: 'Mathematics', regex: /\b(mathematics|maths|math)\b/i },
-    { name: 'English', regex: /\b(english|eng)\b/i },
-    { name: 'Chichewa', regex: /\b(chichewa|chinyanja|chi)\b/i },
-    { name: 'Biology', regex: /\b(biology|bio)\b/i },
-    { name: 'Physical Science', regex: /\b(physical\s*science|phys\s*sci)\b/i },
-    { name: 'Physics', regex: /\b(physics)\b/i },
-    { name: 'Chemistry', regex: /\b(chemistry|chem)\b/i },
-    { name: 'Agriculture', regex: /\b(agriculture|agric|agri)\b/i },
-    { name: 'Geography', regex: /\b(geography|geo)\b/i },
-    { name: 'History', regex: /\b(history|hist)\b/i },
-    { name: 'Social Studies', regex: /\b(social\s*studies|social)\b/i },
-    { name: 'Life Skills', regex: /\b(life\s*skills|lifeskills)\b/i },
-    { name: 'Computer Studies', regex: /\b(computer\s*studies|computer\s*science|computing|ict)\b/i },
-    { name: 'Bible Knowledge', regex: /\b(bible\s*knowledge|religious\s*education|bk|b\.k)\b/i },
-    { name: 'Business Studies', regex: /\b(business\s*studies|business)\b/i },
-    { name: 'Commerce', regex: /\b(commerce)\b/i },
-    { name: 'Home Economics', regex: /\b(home\s*economics|nutrition)\b/i },
-    { name: 'French', regex: /\b(french|français)\b/i }
+  // Subject
+  const subjectRules = [
+    [/physical\s*science|phys\s*sci/i, 'Physical Science'],
+    [/\bphysics\b/i, 'Physics'],
+    [/\bchemistry|chem\b/i, 'Chemistry'],
+    [/\bbiology|bio\b/i, 'Biology'],
+    [/\bmathematics|maths?\b/i, 'Mathematics'],
+    [/\benglish|eng\b/i, 'English'],
+    [/\bchichewa|chinyanja\b/i, 'Chichewa'],
+    [/\bageography|geo\b/i, 'Geography'],
+    [/\bgeography\b/i, 'Geography'],
+    [/\bhistory|hist\b/i, 'History'],
+    [/\bagriculture|agric\b/i, 'Agriculture'],
+    [/\bsocial\s*studies\b/i, 'Social Studies'],
+    [/\blife\s*skills\b/i, 'Life Skills'],
+    [/\bcomputer|ict\b/i, 'Computer Studies'],
+    [/\bbible|religious\b/i, 'Bible Knowledge'],
+    [/\bbusiness\b/i, 'Business Studies'],
+    [/\bcommerce\b/i, 'Commerce'],
+    [/\bhome\s*economics|nutrition\b/i, 'Home Economics']
   ];
-
-  let detectedSubject = 'General Studies';
-  for (const s of subjects) {
-    if (s.regex.test(lower)) {
-      detectedSubject = s.name;
-      break;
-    }
+  let subject = 'General';
+  for (const [re, name] of subjectRules) {
+    if (re.test(lower)) { subject = name; break; }
   }
 
-  // 4. Detect Class Level (Form 1 to Form 4)
-  let detectedLevel = 'Form 4';
-  if (/\b(form\s*1|f1|f\s*1|std\s*8)\b/i.test(lower)) {
-    detectedLevel = 'Form 1';
-  } else if (/\b(form\s*2|f2|f\s*2)\b/i.test(lower)) {
-    detectedLevel = 'Form 2';
-  } else if (/\b(form\s*3|f3|f\s*3)\b/i.test(lower)) {
-    detectedLevel = 'Form 3';
-  } else if (/\b(form\s*4|f4|f\s*4)\b/i.test(lower)) {
-    detectedLevel = 'Form 4';
-  } else if (/\bjce\b/i.test(lower)) {
-    detectedLevel = 'Form 2'; // Junior Certificate of Education terminal level
-  } else if (/\bmsce\b/i.test(lower)) {
-    detectedLevel = 'Form 4'; // Malawi School Certificate of Education terminal level
-  }
+  // Level — ONLY if clearly stated (do not invent Form 4)
+  let level = null;
+  if (/\bform\s*4\b|\bf4\b|\bform-4\b/i.test(lower)) level = 'Form 4';
+  else if (/\bform\s*3\b|\bf3\b|\bform-3\b/i.test(lower)) level = 'Form 3';
+  else if (/\bform\s*2\b|\bf2\b|\bform-2\b/i.test(lower)) level = 'Form 2';
+  else if (/\bform\s*1\b|\bf1\b|\bform-1\b/i.test(lower)) level = 'Form 1';
 
-  // 5. Detect Category (MANEB, Mock, Marking Key, Notes, MSCE, JCE)
-  let detectedCategory = 'MANEB';
-  if (/\b(marking\s*key|marking\s*scheme|answers|solutions|memo)\b/i.test(lower)) {
-    detectedCategory = 'Marking Key';
-  } else if (/\b(notes|summary|revision|handout|pamphlet)\b/i.test(lower)) {
-    detectedCategory = 'Notes';
-  } else if (/\b(mock|cluster|division|zone)\b/i.test(lower)) {
-    detectedCategory = 'Mock';
+  // Category / exam board — MANEB only when official MANEB is indicated
+  let category = null;
+  let exam_board = null;
+  let school = null;
+
+  const isMock = /\bmock\b|\bcluster\b|\bdivision\s*exam\b|\btrial\b/i.test(lower);
+  const isManeb = /\bmaneb\b/.test(lower);
+  const isJce = /\bjce\b|\bjunior\s*certificate\b/i.test(lower);
+  const isMsce = /\bmsce\b|\bmalawi\s*school\s*certificate\b/i.test(lower);
+
+  if (isMarking) {
+    category = 'Marking Key';
+    if (isManeb) exam_board = 'MANEB';
+    else if (isMock) exam_board = 'Mock';
+    else if (isJce) exam_board = 'JCE';
+    else if (isMsce) exam_board = 'MSCE';
+  } else if (isMock) {
+    category = 'Mock';
+    exam_board = 'Mock';
+    // Try school name: text before "mock" or after school keywords
+    const schoolMatch = clean.match(/(?:^|[\s\-])([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,3})\s+(?:Secondary|High|School|Mock)/);
+    const schoolMatch2 = clean.match(/^([A-Za-z][A-Za-z\s]{2,40}?)\s+mock/i);
+    if (schoolMatch) school = schoolMatch[1].trim();
+    else if (schoolMatch2) school = schoolMatch2[1].trim();
+  } else if (isManeb) {
+    category = 'MANEB';
+    exam_board = 'MANEB';
+  } else if (isJce) {
+    category = 'JCE';
+    exam_board = 'JCE';
+  } else if (isMsce) {
+    category = 'MSCE';
+    exam_board = 'MSCE';
   } else if (isBook) {
-    detectedCategory = (detectedLevel === 'Form 1' || detectedLevel === 'Form 2') ? 'JCE' : 'MSCE';
-  } else if (/\bjce\b/i.test(lower)) {
-    detectedCategory = 'JCE';
-  } else if (/\bmsce\b/i.test(lower)) {
-    detectedCategory = 'MSCE';
+    category = /\bnotes?\b/i.test(lower) ? 'Notes' : 'Textbook';
+  } else {
+    // Unknown paper — do NOT label as MANEB
+    category = 'Past Paper';
+    exam_board = null;
   }
 
-  // 6. Detect Exam Board / Division
-  let detectedBoard = 'MANEB';
-  if (/\bmock\b/i.test(lower) || detectedCategory === 'Mock') {
-    detectedBoard = 'Mock';
-  } else if (/\bcluster\b/i.test(lower)) {
-    detectedBoard = 'Cluster Mock';
-  } else if (/\bdivision\b/i.test(lower)) {
-    detectedBoard = 'Division Mock';
+  // Soft level from JCE/MSCE only as band label when form not specified
+  if (!level) {
+    if (isJce) level = 'Form 1–2 (JCE)';
+    else if (isMsce) level = 'Form 3–4 (MSCE)';
+    else if (year && year <= 2010) level = null; // leave unknown
+    else level = null;
   }
 
-  // 7. Detect Author / Publisher (if textbook)
-  let detectedAuthor = '';
-  if (/\bexcel\b/i.test(lower)) detectedAuthor = 'Excel & Succeed';
-  else if (/\blonghorn\b/i.test(lower)) detectedAuthor = 'Longhorn Publishers';
-  else if (/\bmie\b/i.test(lower)) detectedAuthor = 'Malawi Institute of Education (MIE)';
-  else if (/\bministry\b/i.test(lower)) detectedAuthor = 'Ministry of Education';
-  else if (isBook) detectedAuthor = 'Ministry of Education';
+  // Paper number
+  let paper_no = null;
+  const pMatch = lower.match(/\bpaper\s*([1-4ivx]+)\b/i) || lower.match(/\bp\s*([1-4])\b/);
+  if (pMatch) paper_no = 'Paper ' + pMatch[1].toUpperCase();
 
-  // 8. Generate Clean, Well-Formatted Title
-  let cleanTitle = cleanName.split(' ').map((word) => {
-    const w = word.trim();
-    if (!w) return '';
-    const upper = w.toUpperCase();
-    if (['MSCE', 'JCE', 'MANEB', 'PDF', 'MIE', 'CWED', 'SEED', 'NED', 'SHED', 'SWED'].includes(upper)) return upper;
-    if (['and', 'of', 'in', 'for', 'the', 'to', 'on', 'with', 'at'].includes(w.toLowerCase())) return w.toLowerCase();
-    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-  }).join(' ');
+  // Title: clean, human readable, reflect cover-style naming
+  let title = clean;
+  // Remove file junk
+  title = title.replace(/\b(pdf|docx?|final|copy|scan)\b/ig, '').replace(/\s+/g, ' ').trim();
+  if (isMarking && !/marking/i.test(title)) title = title + ' Marking Key';
+  if (school && isMock && !new RegExp(school, 'i').test(title)) {
+    title = school + ' Mock — ' + (subject !== 'General' ? subject + ' ' : '') + (year || '') + (paper_no ? ' ' + paper_no : '');
+    title = title.replace(/\s+/g, ' ').trim();
+  }
+  if (title.length < 3) title = base;
+  if (title.length > 140) title = title.slice(0, 140);
 
   return {
-    rawName: filename,
-    fileSize,
+    title,
     type,
-    title: cleanTitle,
-    subject: detectedSubject,
-    level: detectedLevel,
-    year: isBook ? null : year,
-    category: detectedCategory,
-    exam_board: isBook ? null : detectedBoard,
-    author: detectedAuthor,
-    description: isBook
-      ? `Malawi Secondary School curriculum textbook for ${detectedLevel} ${detectedSubject}.`
-      : `${detectedLevel} ${detectedSubject} (${detectedCategory}) educational resource.`
+    subject,
+    level, // may be null — UI should not show fake Form 4
+    category,
+    exam_board,
+    year,
+    paper_no,
+    school,
+    author: isBook ? null : null,
+    description: school ? ('School: ' + school) : '',
+    fileSize
   };
 }
 

@@ -1,41 +1,145 @@
+/**
+ * Drime Cloud = primary file storage for Muhebrew Library
+ * Website server talks to Drime API: list, upload, download/stream
+ */
 const fs = require('fs');
 const path = require('path');
 
-const DRIME_API_KEY = process.env.DRIME_API_KEY || '75742|BShm3EM0mJPNumW9qZphDpHCCkJK1koYZb3HBMFA0aedf331';
+const DRIME_API_KEY = process.env.DRIME_API_KEY || '';
 const DRIME_FOLDER_ID = process.env.DRIME_FOLDER_ID || 'OymudINAwCDhPbnTH5Gt4oAIxo5mbC';
 const DRIME_FOLDER_URL = process.env.DRIME_FOLDER_URL || 'https://dri.me/OymudINAwCDhPbnTH5Gt4oAIxo5mbC';
-const DRIME_API_BASE = process.env.DRIME_API_BASE || 'https://app.drime.com/api/v1';
+const DRIME_API_BASE = (process.env.DRIME_API_BASE || 'https://app.drime.com/api/v1').replace(/\/$/, '');
 
-function getMaskedKey(key) {
-  if (!key) return '';
-  const parts = key.split('|');
-  if (parts.length === 2) {
-    return `${parts[0]}|${parts[1].slice(0, 4)}...${parts[1].slice(-4)}`;
-  }
-  return key.slice(0, 8) + '...' + key.slice(-4);
+const FOLDER_MAP = {
+  paper: process.env.DRIME_FOLDER_PAPERS || DRIME_FOLDER_ID,
+  book: process.env.DRIME_FOLDER_BOOKS || DRIME_FOLDER_ID,
+  marking: process.env.DRIME_FOLDER_MARKING || process.env.DRIME_FOLDER_PAPERS || DRIME_FOLDER_ID,
+  notes: process.env.DRIME_FOLDER_NOTES || process.env.DRIME_FOLDER_BOOKS || DRIME_FOLDER_ID
+};
+
+function authHeaders() {
+  return {
+    Authorization: `Bearer ${DRIME_API_KEY}`,
+    Accept: 'application/json'
+  };
+}
+
+function getFolderIdForType(type) {
+  const key = String(type || 'paper').toLowerCase();
+  if (key.includes('mark')) return FOLDER_MAP.marking;
+  if (key.includes('book') || key.includes('text')) return FOLDER_MAP.book;
+  if (key.includes('note')) return FOLDER_MAP.notes;
+  return FOLDER_MAP.paper;
 }
 
 function getStatus() {
   return {
-    enabled: true,
+    enabled: Boolean(DRIME_API_KEY),
     provider: 'drime',
-    name: "Winston's Drime Cloud Storage",
+    name: 'Drime Cloud Storage',
     folderId: DRIME_FOLDER_ID,
     folderUrl: DRIME_FOLDER_URL,
+    folders: FOLDER_MAP,
     hasApiKey: Boolean(DRIME_API_KEY),
-    maskedApiKey: getMaskedKey(DRIME_API_KEY),
-    status: 'connected'
+    status: DRIME_API_KEY ? 'configured' : 'missing_api_key'
   };
 }
 
 /**
- * Upload a file to Drime Cloud Storage
- * @param {Object} options
- * @param {string} options.filePath - Relative or absolute path to local file
- * @param {string} options.originalName - Name of the file
- * @param {string} options.mimeType - Mime type (e.g. application/pdf)
- * @param {string} [options.folderId] - Specific target folder ID
+ * List files in a Drime folder (for sync / browse)
  */
+async function listFiles(folderId) {
+  const fid = folderId || DRIME_FOLDER_ID;
+  if (!DRIME_API_KEY) return { ok: false, files: [], error: 'DRIME_API_KEY not set' };
+
+  const endpoints = [
+    `${DRIME_API_BASE}/folders/${fid}/files`,
+    `${DRIME_API_BASE}/files?folder_id=${encodeURIComponent(fid)}`,
+    `${DRIME_API_BASE}/files?parent_id=${encodeURIComponent(fid)}`,
+    `${DRIME_API_BASE}/entries?folder_id=${encodeURIComponent(fid)}`
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { headers: authHeaders() });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const list = Array.isArray(data)
+        ? data
+        : data.files || data.data || data.items || data.entries || [];
+      if (!Array.isArray(list)) continue;
+      return {
+        ok: true,
+        files: list.map((f) => ({
+          id: String(f.id || f.file_id || f.uuid || ''),
+          name: f.name || f.filename || f.title || f.original_name || 'file',
+          size: f.size || f.bytes || 0,
+          mime: f.mime || f.mime_type || f.content_type || 'application/pdf',
+          url: f.url || f.download_url || f.link || null,
+          folderId: fid
+        })).filter((f) => f.id || f.name)
+      };
+    } catch (e) {
+      console.log('[Drime] listFiles try failed:', e.message);
+    }
+  }
+  return { ok: false, files: [], error: 'Could not list Drime folder (check API key / folder id)' };
+}
+
+/**
+ * Get a direct download URL or stream buffer from Drime for a file id
+ */
+async function downloadFile(fileId) {
+  if (!DRIME_API_KEY || !fileId) return { ok: false, error: 'Missing API key or file id' };
+
+  const endpoints = [
+    `${DRIME_API_BASE}/files/${fileId}/download`,
+    `${DRIME_API_BASE}/files/${fileId}/content`,
+    `${DRIME_API_BASE}/downloads/${fileId}`,
+    `${DRIME_API_BASE}/files/${fileId}`
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, {
+        headers: { ...authHeaders() },
+        redirect: 'follow'
+      });
+      if (!res.ok) continue;
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      // JSON metadata with url inside
+      if (ct.includes('application/json')) {
+        const data = await res.json();
+        const direct = data.url || data.download_url || data.link || (data.file && data.file.url);
+        if (direct) {
+          const fileRes = await fetch(direct);
+          if (fileRes.ok) {
+            const buf = Buffer.from(await fileRes.arrayBuffer());
+            return {
+              ok: true,
+              buffer: buf,
+              contentType: fileRes.headers.get('content-type') || 'application/pdf'
+            };
+          }
+        }
+        continue;
+      }
+      // Binary body
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length > 100) {
+        return {
+          ok: true,
+          buffer: buf,
+          contentType: res.headers.get('content-type') || 'application/pdf'
+        };
+      }
+    } catch (e) {
+      console.log('[Drime] download try failed:', e.message);
+    }
+  }
+  return { ok: false, error: 'Could not download file from Drime' };
+}
+
 async function uploadToDrime({ filePath, originalName, mimeType, folderId }) {
   const targetFolder = folderId || DRIME_FOLDER_ID;
   const absPath = path.isAbsolute(filePath) ? filePath : path.join(__dirname, '..', filePath);
@@ -47,7 +151,18 @@ async function uploadToDrime({ filePath, originalName, mimeType, folderId }) {
   const fileSize = fs.statSync(absPath).size;
   const fileHash = `drime_ref_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
-  // Attempt remote upload to Drime API
+  if (!DRIME_API_KEY) {
+    return {
+      success: true,
+      provider: 'drime',
+      fileId: fileHash,
+      url: DRIME_FOLDER_URL,
+      folderId: targetFolder,
+      synced: false,
+      size: fileSize
+    };
+  }
+
   try {
     const fileBuffer = fs.readFileSync(absPath);
     const blob = new Blob([fileBuffer], { type: mimeType || 'application/pdf' });
@@ -57,50 +172,42 @@ async function uploadToDrime({ filePath, originalName, mimeType, folderId }) {
     formData.append('folder_id', targetFolder);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
+    const timeout = setTimeout(() => controller.abort(), 20000);
 
     const response = await fetch(`${DRIME_API_BASE}/uploads`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${DRIME_API_KEY}`,
-        'Accept': 'application/json'
-      },
+      headers: authHeaders(),
       body: formData,
       signal: controller.signal
     });
-
     clearTimeout(timeout);
 
     if (response.ok) {
       const data = await response.json();
       const drimeFileId = String(data.id || (data.file && data.file.id) || fileHash);
-      const drimeUrl = data.url || (data.file && data.file.url) || `${DRIME_FOLDER_URL}`;
-      console.log(`[Drime Cloud] Remote upload success: ${originalName} -> ${drimeFileId}`);
+      const drimeUrl = data.url || (data.file && data.file.url) || DRIME_FOLDER_URL;
+      console.log(`[Drime] Upload OK: ${originalName} -> ${drimeFileId}`);
       return {
         success: true,
         provider: 'drime',
         fileId: drimeFileId,
         url: drimeUrl,
         folderId: targetFolder,
-        folderUrl: DRIME_FOLDER_URL,
         synced: true,
         size: fileSize
       };
     }
+    console.log('[Drime] Upload status:', response.status);
   } catch (err) {
-    // Network restricted or offline sandbox environment: safely record Drime storage reference
-    console.log(`[Drime Cloud] Sync registered locally (offline mode / network sandbox): ${originalName}`);
+    console.log('[Drime] Upload error:', err.message);
   }
 
-  // Graceful local sync fallback with Drime Cloud metadata
-  const fallbackUrl = `${DRIME_FOLDER_URL}`;
   return {
     success: true,
     provider: 'drime',
     fileId: fileHash,
-    url: fallbackUrl,
+    url: DRIME_FOLDER_URL,
     folderId: targetFolder,
-    folderUrl: DRIME_FOLDER_URL,
     synced: false,
     size: fileSize
   };
@@ -112,5 +219,8 @@ module.exports = {
   DRIME_FOLDER_URL,
   DRIME_API_BASE,
   getStatus,
+  getFolderIdForType,
+  listFiles,
+  downloadFile,
   uploadToDrime
 };

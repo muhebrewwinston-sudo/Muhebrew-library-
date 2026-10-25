@@ -32,6 +32,26 @@ router.get('/mine', requireAuth, (req, res) => {
   res.json({ items });
 });
 
+// Student's 5 most recent downloads (for student display page)
+router.get('/recent-downloads', requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT d.item_type, d.item_id, d.created_at
+    FROM downloads d
+    WHERE d.user_id = ?
+    ORDER BY d.id DESC
+    LIMIT 5
+  `).all(req.user.id);
+
+  const items = rows.map((r) => {
+    const t = r.item_type === 'paper' ? 'papers' : 'books';
+    const row = db.prepare("SELECT * FROM " + t + " WHERE id = ? AND status = 'approved'").get(r.item_id);
+    return row ? { ...row, _type: r.item_type, downloaded_at: r.created_at } : null;
+  }).filter(Boolean);
+
+  res.json({ items });
+});
+
+
 // Public numbers for the home page
 router.get('/stats', (_req, res) => {
   const one = (sql) => db.prepare(sql).get().c;
