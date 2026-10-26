@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin & Owner Dashboard - Muhebrew Library</title>
+<meta name="theme-color" content="#14532d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%2314532d' stroke-width='4' stroke-linejoin='round'%3E%3Cpath d='M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z'/%3E%3Cpath d='M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css?v=3.1.0">
+<script>
+  document.documentElement.setAttribute('data-theme', localStorage.getItem('ph_theme') || 'light');
+  if (!localStorage.getItem('ph_token')) {
+    location.replace('/auth.html');
+  }
+</script>
+</head>
+<body class="auth-protected">
+<header class="site">
+  <div class="wrap">
+    <a class="logo" href="/">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg>
+      <span>Muhebrew <b>Library</b></span>
+    </a>
+    <span class="spacer"></span>
+    <button class="btn sm" id="themeBtn">Theme</button>
+    <a class="btn sm" href="/">Browse Library</a>
+    <button class="btn sm danger" id="adminSignOutBtn" title="Sign out">Sign out</button>
+  </div>
+</header>
+
+<main class="wrap" style="padding-bottom:40px">
+  <!-- Owner Header -->
+  <div style="margin:18px 0 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <h1 style="margin:0 0 2px;font-size:22px">Admin &amp; Owner Dashboard</h1>
+      <p style="color:var(--muted);margin:0;font-size:13px">
+        Logged in as <b id="ownerBadge" style="color:var(--primary)">muhebrewwinston@gmail.com (Owner)</b>
+      </p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <a class="btn sm primary" href="/muhebrew-backend-updated.zip" download="muhebrew-backend-updated.zip" style="font-size:12px;display:inline-flex;align-items:center;gap:6px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <span>Download Backend ZIP</span>
+      </a>
+      <span class="role-badge badge-admin">Owner Active</span>
+    </div>
+  </div>
+
+  <!-- SECTION 1: Statistics & Most Favorite Books -->
+  <section class="panel" style="background:var(--surface)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0;font-size:16px">1. Library Statistics</h3>
+      <span style="font-size:12px;color:var(--muted)">Live Real-time Stats</span>
+    </div>
+    <div class="stat-grid" style="margin-top:0">
+      <div class="stat"><b id="sUsers">-</b><span>Total Users</span></div>
+      <div class="stat"><b id="sDl">-</b><span>Total Downloads</span></div>
+      <div class="stat"><b id="sPapers">-</b><span>Past Papers</span></div>
+      <div class="stat"><b id="sBooks">-</b><span>Textbooks</span></div>
+      <div class="stat" style="grid-column:1/-1;background:var(--surface-2)">
+        <b id="s7">-</b><span>Downloads in Last 7 Days</span>
+      </div>
+    </div>
+
+    <!-- Sub-section: Most Favorite Books That Mostly Downloaded -->
+    <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+      <h4 style="margin:0 0 10px;font-size:14px;color:var(--primary);display:flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+        <span>Most Favorite Textbooks (Mostly Downloaded)</span>
+      </h4>
+      <div id="favoriteBooksList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Sub-section: Most Favorite Past Papers -->
+    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+      <h4 style="margin:0 0 10px;font-size:14px;color:var(--primary);display:flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Most Favorite Past Papers &amp; Notes</span>
+      </h4>
+      <div id="favoritePapersList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: Issues Faced by Users (Reports & Help Requests) -->
+  <section class="panel" style="background:var(--surface)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;font-size:16px">2. Issues Faced by Users</h3>
+      <span id="issuesCountBadge" class="tag wait" style="font-size:11px">Open Issues</span>
+    </div>
+    <p style="color:var(--muted);margin:0 0 12px;font-size:12.5px">
+      Student inquiries, broken file notifications, and help requests submitted through the system:
+    </p>
+    <div id="reports"></div>
+  </section>
+
+  <!-- SECTION 3: Live Progression Happening on the Web -->
+  <section class="panel" style="background:var(--surface)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;font-size:16px">3. Web Progression Activity</h3>
+      <span class="tag ok" style="font-size:11px">Live Feed</span>
+    </div>
+    <p style="color:var(--muted);margin:0 0 12px;font-size:12.5px">
+      Track real-time downloads, new student signups, and community interactions:
+    </p>
+    
+    <div style="display:flex;gap:6px;margin-bottom:12px" class="tabs">
+      <button class="btn sm primary" id="progTabDl" type="button">Recent Downloads</button>
+      <button class="btn sm" id="progTabUsers" type="button">New Signups</button>
+      <button class="btn sm" id="progTabUploads" type="button">Recent Uploads</button>
+    </div>
+    <div id="progressionContent"></div>
+  </section>
+
+  <!-- Review Queue for Teacher Uploads -->
+  <section class="panel">
+    <h3>Pending Teacher Uploads for Review</h3>
+    <div id="pending"></div>
+  </section>
+
+  <!-- User & Role Management -->
+  <section class="panel">
+    <h3>Assign Teacher Access</h3>
+    <p style="color:var(--muted);margin:0 0 10px;font-size:12.5px">Public registration enrolls users as students. Only admins can grant teacher status to chosen emails.</p>
+    <form id="grantTeacherForm" style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="grantEmail" type="email" required placeholder="teacher@example.com" style="flex:1;min-width:180px">
+      <select id="grantRole" style="width:120px">
+        <option value="teacher">Teacher</option>
+        <option value="admin">Admin</option>
+        <option value="student">Student</option>
+      </select>
+      <button class="btn primary sm" type="submit">Assign Role</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h3>Registered Users</h3>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table id="usersTable">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>School</th><th>Joined</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SECTION 4: THE LAST BAR - UPLOAD RESOURCES -->
+  <!-- "The last bar on admin display should show upload button where I will use to upload resources." -->
+  <section class="panel" style="border:2px solid var(--primary);box-shadow:0 0 18px rgba(27,127,75,0.18)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0;font-size:17px;color:var(--primary);display:flex;align-items:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+        <span>Upload Resource Bar &amp; Bulk Multi-Upload</span>
+      </h3>
+      <span class="badge-new">Owner Tool</span>
+    </div>
+    <p style="color:var(--muted);margin:0 0 14px;font-size:13px">
+      Directly publish verified past papers, textbooks, study notes, and marking keys to the library (supports uploading dozens of files at once with automatic detail tracing):
+    </p>
+
+    <!-- DRIME CLOUD STORAGE CONNECTED CARD -->
+    <div style="background:var(--surface-2);border:1px solid #3b82f6;border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        <div>
+          <b style="font-size:13.5px;color:var(--text);display:flex;align-items:center;gap:6px">
+            Drime Cloud Storage
+            <span class="tag ok" style="font-size:10px;padding:2px 6px">CONNECTED</span>
+          </b>
+          <span style="font-size:12px;color:var(--muted);display:block;margin-top:2px">
+            Storage Folder: <a href="https://dri.me/OymudINAwCDhPbnTH5Gt4oAIxo5mbC" target="_blank" rel="noopener" style="color:#2563eb;font-weight:600">dri.me/OymudINAwCDhPbnTH5Gt4oAIxo5mbC ↗</a>
+          </span>
+          <span id="drimeCloudCount" style="font-size:11px;color:var(--muted);display:block;margin-top:2px">
+            All uploads by Owner or Admin sync to Drime cloud storage.
+          </span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <a href="https://dri.me/OymudINAwCDhPbnTH5Gt4oAIxo5mbC" target="_blank" rel="noopener" class="btn sm" style="font-size:11.5px;background:#2563eb;color:#fff;border-color:#2563eb">
+          View Cloud Folder ↗
+        </a>
+      </div>
+    </div>
+
+    <!-- GITHUB AUTO-DEPLOYMENT & REPO SYNC CARD -->
+    <div style="background:var(--surface-2);border:1.5px solid rgba(20,83,45,0.3);border-radius:12px;padding:12px 14px;margin-bottom:16px;box-shadow:0 2px 8px rgba(20,83,45,0.06)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;border-radius:8px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;color:var(--text);flex-shrink:0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+              <path d="M9 18c-4.51 2-5-2-7-2"/>
+            </svg>
+          </div>
+          <div>
+            <b style="font-size:13.5px;color:var(--text);display:flex;align-items:center;gap:6px">
+              GitHub Auto-Deployment &amp; X Systems Server Sync
+              <span id="gitStatusBadge" class="tag ok" style="font-size:10px;padding:2px 6px">CONNECTED</span>
+            </b>
+            <span style="font-size:12px;color:var(--muted);display:block;margin-top:2px">
+              Repo: <a href="https://github.com/muhebrewwinston-sudo/Muhebrew-library-" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">muhebrewwinston-sudo/Muhebrew-library- ↗</a> (branch: <code style="font-weight:700">main</code>)
+            </span>
+            <span id="gitCommitInfo" style="font-size:11.5px;color:var(--muted);display:block;margin-top:2px">
+              Server Commit: <code id="gitCommitHash" style="font-weight:700">checking...</code> · <span id="gitCommitDesc"></span>
+            </span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn sm" id="btnGitPull" style="background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700;display:inline-flex;align-items:center;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            <span>Sync from GitHub Now</span>
+          </button>
+          <button type="button" class="btn sm" id="btnToggleWebhookInfo" style="font-size:11.5px">
+            Auto-Sync Settings ▾
+          </button>
+        </div>
+      </div>
+
+      <!-- Expandable Auto-Sync & Webhook Details -->
+      <div id="gitWebhookDetails" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);font-size:12px">
+        <p style="margin:0 0 6px;color:var(--text);font-weight:700">
+          How to keep X Systems Server auto-updated without manual panel changes:
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px">
+            <b style="color:var(--primary);display:block;margin-bottom:4px">Method 1: Startup Auto-Sync (Recommended)</b>
+            <span style="color:var(--muted);font-size:11.5px;line-height:1.4;display:block">
+              In X Systems Hosting Panel &gt; <b>Startup</b> tab, change the startup command to <code>bash startup.sh</code> (or <code>npm run start:auto</code>).
+              Every server boot or restart automatically pulls latest backend changes!
+            </span>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px">
+            <b style="color:var(--primary);display:block;margin-bottom:4px">Method 2: Instant GitHub Push Webhook</b>
+            <span style="color:var(--muted);font-size:11.5px;line-height:1.4;display:block">
+              Add a Webhook in <a href="https://github.com/muhebrewwinston-sudo/Muhebrew-library-/settings/hooks" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">GitHub Settings &gt; Webhooks ↗</a> with the URL below. Any push to main triggers instant auto-update!
+            </span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;max-width:100%">
+          <span style="font-weight:600;color:var(--text);flex-shrink:0">Webhook URL:</span>
+          <input id="webhookUrlInput" type="text" readonly style="font-size:12px;padding:6px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;flex:1;min-height:34px" value="https://.../api/webhook/github">
+          <button type="button" class="btn sm" id="btnCopyWebhookUrl" style="padding:6px 12px;font-size:12px">Copy URL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Mode Switcher Tabs -->
+    <div class="upload-mode-tabs" style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px">
+      <button type="button" class="btn sm primary" id="modeTabBulk" style="display:inline-flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+        <span>Bulk Multi-Upload (Auto-Trace)</span>
+        <span style="background:#ffffff;color:var(--primary);font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;margin-left:4px">NEW</span>
+      </button>
+      <button type="button" class="btn sm" id="modeTabSingle" style="display:inline-flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Single File Upload</span>
+      </button>
+    </div>
+
+    <!-- ================= BULK MULTI-UPLOAD PANEL ================= -->
+    <div id="bulkUploadPanel">
+      <!-- Drag & Drop Zone -->
+      <div class="bulk-dropzone" id="bulkDropzone">
+        <input type="file" id="bulkFileInput" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.png" style="display:none">
+        <div class="dropzone-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
+            <path d="M12 12v9"/>
+            <path d="m16 16-4-4-4 4"/>
+          </svg>
+        </div>
+        <h4 style="margin:8px 0 4px;font-size:16px;color:var(--text)">Drag &amp; Drop Multiple Exam Papers &amp; Books Here</h4>
+        <p style="margin:0 0 12px;font-size:13px;color:var(--muted)">
+          Upload 2, 5, 10, or 50+ files at once. The system will automatically trace and extract the subject, class level, year, category, and title!
+        </p>
+        <button type="button" class="btn primary" id="bulkSelectBtn" style="font-size:13.5px;padding:9px 20px;display:inline-flex;align-items:center;gap:8px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Select Multiple Files to Upload</span>
+        </button>
+        <div style="margin-top:10px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Auto-detection active: Mathematics, English, Biology, Physical Science, Form 1-4, MANEB, Mock, etc.</span>
+        </div>
+      </div>
+
+      <!-- Queue Container (shown after files are dropped/selected) -->
+      <div id="bulkQueueContainer" hidden style="margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+          <div>
+            <b style="font-size:14px;color:var(--text);display:flex;align-items:center;gap:6px">
+              <span id="bulkQueueCount">0</span> Files Traced &amp; Queued
+              <span class="tag ok" style="font-size:10px">READY FOR PUBLISHING</span>
+            </b>
+            <span style="font-size:12px;color:var(--muted)">Review the auto-detected details below. You can tweak any field before uploading.</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <!-- Quick Batch Level -->
+            <select id="bulkQuickLevel" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
+              <option value="">Quick: Set All Forms...</option>
+              <option value="Form 1">Form 1 (All)</option>
+              <option value="Form 2">Form 2 (All)</option>
+              <option value="Form 3">Form 3 (All)</option>
+              <option value="Form 4">Form 4 (All)</option>
+            </select>
+            <!-- Quick Batch Category -->
+            <select id="bulkQuickCategory" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
+              <option value="">Quick: Set All Categories...</option>
+              <option value="MANEB">MANEB Official</option>
+              <option value="Mock">Mock Exam</option>
+              <option value="Marking Key">Marking Key</option>
+              <option value="Notes">Study Notes</option>
+              <option value="MSCE">MSCE Textbook</option>
+              <option value="JCE">JCE Textbook</option>
+            </select>
+            <button type="button" class="btn sm" id="bulkAddMoreBtn">
+              + Add More Files
+            </button>
+            <button type="button" class="btn sm danger" id="bulkClearBtn">
+              Clear Queue
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress Tracker Bar -->
+        <div id="bulkProgressWrapper" hidden style="margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <b id="bulkProgressTitle" style="font-size:13px;color:var(--primary)">Publishing &amp; Syncing to Drime Cloud...</b>
+            <span id="bulkProgressPercent" style="font-size:12.5px;font-weight:700">0%</span>
+          </div>
+          <div style="width:100%;height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden">
+            <div id="bulkProgressBar" style="width:0%;height:100%;background:var(--grad);border-radius:999px;transition:width 0.2s ease"></div>
+          </div>
+          <div id="bulkProgressSub" style="font-size:11.5px;color:var(--muted);margin-top:6px">
+            Uploading files to Drime Cloud and publishing to student pages...
+          </div>
+        </div>
+
+        <!-- Traced Items Cards List -->
+        <div id="bulkItemsList" class="bulk-items-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>
+
+        <!-- Bulk Action Buttons -->
+        <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px">
+          <button type="button" class="btn primary" id="bulkUploadAllBtn" style="flex:1;padding:14px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+            <span id="bulkUploadBtnText">Upload All Files &amp; Publish to Student Pages</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= SINGLE FILE UPLOAD FORM ================= -->
+    <form id="uploadForm" class="form-grid" hidden>
+      <div>
+        <label>Resource Type</label>
+        <select id="uType">
+          <option value="papers">Past paper (MANEB / Mock)</option>
+          <option value="books">Textbook / Student Guide</option>
+          <option value="papers-notes">Study Revision Notes</option>
+          <option value="papers-keys">Official Marking Key</option>
+        </select>
+      </div>
+      <div>
+        <label>Subject</label>
+        <input id="uSubject" required placeholder="e.g. Mathematics, Biology, English">
+      </div>
+      <div>
+        <label>Title</label>
+        <input id="uTitle" required placeholder="e.g. Senior Secondary Mathematics Form 4">
+      </div>
+      <div>
+        <label>Class Level</label>
+        <select id="uLevel" required>
+          <option>Form 1</option>
+          <option>Form 2</option>
+          <option>Form 3</option>
+          <option>Form 4</option>
+        </select>
+      </div>
+      <div id="categoryWrap">
+        <label>Curriculum Category</label>
+        <select id="uCategory">
+          <option value="MSCE">MSCE (Senior Secondary Form 3 & 4)</option>
+          <option value="JCE">JCE (Junior Secondary Form 1 & 2)</option>
+          <option value="MANEB">MANEB Official Exam</option>
+          <option value="Mock">Mock Exam Paper</option>
+          <option value="Notes">Study Notes</option>
+          <option value="Marking Key">Marking Scheme / Key</option>
+        </select>
+      </div>
+      <div id="yearWrap">
+        <label>Exam / Publication Year</label>
+        <input id="uYear" type="number" min="1990" max="2100" placeholder="2024">
+      </div>
+      <div id="boardWrap">
+        <label>Exam Board / Publisher</label>
+        <input id="uBoard" placeholder="e.g. MANEB, Longhorn, Grey Matter">
+      </div>
+      <div id="authorWrap" hidden>
+        <label>Author(s)</label>
+        <input id="uAuthor" placeholder="e.g. Florence Thomo, Jared Ondera">
+      </div>
+      <div id="publisherWrap" hidden>
+        <label>Publisher</label>
+        <input id="uPublisher" placeholder="e.g. Longhorn Publishers">
+      </div>
+      <div>
+        <label>Description (optional)</label>
+        <textarea id="uDesc" rows="2" placeholder="Brief overview of curriculum chapters or exam paper..."></textarea>
+      </div>
+      <div>
+        <label>Document File (PDF works best - auto-traces metadata on select)</label>
+        <input id="uFile" type="file" required accept=".pdf,.doc,.docx,.jpg,.png">
+      </div>
+      <div id="coverWrap" hidden>
+        <label>Book Cover Image (optional)</label>
+        <input id="uCover" type="file" accept="image/*">
+      </div>
+      <div>
+        <label>Drime Cloud Direct Link (optional if already in Drime)</label>
+        <input id="uDrimeLink" placeholder="https://dri.me/... (optional direct share link)">
+      </div>
+      <div style="background:var(--surface);border:1px dashed #3b82f6;border-radius:8px;padding:8px 12px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        <span><b>Storage Destination:</b> Drime Cloud Storage (Folder <code>OymudINAwCDhPbnTH5Gt4oAIxo5mbC</code>).</span>
+      </div>
+      <!-- Single Upload Progression Bar -->
+      <div id="uSingleProgressWrapper" hidden style="background:var(--surface-2);border:1px solid #3b82f6;border-radius:10px;padding:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <b id="uSingleProgressTitle" style="font-size:13px;color:#2563eb;display:flex;align-items:center;gap:6px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Publishing &amp; Syncing to Drime Cloud...</span>
+          </b>
+          <span id="uSingleProgressPercent" style="font-size:12.5px;font-weight:700;color:#2563eb">0%</span>
+        </div>
+        <div style="width:100%;height:8px;background:rgba(0,0,0,0.08);border-radius:999px;overflow:hidden">
+          <div id="uSingleProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#2563eb,#3b82f6);border-radius:999px;transition:width 0.2s ease"></div>
+        </div>
+        <div id="uSingleProgressSub" style="font-size:11.5px;color:var(--muted);margin-top:6px">
+          Uploading file to server and syncing to Drime Cloud...
+        </div>
+      </div>
+      <div>
+        <button class="btn primary" id="uSubmit" type="submit" style="width:100%;padding:13px;font-size:15px;font-weight:700">
+          Publish Resource to Library (Syncs to Drime Cloud)
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Password change for owner -->
+  <section class="panel">
+    <h3>Owner Account Security</h3>
+    <form id="pwForm" class="form-grid">
+      <div><label for="pwCurrent">Current password</label><input id="pwCurrent" type="password" required autocomplete="current-password" autocapitalize="none"></div>
+      <div><label for="pwNew">New password (6+ characters)</label><input id="pwNew" type="password" required minlength="6" autocomplete="new-password" autocapitalize="none"></div>
+      <div><button class="btn primary" type="submit" style="width:100%">Change password</button></div>
+    </form>
+  </section>
+
+  <!-- Modal: Git Sync / Pull Terminal Output -->
+  <div id="gitPullModal" class="modal" hidden>
+    <div class="modal-box" style="max-width:540px;height:auto;max-height:85vh">
+      <div class="modal-bar" style="background:var(--surface);display:flex;justify-content:space-between;align-items:center">
+        <b style="color:var(--text);font-size:14px;display:flex;align-items:center;gap:6px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          <span>GitHub Auto-Sync Terminal</span>
+        </b>
+        <button type="button" class="btn sm" id="btnCloseGitModal" style="padding:4px 8px;min-height:28px">&times;</button>
+      </div>
+      <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+        <div id="gitPullStatusText" style="font-size:13px;font-weight:700;color:var(--primary)">
+          Syncing with GitHub repository...
+        </div>
+        <pre id="gitPullLogOutput" style="background:#09120d;color:#4ade80;padding:12px;border-radius:8px;font-family:monospace;font-size:12px;max-height:280px;overflow-y:auto;white-space:pre-wrap;margin:0;line-height:1.45">Executing git fetch and git reset...</pre>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+          <button type="button" class="btn sm primary" id="btnReloadAfterGit" style="display:none">Reload Page</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
+<script src="/js/icons.js?v=3.1.0"></script>
+<script src="/js/api.js?v=3.1.0"></script>
+<script src="/js/admin.js?v=3.1.0"></script>
+<script src="/js/account.js?v=3.1.0"></script>
+</body>
+</html>

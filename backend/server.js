@@ -174,15 +174,31 @@ app.use((err, _req, res, _next) => {
 });
 
 // Bind to 0.0.0.0 so Pterodactyl container and proxy can reach it
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('Muhebrew Library running -> http://0.0.0.0:' + PORT);
+// In Vercel serverless environment, Vercel manages the HTTP server; skip app.listen
+if (!process.env.VERCEL) {
+  const isDirectRun = require.main === module ||
+    (process.mainModule && process.mainModule.filename && process.mainModule.filename.includes('server.js'));
 
-  // Initialize background auto-update if enabled via AUTO_UPDATE or AUTO_UPDATE_POLL
-  if (process.env.AUTO_UPDATE === 'true' || process.env.AUTO_UPDATE_POLL === 'true') {
-    const pollMin = parseInt(process.env.AUTO_UPDATE_POLL_INTERVAL, 10) || 5;
-    autoUpdater.startAutoPolling(pollMin);
+  if (isDirectRun) {
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log('Muhebrew Library running -> http://0.0.0.0:' + PORT);
+
+      // Initialize background auto-update if enabled via AUTO_UPDATE or AUTO_UPDATE_POLL
+      if (process.env.AUTO_UPDATE === 'true' || process.env.AUTO_UPDATE_POLL === 'true') {
+        const pollMin = parseInt(process.env.AUTO_UPDATE_POLL_INTERVAL, 10) || 5;
+        autoUpdater.startAutoPolling(pollMin);
+      }
+    });
+
+    server.on('error', (e) => {
+      if (e.code === 'EADDRINUSE') {
+        console.warn(`[Warning] Port ${PORT} already in use; skipping app.listen.`);
+      } else {
+        console.error('[Server Error]', e);
+      }
+    });
   }
-});
+}
 
 process.on('uncaughtException', (err) => {
   console.error('[Uncaught Exception]', err);
