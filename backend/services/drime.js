@@ -6,15 +6,15 @@ const fs = require('fs');
 const path = require('path');
 
 const DRIME_API_KEY = process.env.DRIME_API_KEY || '';
-const DRIME_FOLDER_ID = process.env.DRIME_FOLDER_ID || 'OymudINAwCDhPbnTH5Gt4oAIxo5mbC';
-const DRIME_FOLDER_URL = process.env.DRIME_FOLDER_URL || 'https://dri.me/OymudINAwCDhPbnTH5Gt4oAIxo5mbC';
+const DRIME_FOLDER_ID = process.env.DRIME_FOLDER_ID || 'BiWwc46CM0eJ0yzuDOJu5jxg1L8yfw';
+const DRIME_FOLDER_URL = process.env.DRIME_FOLDER_URL || 'https://dri.me/BiWwc46CM0eJ0yzuDOJu5jxg1L8yfw';
 const DRIME_API_BASE = (process.env.DRIME_API_BASE || 'https://app.drime.com/api/v1').replace(/\/$/, '');
 
 const FOLDER_MAP = {
   paper: process.env.DRIME_FOLDER_PAPERS || DRIME_FOLDER_ID,
   book: process.env.DRIME_FOLDER_BOOKS || DRIME_FOLDER_ID,
-  marking: process.env.DRIME_FOLDER_MARKING || process.env.DRIME_FOLDER_PAPERS || DRIME_FOLDER_ID,
-  notes: process.env.DRIME_FOLDER_NOTES || process.env.DRIME_FOLDER_BOOKS || DRIME_FOLDER_ID
+  marking: process.env.DRIME_FOLDER_MARKING || DRIME_FOLDER_ID,
+  notes: process.env.DRIME_FOLDER_NOTES || DRIME_FOLDER_ID
 };
 
 function authHeaders() {
@@ -24,11 +24,14 @@ function authHeaders() {
   };
 }
 
-function getFolderIdForType(type) {
-  const key = String(type || 'paper').toLowerCase();
-  if (key.includes('mark')) return FOLDER_MAP.marking;
-  if (key.includes('book') || key.includes('text')) return FOLDER_MAP.book;
-  if (key.includes('note')) return FOLDER_MAP.notes;
+function getFolderIdForType(type, category = '') {
+  const t = String(type || 'paper').toLowerCase();
+  const c = String(category || '').toLowerCase();
+  if (t.includes('mark') || c.includes('mark') || c.includes('scheme') || c.includes('key')) {
+    return FOLDER_MAP.marking;
+  }
+  if (t.includes('book') || t.includes('text')) return FOLDER_MAP.book;
+  if (t.includes('note') || c.includes('note')) return FOLDER_MAP.notes;
   return FOLDER_MAP.paper;
 }
 
@@ -140,8 +143,9 @@ async function downloadFile(fileId) {
   return { ok: false, error: 'Could not download file from Drime' };
 }
 
-async function uploadToDrime({ filePath, originalName, mimeType, folderId }) {
-  const targetFolder = folderId || DRIME_FOLDER_ID;
+async function uploadToDrime({ filePath, originalName, mimeType, folderId, category, subject, level }) {
+  const isMarking = (category || '').toLowerCase().includes('mark') || (originalName || '').toLowerCase().includes('mark');
+  const targetFolder = folderId || (isMarking ? FOLDER_MAP.marking : DRIME_FOLDER_ID);
   const absPath = path.isAbsolute(filePath) ? filePath : path.join(__dirname, '..', filePath);
 
   if (!fs.existsSync(absPath)) {
@@ -170,6 +174,11 @@ async function uploadToDrime({ filePath, originalName, mimeType, folderId }) {
     formData.append('file', blob, originalName || path.basename(absPath));
     formData.append('parent_id', targetFolder);
     formData.append('folder_id', targetFolder);
+    if (category) formData.append('category', category);
+    if (subject) formData.append('subject', subject);
+    if (level) formData.append('level', level);
+    const folderGroup = isMarking ? 'Marking Keys' : (category || 'Past Papers');
+    formData.append('path', `${folderGroup}/${subject || 'General'}/${level || 'Form 4'}`);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);

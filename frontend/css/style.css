@@ -98,8 +98,15 @@ a {
   text-decoration: none;
 }
 
-h1, h2, .btn.primary {
-  font-family: Poppins, system-ui, sans-serif;
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.25px;
+}
+
+.btn.primary {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
 }
 
 .wrap {
@@ -188,9 +195,9 @@ header.site .wrap {
   align-items: center;
   gap: 8px;
   color: var(--text);
-  font-family: Poppins, system-ui, sans-serif;
-  font-size: 17px;
-  font-weight: 700;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 600;
   letter-spacing: -0.3px;
   text-decoration: none;
   flex-shrink: 0;
@@ -592,6 +599,18 @@ input:focus, select:focus, textarea:focus {
   transform: scale(1.08);
 }
 
+.bottom-tabs .tab.danger-tab {
+  color: #dc2626;
+}
+
+.bottom-tabs .tab.danger-tab:hover {
+  color: #b91c1c;
+}
+
+.bottom-tabs .tab.danger-tab svg {
+  stroke: #dc2626;
+}
+
 body.has-bottom-tabs main {
   padding-bottom: 78px;
 }
@@ -732,6 +751,126 @@ body.has-bottom-tabs footer.foot {
   stroke: #22c55e;
 }
 
+/* Document Cover Page Sheet (Replaces generic PDF icon with authentic cover page) */
+.card-cover-sheet {
+  flex-shrink: 0;
+  width: 48px;
+  height: 62px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme="dark"] .card-cover-sheet {
+  background: #141f18;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.card-cover-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-sheet-header {
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.cover-sheet-header.maneb {
+  background: #0284c7;
+}
+
+.cover-sheet-header.mock {
+  background: #15803d;
+}
+
+.cover-sheet-header.key {
+  background: #d97706;
+}
+
+.cover-sheet-header.book {
+  background: #14532d;
+}
+
+.cover-sheet-body {
+  flex: 1;
+  padding: 3px 2px 1px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-image: repeating-linear-gradient(transparent, transparent 6px, rgba(0, 0, 0, 0.04) 6px, rgba(0, 0, 0, 0.04) 7px);
+}
+
+[data-theme="dark"] .cover-sheet-body {
+  background-image: repeating-linear-gradient(transparent, transparent 6px, rgba(255, 255, 255, 0.04) 6px, rgba(255, 255, 255, 0.04) 7px);
+}
+
+.cover-sheet-subject {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  max-width: 44px;
+}
+
+.cover-sheet-sub {
+  font-size: 7px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.cover-sheet-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 3px 2px;
+}
+
+.cover-type-tag {
+  font-size: 6.5px;
+  font-weight: 700;
+  padding: 1px 3px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.cover-type-tag.tag-pdf {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+.cover-type-tag.tag-book {
+  background: rgba(20, 83, 45, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(20, 83, 45, 0.25);
+}
+
 .card-header-body {
   flex: 1;
   min-width: 0;
@@ -739,10 +878,11 @@ body.has-bottom-tabs footer.foot {
 
 .card-title {
   margin: 0 0 5px 0;
-  font-size: 14.5px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
   line-height: 1.35;
-  font-weight: 550;
-  letter-spacing: -0.15px;
+  font-weight: 500;
+  letter-spacing: -0.1px;
   color: var(--text);
   word-break: break-word;
 }
@@ -1027,12 +1167,11 @@ body.has-bottom-tabs footer.foot {
 
 .stat b {
   display: block;
-  font-size: 22px;
-  letter-spacing: -0.5px;
-  background: var(--grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--primary);
 }
 
 .stat span {

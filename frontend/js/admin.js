@@ -26,12 +26,15 @@ function isAdmin(user) {
     ownerBadge.textContent = (user.email || 'muhebrewwinston@gmail.com') + ' (Owner)';
   }
 
-  $('adminSignOutBtn')?.addEventListener('click', () => {
+  function doSignOut() {
     if (confirm('Sign out from owner dashboard?')) {
       API.setToken(null);
       location.replace('/auth.html');
     }
-  });
+  }
+
+  $('adminSignOutBtn')?.addEventListener('click', doSignOut);
+  $('bottomAdminSignOutBtn')?.addEventListener('click', doSignOut);
 
   loadStats();
   loadReports();
@@ -41,13 +44,19 @@ function isAdmin(user) {
   loadGitStatus();
 })();
 
+function toggleTheme() {
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+  localStorage.setItem('ph_theme', dark ? 'light' : 'dark');
+}
+
 const themeBtn = $('themeBtn');
 if (themeBtn) {
-  themeBtn.addEventListener('click', () => {
-    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
-    localStorage.setItem('ph_theme', dark ? 'light' : 'dark');
-  });
+  themeBtn.addEventListener('click', toggleTheme);
+}
+const bottomThemeBtn = $('bottomThemeBtn');
+if (bottomThemeBtn) {
+  bottomThemeBtn.addEventListener('click', toggleTheme);
 }
 
 // ============ SECTION 1: Statistics & Most Favorite Books ============
@@ -72,17 +81,17 @@ async function loadStats() {
       } else {
         fbList.innerHTML = s.favoriteBooks.map((b, idx) => `
           <div style="display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
-            <span style="font-weight:800;color:var(--primary);font-size:14px;width:20px;text-align:center">#${idx + 1}</span>
-            <div style="width:36px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;display:grid;place-items:center">
-              ${b.cover_path ? `<img src="/${esc(b.cover_path)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>'}
+            <span style="font-weight:700;color:var(--primary);font-size:13px;width:20px;text-align:center">#${idx + 1}</span>
+            <div style="width:34px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;display:grid;place-items:center">
+              ${b.cover_path ? `<img src="/${esc(b.cover_path)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>'}
             </div>
             <div style="flex:1;min-width:0">
-              <b style="font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.title)}</b>
+              <span style="font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').trim())}</span>
               <span style="font-size:11.5px;color:var(--muted)">${esc(b.subject)} · ${esc(b.level)}</span>
             </div>
             <div style="display:flex;gap:4px;align-items:center">
               ${b.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime</span>' : ''}
-              <span class="tag ok" style="font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${b.downloads.toLocaleString()} dl</span>
+              <span class="tag ok" style="font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${b.downloads.toLocaleString()} dl</span>
             </div>
           </div>
         `).join('');
@@ -95,22 +104,32 @@ async function loadStats() {
       if (!s.favoritePapers.length) {
         fpList.innerHTML = '<p style="color:var(--muted);font-size:13px">No papers uploaded yet.</p>';
       } else {
-        fpList.innerHTML = s.favoritePapers.map((p, idx) => `
+        fpList.innerHTML = s.favoritePapers.map((p, idx) => {
+          const isMarking = (p.category || '').toLowerCase().includes('mark') || (p.title || '').toLowerCase().includes('mark');
+          const boardTag = isMarking ? 'KEY' : (p.exam_board ? p.exam_board.toUpperCase().slice(0, 6) : 'MANEB');
+          const headerCls = isMarking ? 'key' : (boardTag.includes('MOCK') ? 'mock' : 'maneb');
+          const cleanPTitle = p.title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').trim();
+
+          return `
           <div style="display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
-            <span style="font-weight:800;color:var(--primary);font-size:14px;width:20px;text-align:center">#${idx + 1}</span>
-            <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:44px;flex-shrink:0;color:var(--primary)">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
-            </span>
+            <span style="font-weight:700;color:var(--primary);font-size:13px;width:20px;text-align:center">#${idx + 1}</span>
+            <div style="width:34px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column">
+              ${p.cover_path 
+                ? `<img src="/${esc(p.cover_path)}" alt="" style="width:100%;height:100%;object-fit:cover">`
+                : `<div class="cover-sheet-header ${headerCls}" style="height:12px;font-size:6.5px">${esc(boardTag)}</div>
+                   <div class="cover-sheet-body" style="padding:1px"><div class="cover-sheet-subject" style="font-size:6.5px">${esc((p.subject||'').slice(0,5))}</div></div>`
+              }
+            </div>
             <div style="flex:1;min-width:0">
-              <b style="font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.title)}</b>
+              <span style="font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cleanPTitle)}</span>
               <span style="font-size:11.5px;color:var(--muted)">${esc(p.subject)} · ${esc(p.level)} · ${esc(p.category || p.exam_board || '')}</span>
             </div>
             <div style="display:flex;gap:4px;align-items:center">
               ${p.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime</span>' : ''}
-              <span class="tag ok" style="font-size:11.5px;font-weight:700;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${p.downloads.toLocaleString()} dl</span>
+              <span class="tag ok" style="font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${p.downloads.toLocaleString()} dl</span>
             </div>
           </div>
-        `).join('');
+        `;}).join('');
       }
     }
   } catch (err) {
@@ -378,23 +397,23 @@ function clientAutoTrace(filename, size = 0) {
   const lower = cleanSpacing.toLowerCase();
 
   const subjectPatterns = [
-    { name: 'Mathematics', regex: /\b(math|maths|mathematics|algebra|geometry)\b/i },
-    { name: 'English', regex: /\b(english|grammar|literature)\b/i },
-    { name: 'Chichewa', regex: /\b(chichewa|chi chewa)\b/i },
-    { name: 'Biology', regex: /\b(biology|bio)\b/i },
-    { name: 'Physical Science', regex: /\b(physical science|ps|phys-sci)\b/i },
-    { name: 'Physics', regex: /\b(physics)\b/i },
-    { name: 'Chemistry', regex: /\b(chemistry|chem)\b/i },
-    { name: 'Agriculture', regex: /\b(agriculture|agric)\b/i },
-    { name: 'Geography', regex: /\b(geography|geo)\b/i },
+    { name: 'Physical Science', regex: /\b(physical\s*science|phys\s*sci|p\/s)\b/i },
+    { name: 'Physics', regex: /\b(physics|phys|phy)\b/i },
+    { name: 'Chemistry', regex: /\b(chemistry|chem|chm)\b/i },
+    { name: 'Biology', regex: /\b(biology|biol?|bio)\b/i },
+    { name: 'Mathematics', regex: /\b(math|maths|mathematics|algebra|geometry|mth)\b/i },
+    { name: 'English', regex: /\b(english|grammar|literature|eng)\b/i },
+    { name: 'Chichewa', regex: /\b(chichewa|chi\s*chewa|chinyanja|chic|chich)\b/i },
+    { name: 'Geography', regex: /\b(geography|geog?|geo)\b/i },
     { name: 'History', regex: /\b(history|hist)\b/i },
-    { name: 'Social Studies', regex: /\b(social studies|social-studies)\b/i },
-    { name: 'Life Skills', regex: /\b(life skills|life-skills)\b/i },
-    { name: 'Computer Studies', regex: /\b(computer studies|computer science|ict|computing)\b/i },
-    { name: 'Bible Knowledge', regex: /\b(bible knowledge|bk|religious studies|cre)\b/i },
-    { name: 'Business Studies', regex: /\b(business studies|business)\b/i },
-    { name: 'Commerce', regex: /\b(commerce)\b/i },
-    { name: 'Home Economics', regex: /\b(home economics|nutrition)\b/i },
+    { name: 'Agriculture', regex: /\b(agriculture|agric?|agr)\b/i },
+    { name: 'Social Studies', regex: /\b(social\s*studies|social|soc)\b/i },
+    { name: 'Life Skills', regex: /\b(life\s*skills|life|ls)\b/i },
+    { name: 'Computer Studies', regex: /\b(computer\s*studies|computer|ict|computing|cs)\b/i },
+    { name: 'Bible Knowledge', regex: /\b(bible\s*knowledge|bible|bk|b\.k|religious|cre)\b/i },
+    { name: 'Business Studies', regex: /\b(business\s*studies|business|bus|biz)\b/i },
+    { name: 'Commerce', regex: /\b(commerce|comm)\b/i },
+    { name: 'Home Economics', regex: /\b(home\s*economics|nutrition|he)\b/i },
     { name: 'French', regex: /\b(french)\b/i }
   ];
 
@@ -407,7 +426,7 @@ function clientAutoTrace(filename, size = 0) {
   }
 
   let detectedLevel = 'Form 4';
-  if (/\b(form\s*1|f1|grade\s*9|junior)\b/i.test(lower)) detectedLevel = 'Form 1';
+  if (/\b(form\s*1|f1|grade\s*9)\b/i.test(lower)) detectedLevel = 'Form 1';
   else if (/\b(form\s*2|f2|grade\s*10|jce)\b/i.test(lower)) detectedLevel = 'Form 2';
   else if (/\b(form\s*3|f3|grade\s*11)\b/i.test(lower)) detectedLevel = 'Form 3';
   else if (/\b(form\s*4|f4|grade\s*12|msce)\b/i.test(lower)) detectedLevel = 'Form 4';
@@ -419,7 +438,7 @@ function clientAutoTrace(filename, size = 0) {
   let detectedCategory = 'MANEB';
   let examBoard = 'MANEB';
 
-  const isMarkingKey = /\b(marking\s*key|marking\s*scheme|answers|solution|key)\b/i.test(lower);
+  const isMarkingKey = /\b(marking\s*key|marking\s*scheme|mark\s*scheme|marking|answers?|solution|key)\b/i.test(lower);
   const isNotes = /\b(notes|revision|summary|guide|module|pamphlet)\b/i.test(lower);
   const isMock = /\b(mock|cluster|division|zone|district)\b/i.test(lower);
   const isTextbook = /\b(textbook|book|student\s*book|learners?\s*book|teachers?\s*guide)\b/i.test(lower);
@@ -443,20 +462,23 @@ function clientAutoTrace(filename, size = 0) {
     detectedCategory = 'MSCE';
   }
 
-  let title = cleanSpacing;
-  const paperMatch = cleanSpacing.match(/\bpaper\s*([1-3]|i{1,3})\b/i);
+  const paperMatch = cleanSpacing.match(/\b(?:paper|p|pp)\s*([1-4]|i{1,3})\b/i);
   const paperStr = paperMatch ? ` Paper ${paperMatch[1].toUpperCase()}` : '';
 
+  let title = cleanSpacing;
   if (detectedCategory === 'Marking Key') {
-    title = `${detectedCategory} - ${detectedSubject}${paperStr} (${detectedLevel} ${detectedYear})`;
+    title = `Marking Key - ${detectedSubject}${paperStr} ${detectedYear}`;
   } else if (detectedCategory === 'Notes') {
-    title = `${detectedSubject} Study Revision Notes (${detectedLevel})`;
+    title = `${detectedSubject} Study Revision Notes`;
   } else if (detectedType === 'books') {
-    title = `${detectedSubject} ${detectedLevel} Textbook`;
+    title = `${detectedSubject} Textbook`;
   } else {
     const prefix = isMock ? 'Cluster Mock' : 'MANEB';
-    title = `${prefix} ${detectedSubject}${paperStr} ${detectedYear} (${detectedLevel})`;
+    title = `${prefix} ${detectedSubject}${paperStr} ${detectedYear}`;
   }
+
+  // Explicitly remove (Form 4), (Form 1..4), etc. from the end of paper name
+  title = title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').replace(/\s+Form\s*[1-4]\s*$/i, '').trim();
 
   return {
     rawName: filename,
