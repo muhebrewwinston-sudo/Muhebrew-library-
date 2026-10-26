@@ -21,36 +21,36 @@ function autoTraceFile(filename, fileSize = 0) {
 
   // Subject
   const subjectRules = [
-    [/physical\s*science|phys\s*sci/i, 'Physical Science'],
-    [/\bphysics\b/i, 'Physics'],
-    [/\bchemistry|chem\b/i, 'Chemistry'],
-    [/\bbiology|bio\b/i, 'Biology'],
-    [/\bmathematics|maths?\b/i, 'Mathematics'],
-    [/\benglish|eng\b/i, 'English'],
-    [/\bchichewa|chinyanja\b/i, 'Chichewa'],
-    [/\bageography|geo\b/i, 'Geography'],
-    [/\bgeography\b/i, 'Geography'],
+    [/physical\s*science|phys\s*sci|p\/s/i, 'Physical Science'],
+    [/\bphysics|phys|phy\b/i, 'Physics'],
+    [/\bchemistry|chem|chm\b/i, 'Chemistry'],
+    [/\bbiology|biol?|bio\b/i, 'Biology'],
+    [/\bmathematics|maths?|calc|algebra|geometry|mth\b/i, 'Mathematics'],
+    [/\benglish|grammar|literature|eng\b/i, 'English'],
+    [/\bchichewa|chi\s*chewa|chinyanja|chic|chich\b/i, 'Chichewa'],
+    [/\bgeography|geog?|geo\b/i, 'Geography'],
     [/\bhistory|hist\b/i, 'History'],
-    [/\bagriculture|agric\b/i, 'Agriculture'],
-    [/\bsocial\s*studies\b/i, 'Social Studies'],
-    [/\blife\s*skills\b/i, 'Life Skills'],
-    [/\bcomputer|ict\b/i, 'Computer Studies'],
-    [/\bbible|religious\b/i, 'Bible Knowledge'],
-    [/\bbusiness\b/i, 'Business Studies'],
-    [/\bcommerce\b/i, 'Commerce'],
-    [/\bhome\s*economics|nutrition\b/i, 'Home Economics']
+    [/\bagriculture|agric?|agr\b/i, 'Agriculture'],
+    [/\bsocial\s*studies|social|soc\b/i, 'Social Studies'],
+    [/\blife\s*skills|life|ls\b/i, 'Life Skills'],
+    [/\bcomputer|ict|computing|cs\b/i, 'Computer Studies'],
+    [/\bbible|bk|religious|cre\b/i, 'Bible Knowledge'],
+    [/\bbusiness|bus|biz\b/i, 'Business Studies'],
+    [/\bcommerce|comm\b/i, 'Commerce'],
+    [/\bhome\s*economics|nutrition|he\b/i, 'Home Economics'],
+    [/\bfrench\b/i, 'French']
   ];
   let subject = 'General';
   for (const [re, name] of subjectRules) {
     if (re.test(lower)) { subject = name; break; }
   }
 
-  // Level — ONLY if clearly stated (do not invent Form 4)
+  // Level — accurate matching (do not invent Form 4 blindly)
   let level = null;
-  if (/\bform\s*4\b|\bf4\b|\bform-4\b/i.test(lower)) level = 'Form 4';
-  else if (/\bform\s*3\b|\bf3\b|\bform-3\b/i.test(lower)) level = 'Form 3';
-  else if (/\bform\s*2\b|\bf2\b|\bform-2\b/i.test(lower)) level = 'Form 2';
-  else if (/\bform\s*1\b|\bf1\b|\bform-1\b/i.test(lower)) level = 'Form 1';
+  if (/\bform\s*4\b|\bf4\b|\bform-4\b|\bmsce\b|\bgrade\s*12\b/i.test(lower)) level = 'Form 4';
+  else if (/\bform\s*3\b|\bf3\b|\bform-3\b|\bgrade\s*11\b/i.test(lower)) level = 'Form 3';
+  else if (/\bform\s*2\b|\bf2\b|\bform-2\b|\bjce\b|\bgrade\s*10\b/i.test(lower)) level = 'Form 2';
+  else if (/\bform\s*1\b|\bf1\b|\bform-1\b|\bgrade\s*9\b/i.test(lower)) level = 'Form 1';
 
   // Category / exam board — MANEB only when official MANEB is indicated
   let category = null;
@@ -103,7 +103,7 @@ function autoTraceFile(filename, fileSize = 0) {
 
   // Paper number
   let paper_no = null;
-  const pMatch = lower.match(/\bpaper\s*([1-4ivx]+)\b/i) || lower.match(/\bp\s*([1-4])\b/);
+  const pMatch = lower.match(/\b(?:paper|p|pp)\s*([1-4ivx]+)\b/i);
   if (pMatch) paper_no = 'Paper ' + pMatch[1].toUpperCase();
 
   // Title: clean, human readable, reflect cover-style naming
@@ -115,6 +115,10 @@ function autoTraceFile(filename, fileSize = 0) {
     title = school + ' Mock — ' + (subject !== 'General' ? subject + ' ' : '') + (year || '') + (paper_no ? ' ' + paper_no : '');
     title = title.replace(/\s+/g, ' ').trim();
   }
+
+  // Remove trailing (Form 4), (Form 1..4), etc. from title
+  title = title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').replace(/\s+Form\s*[1-4]\s*$/i, '').trim();
+
   if (title.length < 3) title = base;
   if (title.length > 140) title = title.slice(0, 140);
 

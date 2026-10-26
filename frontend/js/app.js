@@ -368,6 +368,14 @@ async function loadFacets() {
   } catch (e) { /* filters stay empty */ }
 }
 
+function formatDocumentTitle(title) {
+  if (!title) return '';
+  return String(title)
+    .replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '')
+    .replace(/\s+Form\s*[1-4]\s*$/i, '')
+    .trim();
+}
+
 function card(item) {
   const isPaper = item._type ? item._type === 'paper' : (item.year !== undefined || item.exam_board !== undefined);
   const coll = isPaper ? 'papers' : 'books';
@@ -397,36 +405,40 @@ function card(item) {
     }
   }
 
-  // Red PDF icon badge for exam papers
-  const redPdfBadge = 
-    '<div class="card-pdf-badge" aria-label="PDF Document">' +
-      '<svg class="pdf-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>' +
-        '<polyline points="14 2 14 8 20 8"/>' +
-        '<line x1="16" y1="13" x2="8" y2="13"/>' +
-        '<line x1="16" y1="17" x2="8" y2="17"/>' +
-        '<line x1="10" y1="9" x2="8" y2="9"/>' +
-      '</svg>' +
-      '<span class="pdf-tag">PDF</span>' +
-    '</div>';
+  // Document Cover Page / Thumbnail Display for Easy Visual Identification
+  const isMarkingKey = (item.category || '').toLowerCase().includes('mark') || (item.title || '').toLowerCase().includes('mark');
+  const boardHeader = isMarkingKey ? 'KEY' : (item.exam_board ? item.exam_board.toUpperCase().slice(0, 7) : (isPaper ? 'MANEB' : 'BOOK'));
+  const headerClass = isMarkingKey ? 'key' : (boardHeader.includes('MOCK') ? 'mock' : (isPaper ? 'maneb' : 'book'));
+  const subAbbr = (item.subject || 'GENERAL').toUpperCase().slice(0, 9);
+  const lvlShort = item.level ? item.level.replace(/Form\s*/i, 'F') : (item.year ? String(item.year) : '');
+  const cleanTitleStr = formatDocumentTitle(item.title);
 
-  // Deep forest Book badge for textbooks (no raster book images)
-  const bookDocBadge = 
-    '<div class="card-pdf-badge book-badge" aria-label="Curriculum Book">' +
-      '<svg class="pdf-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#14532d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>' +
-        '<path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>' +
-      '</svg>' +
-      '<span class="pdf-tag book-tag">BOOK</span>' +
-    '</div>';
-
-  const visualCol = isPaper ? redPdfBadge : bookDocBadge;
+  let visualCol = '';
+  if (item.cover_path) {
+    visualCol = 
+      '<div class="card-cover-sheet" aria-label="Document Cover Page">' +
+        '<img src="/' + esc(item.cover_path) + '" alt="' + esc(cleanTitleStr) + '" class="card-cover-thumb" loading="lazy">' +
+        '<span class="cover-type-tag ' + (isPaper ? 'tag-pdf' : 'tag-book') + '" style="position:absolute;bottom:2px;right:2px">' + (isPaper ? 'PDF' : 'BOOK') + '</span>' +
+      '</div>';
+  } else {
+    visualCol = 
+      '<div class="card-cover-sheet" aria-label="Document Cover Page">' +
+        '<div class="cover-sheet-header ' + headerClass + '">' + esc(boardHeader) + '</div>' +
+        '<div class="cover-sheet-body">' +
+          '<div class="cover-sheet-subject">' + esc(subAbbr) + '</div>' +
+          '<div class="cover-sheet-sub">' + esc(lvlShort) + '</div>' +
+        '</div>' +
+        '<div class="cover-sheet-footer">' +
+          '<span class="cover-type-tag ' + (isPaper ? 'tag-pdf' : 'tag-book') + '">' + (isPaper ? 'PDF' : 'BOOK') + '</span>' +
+        '</div>' +
+      '</div>';
+  }
 
   return '<article class="card">' +
     '<div class="card-header">' +
       visualCol +
       '<div class="card-header-body">' +
-        '<h3 class="card-title">' + esc(item.title) + '</h3>' +
+        '<h3 class="card-title">' + esc(cleanTitleStr) + '</h3>' +
         '<div class="card-meta-row">' +
           '<span class="meta-item dlcount">' +
             '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ' +

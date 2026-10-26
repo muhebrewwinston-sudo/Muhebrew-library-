@@ -321,6 +321,8 @@ function buildRouter(table, type) {
         body.title = baseName || `${body.subject || 'Resource'} ${body.level || ''} ${isBook ? 'Textbook' : 'Paper'}`.trim();
       }
 
+      body.title = (body.title || '').replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').replace(/\s+Form\s*[1-4]\s*$/i, '').trim();
+
       if (!body.subject || !body.level) { discard(); return res.status(400).json({ error: 'Subject and class level are required.' }); }
 
       // Check for duplicate uploads in the library ("which was not existing")
@@ -342,13 +344,16 @@ function buildRouter(table, type) {
 
       try {
         const folderForType = drimeService.getFolderIdForType
-          ? drimeService.getFolderIdForType(isBook ? 'book' : (String(body.category || '').toLowerCase().includes('marking') ? 'marking' : 'paper'))
+          ? drimeService.getFolderIdForType(isBook ? 'book' : (String(body.category || '').toLowerCase().includes('marking') ? 'marking' : 'paper'), body.category)
           : drimeService.DRIME_FOLDER_ID;
         const drimeRes = await drimeService.uploadToDrime({
           filePath: file.path,
           originalName: file.originalname,
           mimeType: file.mimetype,
-          folderId: body.drime_folder_id || folderForType || drimeService.DRIME_FOLDER_ID
+          folderId: body.drime_folder_id || folderForType || drimeService.DRIME_FOLDER_ID,
+          category: body.category,
+          subject: body.subject,
+          level: body.level
         });
         drimeFileId = drimeRes.fileId;
         drimeUrl = body.drime_link ? body.drime_link.trim() : (drimeRes.url || drimeService.DRIME_FOLDER_URL);

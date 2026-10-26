@@ -220,7 +220,8 @@ router.post('/upload-item', upload.single('file'), async (req, res) => {
     const isBook = type === 'books';
     const table = isBook ? 'books' : 'papers';
 
-    const title = (body.title || traced.title || file.originalname).trim();
+    const rawTitle = (body.title || traced.title || file.originalname).trim();
+    const title = rawTitle.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').replace(/\s+Form\s*[1-4]\s*$/i, '').trim();
     const subject = (body.subject || traced.subject || 'General Studies').trim();
     const level = (body.level || traced.level || 'Form 4').trim();
     const category = (body.category || traced.category || (isBook ? 'MSCE' : 'MANEB')).trim();
@@ -242,12 +243,17 @@ router.post('/upload-item', upload.single('file'), async (req, res) => {
     let drimeFolderId = null;
 
     try {
-      const folderForType = drimeService.getFolderIdForType ? drimeService.getFolderIdForType(isBook ? 'book' : 'paper') : drimeService.DRIME_FOLDER_ID;
+      const isMarking = String(body.category || body.title || '').toLowerCase().includes('mark');
+      const folderType = isBook ? 'book' : (isMarking ? 'marking' : 'paper');
+      const folderForType = drimeService.getFolderIdForType ? drimeService.getFolderIdForType(folderType, body.category) : drimeService.DRIME_FOLDER_ID;
       const drimeRes = await drimeService.uploadToDrime({
         filePath: file.path,
         originalName: file.originalname,
         mimeType: file.mimetype,
-        folderId: body.drime_folder_id || folderForType || drimeService.DRIME_FOLDER_ID
+        folderId: body.drime_folder_id || folderForType || drimeService.DRIME_FOLDER_ID,
+        category: body.category,
+        subject: body.subject,
+        level: body.level
       });
       drimeFileId = drimeRes.fileId;
       drimeUrl = body.drime_link ? body.drime_link.trim() : (drimeRes.url || drimeService.DRIME_FOLDER_URL);

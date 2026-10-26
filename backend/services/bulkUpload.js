@@ -123,13 +123,16 @@ async function processBulkZip({ zipPath, uploadedBy, defaultStatus = 'approved' 
         let drimeFolderId = null;
         try {
           const folderId = drimeService.getFolderIdForType
-            ? drimeService.getFolderIdForType(meta.type === 'book' ? 'book' : (meta.category === 'Marking Key' ? 'marking' : 'paper'))
+            ? drimeService.getFolderIdForType(meta.type === 'book' ? 'book' : (meta.category === 'Marking Key' ? 'marking' : 'paper'), meta.category)
             : drimeService.DRIME_FOLDER_ID;
           const drimeRes = await drimeService.uploadToDrime({
             filePath: destPath,
             originalName,
             mimeType: mime,
-            folderId
+            folderId,
+            category: meta.category,
+            subject: meta.subject,
+            level: meta.level
           });
           drimeFileId = drimeRes.fileId;
           drimeUrl = drimeRes.url || drimeService.DRIME_FOLDER_URL;

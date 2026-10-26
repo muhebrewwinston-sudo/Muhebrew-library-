@@ -210,6 +210,17 @@ try {
   }
 } catch (_) {}
 
+// Clean existing paper titles ending with (Form 1..4)
+try {
+  const papersWithForm = db.prepare("SELECT id, title FROM papers WHERE title LIKE '%(Form %'").all();
+  for (const p of papersWithForm) {
+    const clean = p.title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').replace(/\s+Form\s*[1-4]\s*$/i, '').trim();
+    if (clean !== p.title) {
+      db.prepare('UPDATE papers SET title = ? WHERE id = ?').run(clean, p.id);
+    }
+  }
+} catch (_) {}
+
 // Ensure muhebrewwinston@gmail.com is always role = 'admin', owner and verified
 try {
   const owner = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'muhebrewwinston@gmail.com'").get();
