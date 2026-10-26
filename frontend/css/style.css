@@ -694,7 +694,7 @@ body.has-bottom-tabs footer.foot {
 
 .card-pdf-badge .pdf-tag {
   font-size: 8.5px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.5px;
   color: #dc2626;
   line-height: 1;
@@ -713,7 +713,7 @@ body.has-bottom-tabs footer.foot {
 
 .card-pdf-badge.book-badge .book-tag {
   font-size: 8.5px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.5px;
   color: #14532d;
   line-height: 1;
@@ -741,7 +741,8 @@ body.has-bottom-tabs footer.foot {
   margin: 0 0 5px 0;
   font-size: 14.5px;
   line-height: 1.35;
-  font-weight: 700;
+  font-weight: 550;
+  letter-spacing: -0.15px;
   color: var(--text);
   word-break: break-word;
 }
@@ -763,7 +764,7 @@ body.has-bottom-tabs footer.foot {
 
 .card-meta-row .meta-dot {
   color: var(--border);
-  font-weight: bold;
+  font-weight: normal;
 }
 
 /* Soft pills / chips */
@@ -785,16 +786,16 @@ body.has-bottom-tabs footer.foot {
 }
 
 .chip.chip-subject {
-  background: rgba(20, 83, 45, 0.1);
+  background: rgba(20, 83, 45, 0.08);
   color: var(--primary);
-  border: 1px solid rgba(20, 83, 45, 0.2);
-  font-weight: 600;
+  border: 1px solid rgba(20, 83, 45, 0.18);
+  font-weight: 500;
 }
 
 .chip.chip-level {
   background: var(--surface-2);
   color: var(--text);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .chip.chip-year {
@@ -804,15 +805,17 @@ body.has-bottom-tabs footer.foot {
 }
 
 .chip.chip-board {
-  background: rgba(2, 132, 199, 0.1);
+  background: rgba(2, 132, 199, 0.08);
   color: #0284c7;
-  border: 1px solid rgba(2, 132, 199, 0.2);
-  font-weight: 600;
+  border: 1px solid rgba(2, 132, 199, 0.18);
+  font-weight: 500;
 }
 
 .chip.chip-category {
-  background: rgba(22, 163, 74, 0.12);
+  background: rgba(22, 163, 74, 0.08);
   color: #16a34a;
+  font-weight: 500;
+}
   font-weight: 600;
 }
 
@@ -1110,6 +1113,65 @@ th {
 
 [data-theme="dark"] .auth-card {
   background: rgba(18, 32, 26, 0.88);
+}
+
+/* Two-button toggle for Sign In and Register */
+.auth-tabs {
+  display: flex;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 6px;
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-tab-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  min-height: 42px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-tab-btn:hover {
+  color: var(--text);
+}
+
+.auth-tab-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(20, 83, 45, 0.28);
+  font-weight: 700;
+}
+
+.auth-tab-btn svg {
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .auth-tabs {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .auth-tab-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(34, 197, 94, 0.3);
 }
 
 .auth-card h2 {
@@ -1503,6 +1565,76 @@ body.auth::after {
 
 .teacher-quick-btn:hover {
   background: rgba(2, 132, 199, 0.18);
+}
+
+/* Switch to Student View Button in Admin Header */
+.switch-student-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  padding: 6px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.switch-student-btn:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+/* Drime Cloud Storage Card with zero mobile overflow */
+.drime-card {
+  background: var(--surface-2);
+  border: 1px solid #3b82f6;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.drime-card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 220px;
+  max-width: 100%;
+}
+
+.drime-card-info {
+  min-width: 0;
+  flex: 1;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.drime-link {
+  color: #2563eb;
+  font-weight: 600;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  display: inline-block;
+  max-width: 100%;
+}
+
+code {
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 /* Download Quota Card with progress bar and "Upload to unlock +5" button (matching screenshot) */
