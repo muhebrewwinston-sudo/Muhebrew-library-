@@ -13,23 +13,11 @@ function isAdmin(user) {
 
 function redirectAfterAuth(user) {
   if (isAdmin(user)) {
-    location.href = '/admin.html';
+    location.replace('/admin.html');
   } else {
-    location.href = '/';
+    location.replace('/');
   }
 }
-
-// Check existing login
-(async function checkExistingAuth() {
-  if (API.token()) {
-    try {
-      const u = await API.me();
-      if (u) {
-        redirectAfterAuth(u);
-      }
-    } catch (_) {}
-  }
-})();
 
 function showCard(cardId) {
   ['mainAuthCard', 'verifyCard', 'forgotCard'].forEach((id) => {
@@ -40,15 +28,41 @@ function showCard(cardId) {
 function render() {
   showCard('mainAuthCard');
   const reg = mode === 'register';
+
+  // Update Two-Button segmented switcher
+  const btnSignIn = $('btnSignInTab');
+  const btnRegister = $('btnRegisterTab');
+  if (btnSignIn && btnRegister) {
+    btnSignIn.classList.toggle('active', !reg);
+    btnSignIn.setAttribute('aria-selected', !reg);
+    btnRegister.classList.toggle('active', reg);
+    btnRegister.setAttribute('aria-selected', reg);
+  }
+
   $('title').innerHTML = reg ? 'Create your <span>account</span>' : 'Welcome <span>back</span>';
-  $('sub').textContent = reg ? 'Free for Malawi secondary school students. Verify email to begin.' : 'Download Malawi secondary school resources.';
-  $('submit').textContent = reg ? 'Create account' : 'Sign in';
-  $('hintText').textContent = reg ? 'Already have an account?' : 'No account?';
-  $('toggle').textContent = reg ? 'Sign in' : 'Create one';
+  $('sub').textContent = reg ? 'Free for Malawi secondary school students. Verify email to begin.' : 'Sign in to download Malawi secondary school resources.';
+  $('submit').textContent = reg ? 'Register' : 'Sign In';
+  $('hintText').textContent = reg ? 'Already have an account?' : 'Need a new account?';
+  $('toggle').textContent = reg ? 'Sign in' : 'Register here';
   ['nameField', 'schoolField', 'levelField'].forEach((i) => { $(i).hidden = !reg; });
   $('password').autocomplete = reg ? 'new-password' : 'current-password';
-  document.title = (reg ? 'Create account' : 'Sign in') + ' - Muhebrew Library';
+  document.title = (reg ? 'Register' : 'Sign in') + ' - Muhebrew Library';
 }
+
+// Two-Button Switch Handlers
+$('btnSignInTab')?.addEventListener('click', () => {
+  if (mode !== 'login') {
+    mode = 'login';
+    render();
+  }
+});
+
+$('btnRegisterTab')?.addEventListener('click', () => {
+  if (mode !== 'register') {
+    mode = 'register';
+    render();
+  }
+});
 
 $('toggle').onclick = (e) => {
   e.preventDefault();

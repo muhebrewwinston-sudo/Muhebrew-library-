@@ -11,7 +11,29 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css?v=3.1.0">
 <script>
-  document.documentElement.setAttribute('data-theme', localStorage.getItem('ph_theme') || 'light');
+  (function() {
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('ph_theme') || 'light');
+    var isReload = false;
+    try {
+      if (window.performance) {
+        var navEntries = performance.getEntriesByType && performance.getEntriesByType('navigation');
+        if (navEntries && navEntries.length > 0) {
+          isReload = navEntries[0].type === 'reload';
+        } else if (performance.navigation) {
+          isReload = performance.navigation.type === 1;
+        }
+      }
+    } catch (_) {}
+
+    var token = localStorage.getItem('ph_token');
+    if (isReload || !token) {
+      if (isReload) {
+        localStorage.removeItem('ph_token');
+        localStorage.removeItem('ph_user');
+      }
+      location.replace('/auth.html');
+    }
+  })();
 </script>
 </head>
 <body class="has-bottom-tabs">

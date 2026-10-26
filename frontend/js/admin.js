@@ -61,7 +61,7 @@ async function loadStats() {
     $('s7').textContent = s.last7.toLocaleString() + ' downloads';
 
     if (s.drime && $('drimeCloudCount')) {
-      $('drimeCloudCount').innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> <b>${s.drime.totalCloudFiles} files</b> backed up on Drime Cloud (Folder ID: <code>${esc(s.drime.folderId)}</code>)`;
+      $('drimeCloudCount').innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> <b>${s.drime.totalCloudFiles} files</b> backed up on Drime Cloud (Folder ID: <code style="word-break:break-all;overflow-wrap:anywhere">${esc(s.drime.folderId)}</code>)`;
     }
 
     // Render Most Favorite Textbooks (Mostly Downloaded)
