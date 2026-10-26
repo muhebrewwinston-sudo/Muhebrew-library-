@@ -25,12 +25,25 @@ if (!SQLiteDriver) {
   process.exit(1);
 }
 
-const DB_PATH = path.resolve(process.env.DB_PATH || path.join(__dirname, 'pasthub.db'));
+// In Vercel serverless environment, filesystem is read-only except /tmp
+const defaultDbPath = process.env.VERCEL
+  ? path.join('/tmp', 'pasthub.db')
+  : path.join(__dirname, 'pasthub.db');
+
+const DB_PATH = path.resolve(process.env.DB_PATH || defaultDbPath);
 
 // Ensure parent folder exists before opening SQLite database
 const dbDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+  try { fs.mkdirSync(dbDir, { recursive: true }); } catch (_) {}
+}
+
+// In Vercel, copy seed database to /tmp if it exists locally
+if (process.env.VERCEL && !fs.existsSync(DB_PATH)) {
+  const localDb = path.join(__dirname, 'pasthub.db');
+  if (fs.existsSync(localDb)) {
+    try { fs.copyFileSync(localDb, DB_PATH); } catch (_) {}
+  }
 }
 
 class DB {
