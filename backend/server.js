@@ -8,6 +8,10 @@ const cors = require('cors');
 const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const telemetry = require('./services/telemetry');
+
+// Initialize in-memory console interceptor to power live admin telemetry
+telemetry.initConsoleInterceptor();
 
 // Ensure JWT_SECRET is set; auto-generate and create .env if missing to prevent hosting crash
 if (!process.env.JWT_SECRET) {
@@ -75,6 +79,7 @@ const PORT = Number(process.env.PORT || process.env.SERVER_PORT) || 3000;
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
+app.use(telemetry.requestTracker);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({

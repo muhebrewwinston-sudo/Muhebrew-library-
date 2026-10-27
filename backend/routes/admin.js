@@ -5,6 +5,7 @@ const db = require('../db/database');
 const { requireAdmin } = require('../middleware/auth');
 const drimeService = require('../services/drime');
 const thumbnailService = require('../services/thumbnail');
+const telemetry = require('../services/telemetry');
 const { parseFilename } = require('../services/bulkUpload');
 const multer = require('multer');
 const { processBulkZip } = require('../services/bulkUpload');
@@ -14,6 +15,22 @@ const fsMod = require('fs');
 const router = express.Router();
 router.use(requireAdmin);
 const TABLES = { papers: 'papers', books: 'books' };
+
+router.get('/system-stats', (_req, res) => {
+  res.json(telemetry.getSystemStats(db));
+});
+
+router.get('/server-logs', (req, res) => {
+  const since = req.query.since;
+  const limit = Number(req.query.limit) || 100;
+  const level = req.query.level;
+  res.json({ logs: telemetry.getLogs({ since, limit, level }) });
+});
+
+router.post('/clear-logs', (_req, res) => {
+  telemetry.clearLogs();
+  res.json({ ok: true, message: 'Server console logs cleared.' });
+});
 
 router.get('/drime-status', (_req, res) => {
   const one = (sql) => db.prepare(sql).get().c;
