@@ -13,24 +13,8 @@
 <script>
   (function() {
     document.documentElement.setAttribute('data-theme', localStorage.getItem('ph_theme') || 'light');
-    var isReload = false;
-    try {
-      if (window.performance) {
-        var navEntries = performance.getEntriesByType && performance.getEntriesByType('navigation');
-        if (navEntries && navEntries.length > 0) {
-          isReload = navEntries[0].type === 'reload';
-        } else if (performance.navigation) {
-          isReload = performance.navigation.type === 1;
-        }
-      }
-    } catch (_) {}
-
-    var token = localStorage.getItem('ph_token');
-    if (isReload || !token) {
-      if (isReload) {
-        localStorage.removeItem('ph_token');
-        localStorage.removeItem('ph_user');
-      }
+    var token = sessionStorage.getItem('ph_token');
+    if (!token) {
       location.replace('/auth.html');
     }
   })();

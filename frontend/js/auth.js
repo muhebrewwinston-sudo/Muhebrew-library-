@@ -115,6 +115,7 @@ $('form').onsubmit = async (e) => {
 
       if (res.token) {
         API.setToken(res.token);
+        if (res.user) sessionStorage.setItem('ph_user', JSON.stringify(res.user));
         redirectAfterAuth(res.user);
       }
     } else {
@@ -123,6 +124,7 @@ $('form').onsubmit = async (e) => {
 
       if (res.token) {
         API.setToken(res.token);
+        if (res.user) sessionStorage.setItem('ph_user', JSON.stringify(res.user));
         redirectAfterAuth(res.user);
       }
     }
@@ -154,6 +156,7 @@ $('verifyForm').onsubmit = async (e) => {
     toast(res.message || 'Email verified successfully!');
     if (res.token) {
       API.setToken(res.token);
+      if (res.user) sessionStorage.setItem('ph_user', JSON.stringify(res.user));
       setTimeout(() => redirectAfterAuth(res.user), 500);
     } else {
       showCard('mainAuthCard');
