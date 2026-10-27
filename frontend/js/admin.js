@@ -2,8 +2,23 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const tbl = (head, rows) => '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table><thead><tr>' + head.map((h) => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
 
+// State management
+let allFavoriteBooks = [];
+let favBooksPage = 0;
+const favBooksPageSize = 3;
+
+let allFavoritePapers = [];
+let favPapersPage = 0;
+const favPapersPageSize = 3;
+
 let progressionData = { signups: [], downloads: [], uploads: [] };
 let activeProgTab = 'dl';
+let progPage = 0;
+const progPageSize = 3;
+
+let isLogStreamPaused = false;
+let lastLogIdSeen = 0;
+let telemetryPollInterval = null;
 
 function isAdmin(user) {
   if (!user) return false;
@@ -12,6 +27,43 @@ function isAdmin(user) {
   const adminEmails = ['muhebrewwinston@gmail.com', 'admin@muhebrew.com', 'admin@library.mw'];
   if (adminEmails.includes(email) || email.startsWith('admin@')) return true;
   return false;
+}
+
+function doSignOut() {
+  if (confirm('Sign out from owner dashboard?')) {
+    API.logout();
+  }
+}
+
+// Start Bar (Side Drawer) Open / Close
+function openStartBar() {
+  const drawer = $('adminSideDrawer');
+  const backdrop = $('adminDrawerBackdrop');
+  if (drawer && backdrop) {
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    backdrop.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeStartBar() {
+  const drawer = $('adminSideDrawer');
+  const backdrop = $('adminDrawerBackdrop');
+  if (drawer && backdrop) {
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    backdrop.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+}
+
+function scrollToSection(targetId) {
+  closeStartBar();
+  const el = $(targetId);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 (async function guard() {
@@ -26,21 +78,53 @@ function isAdmin(user) {
     ownerBadge.textContent = (user.email || 'muhebrewwinston@gmail.com') + ' (Owner)';
   }
 
-  function doSignOut() {
-    if (confirm('Sign out from owner dashboard?')) {
-      API.logout();
-    }
-  }
-
+  // Header and Start Bar Sign-out triggers
   $('adminSignOutBtn')?.addEventListener('click', doSignOut);
+  $('startBarSignOutBtn')?.addEventListener('click', doSignOut);
   $('bottomAdminSignOutBtn')?.addEventListener('click', doSignOut);
 
+  // Start Bar Triggers
+  $('adminDrawerOpenBtn')?.addEventListener('click', openStartBar);
+  $('adminDrawerCloseBtn')?.addEventListener('click', closeStartBar);
+  $('adminDrawerBackdrop')?.addEventListener('click', closeStartBar);
+
+  // Start Bar Navigation Links
+  $('startBarPendingBtn')?.addEventListener('click', () => scrollToSection('secPendingTeachers'));
+  $('startBarAssignTeacherBtn')?.addEventListener('click', () => scrollToSection('secAssignTeacher'));
+  $('startBarUsersBtn')?.addEventListener('click', () => scrollToSection('secRegisteredUsers'));
+  $('startBarConsoleBtn')?.addEventListener('click', () => scrollToSection('secServerConsole'));
+  $('startBarDrimeBtn')?.addEventListener('click', () => scrollToSection('secDrimeCloud'));
+  $('startBarUploadBtn')?.addEventListener('click', () => scrollToSection('secDrimeCloud'));
+  $('startBarSecurityBtn')?.addEventListener('click', () => scrollToSection('secOwnerSecurity'));
+
+  // Bottom Nav Bar Links
+  $('bottomTabDashboard')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  $('bottomTabConsole')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    scrollToSection('secServerConsole');
+  });
+  $('bottomTabProfile')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    scrollToSection('secOwnerSecurity');
+  });
+
+  // Logo Brand: clicking does NOT turn to student page
+  $('adminLogoBrand')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Initial Data Loads
   loadStats();
   loadReports();
   loadProgression();
   loadPending();
   loadUsers();
   loadGitStatus();
+  initServerTelemetry();
 })();
 
 function toggleTheme() {
@@ -49,97 +133,309 @@ function toggleTheme() {
   localStorage.setItem('ph_theme', dark ? 'light' : 'dark');
 }
 
-const themeBtn = $('themeBtn');
-if (themeBtn) {
-  themeBtn.addEventListener('click', toggleTheme);
-}
-const bottomThemeBtn = $('bottomThemeBtn');
-if (bottomThemeBtn) {
-  bottomThemeBtn.addEventListener('click', toggleTheme);
+$('themeBtn')?.addEventListener('click', toggleTheme);
+$('profileThemeToggleBtn')?.addEventListener('click', toggleTheme);
+
+// ============================================================================
+// LIVE SERVER CONSOLE & INFRASTRUCTURE TELEMETRY MONITOR
+// ============================================================================
+async function initServerTelemetry() {
+  fetchServerStats();
+  fetchServerLogs();
+
+  if (telemetryPollInterval) clearInterval(telemetryPollInterval);
+  telemetryPollInterval = setInterval(() => {
+    if (!isLogStreamPaused) {
+      fetchServerStats();
+      fetchServerLogs();
+    }
+  }, 2500);
+
+  $('btnRefreshServerStats')?.addEventListener('click', () => {
+    fetchServerStats();
+    fetchServerLogs();
+    toast('Server stats refreshed');
+  });
+
+  $('btnToggleLogStream')?.addEventListener('click', () => {
+    isLogStreamPaused = !isLogStreamPaused;
+    const btn = $('btnToggleLogStream');
+    const indicator = $('serverLiveIndicator');
+    if (btn) {
+      btn.textContent = isLogStreamPaused ? 'Resume' : 'Pause';
+      btn.style.color = isLogStreamPaused ? '#fbbf24' : '#e2e8f0';
+    }
+    if (indicator) {
+      indicator.innerHTML = isLogStreamPaused
+        ? '<span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;display:inline-block"></span> <span>PAUSED</span>'
+        : '<span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block"></span> <span>ONLINE · POLLING</span>';
+    }
+  });
+
+  $('btnClearTerminalLogs')?.addEventListener('click', async () => {
+    try {
+      await API.post('/admin/clear-logs', {});
+      const screen = $('serverTerminalScreen');
+      if (screen) {
+        screen.innerHTML = '<div class="terminal-line"><span class="terminal-time">[' + new Date().toLocaleTimeString() + ']</span> <span class="terminal-tag info">INFO</span> <span class="terminal-text">Console output cleared.</span></div>';
+      }
+      toast('Console logs cleared');
+    } catch (_) {}
+  });
 }
 
-// ============ SECTION 1: Statistics & Most Favorite Books ============
+async function fetchServerStats() {
+  try {
+    const res = await fetch(`${API.base}/admin/system-stats`, {
+      headers: { Authorization: `Bearer ${API.token()}` }
+    });
+    if (!res.ok) return;
+    const s = await res.json();
+
+    // RAM Metrics
+    if ($('statRamHeap')) $('statRamHeap').textContent = s.memory.heapUsedFormatted;
+    if ($('statRamPercent')) $('statRamPercent').textContent = `${s.memory.heapPercent}% heap`;
+    if ($('statRamBar')) $('statRamBar').style.width = `${s.memory.heapPercent}%`;
+    if ($('statRamSub')) {
+      $('statRamSub').textContent = `Heap: ${s.memory.heapUsedFormatted} / ${s.memory.heapTotalFormatted} · Free RAM: ${s.memory.systemFreeFormatted}`;
+    }
+
+    // Network & Traffic
+    if ($('statNetRpm')) $('statNetRpm').textContent = s.network.requestsPerMinute;
+    if ($('statNetSub')) {
+      $('statNetSub').textContent = `Total Requests: ${s.network.totalRequests.toLocaleString()} · Avg Latency: ${s.network.avgResponseTimeMs} ms`;
+    }
+    if ($('statNetStatus')) {
+      const c = s.network.statusCounts || {};
+      $('statNetStatus').textContent = `2xx: ${c['2xx'] || 0} · 3xx: ${c['3xx'] || 0} · 4xx: ${c['4xx'] || 0} · 5xx: ${c['5xx'] || 0}`;
+    }
+
+    // Storage & Database
+    if ($('statDbSize')) $('statDbSize').textContent = s.storage.databaseFileSizeFormatted || 'SQLite';
+    if ($('statStorageSub')) {
+      $('statStorageSub').textContent = `Thumbs: ${s.storage.thumbnailsCount} (${s.storage.thumbnailsSizeFormatted}) · Catalog: ${s.storage.catalogItems}`;
+    }
+
+    // CPU & Platform
+    if ($('statUptime')) $('statUptime').textContent = s.uptime;
+    if ($('statPlatform')) $('statPlatform').textContent = `Node.js ${s.nodeVersion} · ${s.platform}`;
+    if ($('statCpuLoad')) $('statCpuLoad').textContent = `Load Avg: ${(s.cpu?.loadAvg || []).join(', ')}`;
+  } catch (_) {}
+}
+
+async function fetchServerLogs() {
+  const screen = $('serverTerminalScreen');
+  if (!screen) return;
+
+  try {
+    const res = await fetch(`${API.base}/admin/server-logs?since=${lastLogIdSeen}&limit=60`, {
+      headers: { Authorization: `Bearer ${API.token()}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const newLogs = data.logs || [];
+
+    if (newLogs.length > 0) {
+      // Remove placeholder on first real logs
+      if (lastLogIdSeen === 0 && screen.children.length === 1 && screen.textContent.includes('Initializing')) {
+        screen.innerHTML = '';
+      }
+
+      for (const log of newLogs) {
+        if (log.id > lastLogIdSeen) lastLogIdSeen = log.id;
+        const line = document.createElement('div');
+        line.className = 'terminal-line';
+
+        const tagClass = (log.level || 'info').toLowerCase();
+        line.innerHTML = `
+          <span class="terminal-time">[${esc(log.timeFormatted || log.timestamp.slice(11, 19))}]</span>
+          <span class="terminal-tag ${tagClass}">${esc(log.level)}</span>
+          <span class="terminal-text">${esc(log.message)}</span>
+        `;
+        screen.appendChild(line);
+      }
+
+      // Cap displayed DOM nodes to prevent memory growth
+      while (screen.children.length > 150) {
+        screen.removeChild(screen.firstChild);
+      }
+
+      const chk = $('chkAutoScroll');
+      if (!chk || chk.checked) {
+        screen.scrollTop = screen.scrollHeight;
+      }
+    }
+  } catch (_) {}
+}
+
+// ============================================================================
+// SECTION 1: LIBRARY STATS & FLIPPED CARDS (FAVORITE BOOKS & PAPERS)
+// ============================================================================
 async function loadStats() {
   try {
     const s = await API.get('/admin/stats');
-    $('sUsers').textContent = s.users.toLocaleString();
-    $('sDl').textContent = s.downloads.toLocaleString();
-    $('sPapers').textContent = s.papers.toLocaleString();
-    $('sBooks').textContent = s.books.toLocaleString();
-    $('s7').textContent = s.last7.toLocaleString() + ' downloads';
+    if ($('sUsers')) $('sUsers').textContent = s.users.toLocaleString();
+    if ($('sDl')) $('sDl').textContent = s.downloads.toLocaleString();
+    if ($('sPapers')) $('sPapers').textContent = s.papers.toLocaleString();
+    if ($('sBooks')) $('sBooks').textContent = s.books.toLocaleString();
+    if ($('s7')) $('s7').textContent = s.last7.toLocaleString() + ' downloads';
 
     if (s.drime && $('drimeCloudCount')) {
-      $('drimeCloudCount').innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> <b>${s.drime.totalCloudFiles} files</b> backed up on Drime Cloud (Folder ID: <code style="word-break:break-all;overflow-wrap:anywhere">${esc(s.drime.folderId)}</code>)`;
+      $('drimeCloudCount').innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-1px"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> <b>${s.drime.totalCloudFiles} files</b> synced on Drime Cloud (Folder: <code style="word-break:break-all;overflow-wrap:anywhere">${esc(s.drime.folderId)}</code>)`;
     }
 
-    // Render Most Favorite Textbooks (Mostly Downloaded)
-    const fbList = $('favoriteBooksList');
-    if (fbList && s.favoriteBooks) {
-      if (!s.favoriteBooks.length) {
-        fbList.innerHTML = '<p style="color:var(--muted);font-size:13px">No textbooks uploaded yet.</p>';
-      } else {
-        fbList.innerHTML = s.favoriteBooks.map((b, idx) => `
-          <div style="display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
-            <span style="font-weight:700;color:var(--primary);font-size:13px;width:20px;text-align:center">#${idx + 1}</span>
-            <div style="width:34px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;position:relative">
-              <img src="${b.cover_path ? ('/' + esc(b.cover_path)) : ('/api/books/' + b.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='grid'">
-              <div style="display:none;width:100%;height:100%;place-items:center">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
-              </div>
-            </div>
-            <div style="flex:1;min-width:0">
-              <span style="font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').trim())}</span>
-              <span style="font-size:11.5px;color:var(--muted)">${esc(b.subject)} · ${esc(b.level)}</span>
-            </div>
-            <div style="display:flex;gap:4px;align-items:center">
-              ${b.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime</span>' : ''}
-              <span class="tag ok" style="font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${b.downloads.toLocaleString()} dl</span>
-            </div>
-          </div>
-        `).join('');
-      }
-    }
+    allFavoriteBooks = s.favoriteBooks || [];
+    favBooksPage = 0;
+    renderFavBooksFlipped();
 
-    // Render Most Favorite Past Papers
-    const fpList = $('favoritePapersList');
-    if (fpList && s.favoritePapers) {
-      if (!s.favoritePapers.length) {
-        fpList.innerHTML = '<p style="color:var(--muted);font-size:13px">No papers uploaded yet.</p>';
-      } else {
-        fpList.innerHTML = s.favoritePapers.map((p, idx) => {
-          const isMarking = (p.category || '').toLowerCase().includes('mark') || (p.title || '').toLowerCase().includes('mark');
-          const boardTag = isMarking ? 'KEY' : (p.exam_board ? p.exam_board.toUpperCase().slice(0, 6) : 'MANEB');
-          const headerCls = isMarking ? 'key' : (boardTag.includes('MOCK') ? 'mock' : 'maneb');
-          const cleanPTitle = p.title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').trim();
-
-          return `
-          <div style="display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:8px 10px">
-            <span style="font-weight:700;color:var(--primary);font-size:13px;width:20px;text-align:center">#${idx + 1}</span>
-            <div style="width:34px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;position:relative">
-              <img src="${p.cover_path ? ('/' + esc(p.cover_path)) : ('/api/papers/' + p.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'">
-              <div style="display:none;width:100%;height:100%;flex-direction:column">
-                <div class="cover-sheet-header ${headerCls}" style="height:12px;font-size:6.5px">${esc(boardTag)}</div>
-                <div class="cover-sheet-body" style="padding:1px"><div class="cover-sheet-subject" style="font-size:6.5px">${esc((p.subject||'').slice(0,5))}</div></div>
-              </div>
-            </div>
-            <div style="flex:1;min-width:0">
-              <span style="font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cleanPTitle)}</span>
-              <span style="font-size:11.5px;color:var(--muted)">${esc(p.subject)} · ${esc(p.level)} · ${esc(p.category || p.exam_board || '')}</span>
-            </div>
-            <div style="display:flex;gap:4px;align-items:center">
-              ${p.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime</span>' : ''}
-              <span class="tag ok" style="font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${p.downloads.toLocaleString()} dl</span>
-            </div>
-          </div>
-        `;}).join('');
-      }
-    }
+    allFavoritePapers = s.favoritePapers || [];
+    favPapersPage = 0;
+    renderFavPapersFlipped();
   } catch (err) {
     console.error('Stats error:', err);
   }
 }
 
-// ============ SECTION 2: Issues Faced by Users ============
+// Render Flipped Cards for Favorite Textbooks
+function renderFavBooksFlipped() {
+  const container = $('favoriteBooksList');
+  const indicator = $('favBooksPageIndicator');
+  const btnPrev = $('btnFavBooksPrev');
+  const btnNext = $('btnFavBooksNext');
+  if (!container) return;
+
+  if (!allFavoriteBooks.length) {
+    container.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No textbooks uploaded yet.</p>';
+    if (indicator) indicator.textContent = '0 / 0';
+    if (btnPrev) btnPrev.disabled = true;
+    if (btnNext) btnNext.disabled = true;
+    return;
+  }
+
+  const totalPages = Math.ceil(allFavoriteBooks.length / favBooksPageSize) || 1;
+  if (favBooksPage >= totalPages) favBooksPage = totalPages - 1;
+  if (favBooksPage < 0) favBooksPage = 0;
+
+  if (indicator) indicator.textContent = `${favBooksPage + 1} / ${totalPages}`;
+  if (btnPrev) btnPrev.disabled = favBooksPage === 0;
+  if (btnNext) btnNext.disabled = favBooksPage >= totalPages - 1;
+
+  const startIdx = favBooksPage * favBooksPageSize;
+  const pageItems = allFavoriteBooks.slice(startIdx, startIdx + favBooksPageSize);
+
+  container.innerHTML = pageItems.map((b, idx) => {
+    const globalRank = startIdx + idx + 1;
+    const cleanTitle = b.title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').trim();
+    return `
+      <div class="flipped-item-row">
+        <span style="font-weight:700;color:var(--primary);font-size:13px;width:22px;text-align:center">#${globalRank}</span>
+        <div style="width:34px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;position:relative">
+          <img src="${b.cover_path ? ('/' + esc(b.cover_path)) : ('/api/books/' + b.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='grid'">
+          <div style="display:none;width:100%;height:100%;place-items:center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <span style="font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cleanTitle)}</span>
+          <span style="font-size:11.5px;color:var(--muted)">${esc(b.subject)} · ${esc(b.level)}</span>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${b.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime</span>' : ''}
+          <span class="tag ok" style="font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${b.downloads.toLocaleString()} dl</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+$('btnFavBooksPrev')?.addEventListener('click', () => {
+  if (favBooksPage > 0) {
+    favBooksPage--;
+    renderFavBooksFlipped();
+  }
+});
+$('btnFavBooksNext')?.addEventListener('click', () => {
+  const totalPages = Math.ceil(allFavoriteBooks.length / favBooksPageSize) || 1;
+  if (favBooksPage < totalPages - 1) {
+    favBooksPage++;
+    renderFavBooksFlipped();
+  }
+});
+
+// Render Flipped Cards for Favorite Past Papers
+function renderFavPapersFlipped() {
+  const container = $('favoritePapersList');
+  const indicator = $('favPapersPageIndicator');
+  const btnPrev = $('btnFavPapersPrev');
+  const btnNext = $('btnFavPapersNext');
+  if (!container) return;
+
+  if (!allFavoritePapers.length) {
+    container.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No past papers uploaded yet.</p>';
+    if (indicator) indicator.textContent = '0 / 0';
+    if (btnPrev) btnPrev.disabled = true;
+    if (btnNext) btnNext.disabled = true;
+    return;
+  }
+
+  const totalPages = Math.ceil(allFavoritePapers.length / favPapersPageSize) || 1;
+  if (favPapersPage >= totalPages) favPapersPage = totalPages - 1;
+  if (favPapersPage < 0) favPapersPage = 0;
+
+  if (indicator) indicator.textContent = `${favPapersPage + 1} / ${totalPages}`;
+  if (btnPrev) btnPrev.disabled = favPapersPage === 0;
+  if (btnNext) btnNext.disabled = favPapersPage >= totalPages - 1;
+
+  const startIdx = favPapersPage * favPapersPageSize;
+  const pageItems = allFavoritePapers.slice(startIdx, startIdx + favPapersPageSize);
+
+  container.innerHTML = pageItems.map((p, idx) => {
+    const globalRank = startIdx + idx + 1;
+    const isMarking = (p.category || '').toLowerCase().includes('mark') || (p.title || '').toLowerCase().includes('mark');
+    const boardTag = isMarking ? 'KEY' : (p.exam_board ? p.exam_board.toUpperCase().slice(0, 6) : 'MANEB');
+    const headerCls = isMarking ? 'key' : (boardTag.includes('MOCK') ? 'mock' : 'maneb');
+    const cleanTitle = p.title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').trim();
+
+    return `
+      <div class="flipped-item-row">
+        <span style="font-weight:700;color:var(--primary);font-size:13px;width:22px;text-align:center">#${globalRank}</span>
+        <div style="width:34px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;position:relative">
+          <img src="${p.cover_path ? ('/' + esc(p.cover_path)) : ('/api/papers/' + p.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'">
+          <div style="display:none;width:100%;height:100%;flex-direction:column">
+            <div class="cover-sheet-header ${headerCls}" style="height:12px;font-size:6.5px">${esc(boardTag)}</div>
+            <div class="cover-sheet-body" style="padding:1px"><div class="cover-sheet-subject" style="font-size:6.5px">${esc((p.subject||'').slice(0,5))}</div></div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <span style="font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cleanTitle)}</span>
+          <span style="font-size:11.5px;color:var(--muted)">${esc(p.subject)} · ${esc(p.level)} · ${esc(p.category || p.exam_board || '')}</span>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${p.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime</span>' : ''}
+          <span class="tag ok" style="font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ${p.downloads.toLocaleString()} dl</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+$('btnFavPapersPrev')?.addEventListener('click', () => {
+  if (favPapersPage > 0) {
+    favPapersPage--;
+    renderFavPapersFlipped();
+  }
+});
+$('btnFavPapersNext')?.addEventListener('click', () => {
+  const totalPages = Math.ceil(allFavoritePapers.length / favPapersPageSize) || 1;
+  if (favPapersPage < totalPages - 1) {
+    favPapersPage++;
+    renderFavPapersFlipped();
+  }
+});
+
+// ============================================================================
+// SECTION 2: ISSUES FACED BY USERS
+// ============================================================================
 async function loadReports() {
   try {
     const { items } = await API.get('/admin/reports');
@@ -185,26 +481,63 @@ async function loadReports() {
   }
 }
 
-// ============ SECTION 3: Live Progression Happening on the Web ============
+// ============================================================================
+// SECTION 3: WEB PROGRESSION ACTIVITY (FLIPPED CARDS)
+// ============================================================================
 async function loadProgression() {
   try {
     progressionData = await API.get('/admin/progression');
-    renderProgression();
+    progPage = 0;
+    renderProgressionFlipped();
   } catch (err) {
     console.error('Progression error:', err);
   }
 }
 
-function renderProgression() {
+function renderProgressionFlipped() {
   const container = $('progressionContent');
+  const indicator = $('progPageIndicator');
+  const label = $('progressionActiveLabel');
+  const btnPrev = $('btnProgPrev');
+  const btnNext = $('btnProgNext');
   if (!container) return;
 
+  let currentList = [];
   if (activeProgTab === 'dl') {
-    const list = progressionData.downloads || [];
-    container.innerHTML = list.length ? list.map((d) => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
+    currentList = progressionData.downloads || [];
+    if (label) label.textContent = 'Recent Downloads (Live Activity)';
+  } else if (activeProgTab === 'users') {
+    currentList = progressionData.signups || [];
+    if (label) label.textContent = 'New Signups (Registered Accounts)';
+  } else {
+    currentList = progressionData.uploads || [];
+    if (label) label.textContent = 'Recent Uploads (Published Resources)';
+  }
+
+  if (!currentList.length) {
+    container.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No activity recorded in this category yet.</p>';
+    if (indicator) indicator.textContent = '0 / 0';
+    if (btnPrev) btnPrev.disabled = true;
+    if (btnNext) btnNext.disabled = true;
+    return;
+  }
+
+  const totalPages = Math.ceil(currentList.length / progPageSize) || 1;
+  if (progPage >= totalPages) progPage = totalPages - 1;
+  if (progPage < 0) progPage = 0;
+
+  if (indicator) indicator.textContent = `${progPage + 1} / ${totalPages}`;
+  if (btnPrev) btnPrev.disabled = progPage === 0;
+  if (btnNext) btnNext.disabled = progPage >= totalPages - 1;
+
+  const startIdx = progPage * progPageSize;
+  const pageItems = currentList.slice(startIdx, startIdx + progPageSize);
+
+  if (activeProgTab === 'dl') {
+    container.innerHTML = pageItems.map((d) => `
+      <div class="flipped-item-row">
         <div style="flex:1;min-width:0">
-          <span style="font-weight:700;color:var(--primary);display:inline-flex;align-items:center;gap:3px">
+          <span style="font-weight:700;color:var(--primary);display:inline-flex;align-items:center;gap:4px">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Downloaded:
           </span>
           <b>${esc(d.item_title)}</b>
@@ -212,61 +545,88 @@ function renderProgression() {
         </div>
         <span style="font-size:11px;color:var(--muted);white-space:nowrap">${new Date(d.created_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
-    `).join('') : '<p style="color:var(--muted);font-size:13px">No downloads recorded yet.</p>';
+    `).join('');
   } else if (activeProgTab === 'users') {
-    const list = progressionData.signups || [];
-    container.innerHTML = list.length ? list.map((u) => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
+    container.innerHTML = pageItems.map((u) => `
+      <div class="flipped-item-row">
         <div>
           <b>${esc(u.name)}</b> <span class="tag" style="font-size:10px">${esc(u.role)}</span>
           <div style="font-size:11px;color:var(--muted)">${esc(u.email)} ${u.school ? '· ' + esc(u.school) : ''}</div>
         </div>
         <span style="font-size:11px;color:var(--muted)">${new Date(u.created_at + 'Z').toLocaleDateString()}</span>
       </div>
-    `).join('') : '<p style="color:var(--muted);font-size:13px">No recent signups.</p>';
+    `).join('');
   } else {
-    const list = progressionData.uploads || [];
-    container.innerHTML = list.length ? list.map((up) => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:12.5px">
+    container.innerHTML = pageItems.map((up) => `
+      <div class="flipped-item-row">
         <div>
           <b>${esc(up.title)}</b> <span class="tag ok" style="font-size:10px">${esc(up.t)}</span>
-          ${up.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime Cloud</span>' : ''}
+          ${up.storage_provider === 'drime' ? '<span class="tag" style="background:rgba(59,130,246,0.12);color:#2563eb;font-size:10px;display:inline-flex;align-items:center;gap:3px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg> Drime</span>' : ''}
           <div style="font-size:11px;color:var(--muted)">${esc(up.subject)} · ${esc(up.level)}</div>
         </div>
         <span style="font-size:11px;color:var(--muted)">${new Date(up.created_at + 'Z').toLocaleDateString()}</span>
       </div>
-    `).join('') : '<p style="color:var(--muted);font-size:13px">No recent uploads.</p>';
+    `).join('');
   }
 }
 
+$('btnProgPrev')?.addEventListener('click', () => {
+  if (progPage > 0) {
+    progPage--;
+    renderProgressionFlipped();
+  }
+});
+$('btnProgNext')?.addEventListener('click', () => {
+  let list = activeProgTab === 'dl' ? (progressionData.downloads || []) : (activeProgTab === 'users' ? (progressionData.signups || []) : (progressionData.uploads || []));
+  const totalPages = Math.ceil(list.length / progPageSize) || 1;
+  if (progPage < totalPages - 1) {
+    progPage++;
+    renderProgressionFlipped();
+  }
+});
+
 $('progTabDl')?.addEventListener('click', () => {
   activeProgTab = 'dl';
+  progPage = 0;
   $('progTabDl').className = 'btn sm primary';
   $('progTabUsers').className = 'btn sm';
   $('progTabUploads').className = 'btn sm';
-  renderProgression();
+  renderProgressionFlipped();
 });
 
 $('progTabUsers')?.addEventListener('click', () => {
   activeProgTab = 'users';
+  progPage = 0;
   $('progTabDl').className = 'btn sm';
   $('progTabUsers').className = 'btn sm primary';
   $('progTabUploads').className = 'btn sm';
-  renderProgression();
+  renderProgressionFlipped();
 });
 
 $('progTabUploads')?.addEventListener('click', () => {
   activeProgTab = 'uploads';
+  progPage = 0;
   $('progTabDl').className = 'btn sm';
   $('progTabUsers').className = 'btn sm';
   $('progTabUploads').className = 'btn sm primary';
-  renderProgression();
+  renderProgressionFlipped();
 });
 
-// ============ SECTION 4: Teacher Uploads Review & Users ============
+// ============================================================================
+// START BAR LINKED MODULES: TEACHERS, USERS, ROLE ASSIGNMENT
+// ============================================================================
 async function loadPending() {
   const { items } = await API.get('/admin/pending');
-  $('pending').innerHTML = items.length
+  const count = items ? items.length : 0;
+
+  // Update badges on Start Bar and Section
+  if ($('startBarPendingBadge')) $('startBarPendingBadge').textContent = count;
+  if ($('pendingSectionBadge')) $('pendingSectionBadge').textContent = `${count} Pending`;
+
+  const pendingDiv = $('pending');
+  if (!pendingDiv) return;
+
+  pendingDiv.innerHTML = count
     ? tbl(['Title', 'Type', 'By', ''], items.map((r) => '<tr><td>' + esc(r.title) + '<br><small style="color:var(--muted)">' + esc(r.subject) + ' · ' + esc(r.level) + '</small></td><td>' +
         (r.t === 'papers' ? 'Paper' : 'Book') + '</td><td>' + esc(r.uploader || '-') + '</td><td style="white-space:nowrap">' +
         '<a class="btn sm" target="_blank" rel="noopener" href="' + API.base + '/' + r.t + '/' + r.id + '/preview?t=' + encodeURIComponent(API.token()) + '">Preview</a> ' +
@@ -277,10 +637,19 @@ async function loadPending() {
 
 async function loadUsers() {
   const { users } = await API.get('/admin/users');
-  document.querySelector('#usersTable tbody').innerHTML = users.map((u) =>
-    '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td><td><select data-role="' + u.id + '">' +
-    ['student', 'teacher', 'admin'].map((r) => '<option ' + (r === u.role ? 'selected' : '') + '>' + r + '</option>').join('') +
-    '</select></td><td>' + esc(u.school || '-') + '</td><td>' + new Date(u.created_at + 'Z').toLocaleDateString() + '</td></tr>').join('');
+  const count = users ? users.length : 0;
+
+  // Update badges on Start Bar and Section
+  if ($('startBarUsersBadge')) $('startBarUsersBadge').textContent = count;
+  if ($('usersCountBadge')) $('usersCountBadge').textContent = `${count} Users`;
+
+  const tbody = document.querySelector('#usersTable tbody');
+  if (tbody) {
+    tbody.innerHTML = (users || []).map((u) =>
+      '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td><td><select data-role="' + u.id + '">' +
+      ['student', 'teacher', 'admin'].map((r) => '<option ' + (r === u.role ? 'selected' : '') + '>' + r + '</option>').join('') +
+      '</select></td><td>' + esc(u.school || '-') + '</td><td>' + new Date(u.created_at + 'Z').toLocaleDateString() + '</td></tr>').join('');
+  }
 }
 
 document.addEventListener('change', async (e) => {
@@ -337,44 +706,40 @@ document.addEventListener('click', async (e) => {
   } catch (err) { toast(err.message, true); }
 });
 
-// ============ SECTION 5: THE LAST BAR - UPLOAD RESOURCES (BULK & SINGLE) ============
-
-// Tab Switcher between Bulk and Single Mode
+// ============================================================================
+// SECTION 4: RESOURCE UPLOAD (BULK & SINGLE) & DRIME CLOUD
+// ============================================================================
 $('modeTabBulk')?.addEventListener('click', () => {
   $('modeTabBulk').classList.add('primary');
   $('modeTabSingle')?.classList.remove('primary');
-  $('bulkUploadPanel').hidden = false;
-  $('uploadForm').hidden = true;
+  if ($('bulkUploadPanel')) $('bulkUploadPanel').style.display = 'block';
+  if ($('uploadForm')) $('uploadForm').style.display = 'none';
 });
 
 $('modeTabSingle')?.addEventListener('click', () => {
   $('modeTabSingle').classList.add('primary');
   $('modeTabBulk')?.classList.remove('primary');
-  $('bulkUploadPanel').hidden = true;
-  $('uploadForm').hidden = false;
+  if ($('bulkUploadPanel')) $('bulkUploadPanel').style.display = 'none';
+  if ($('uploadForm')) $('uploadForm').style.display = 'grid';
 });
 
-// Single file type change
 $('uType')?.addEventListener('change', () => {
   const val = $('uType').value;
-  const isBook = val === 'books';
+  const isBook = val === 'book';
   $('yearWrap').hidden = isBook;
   $('boardWrap').hidden = isBook;
   $('authorWrap').hidden = !isBook;
   $('publisherWrap').hidden = !isBook;
+  $('coverWrap').hidden = !isBook;
 
-  if (val === 'papers-notes') {
-    $('uCategory').value = 'Notes';
-  } else if (val === 'papers-keys') {
-    $('uCategory').value = 'Marking Key';
-  } else if (val === 'books') {
+  if (isBook) {
     $('uCategory').value = 'MSCE';
   } else {
     $('uCategory').value = 'MANEB';
   }
 });
 
-// Auto-trace single file when picked in uFile
+// Auto-trace single file when picked
 $('uFile')?.addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
@@ -384,7 +749,7 @@ $('uFile')?.addEventListener('change', (e) => {
   if ($('uLevel')) $('uLevel').value = traced.level;
   if ($('uCategory')) $('uCategory').value = traced.category;
   if ($('uType')) {
-    $('uType').value = traced.type;
+    $('uType').value = traced.type === 'books' ? 'book' : 'paper';
     $('uType').dispatchEvent(new Event('change'));
   }
   if ($('uYear')) $('uYear').value = traced.year;
@@ -392,7 +757,6 @@ $('uFile')?.addEventListener('change', (e) => {
   toast(`Auto-traced: ${traced.subject} (${traced.level}, ${traced.year})`);
 });
 
-// Client-side Auto Trace Engine (mirrors server utils/autotrace.js)
 function clientAutoTrace(filename, size = 0) {
   const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
   const cleanSpacing = nameWithoutExt.replace(/[-_+]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -479,7 +843,6 @@ function clientAutoTrace(filename, size = 0) {
     title = `${prefix} ${detectedSubject}${paperStr} ${detectedYear}`;
   }
 
-  // Explicitly remove (Form 4), (Form 1..4), etc. from the end of paper name
   title = title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').replace(/\s+Form\s*[1-4]\s*$/i, '').trim();
 
   return {
@@ -496,7 +859,7 @@ function clientAutoTrace(filename, size = 0) {
   };
 }
 
-// Bulk Queue State & Functions
+// Bulk Upload State
 let bulkQueue = [];
 
 window.updateBulkItem = function(idx, field, val) {
@@ -514,14 +877,14 @@ window.updateBulkItem = function(idx, field, val) {
 window.removeBulkItem = function(idx) {
   bulkQueue.splice(idx, 1);
   renderBulkQueue();
-  if (bulkQueue.length === 0) {
+  if (bulkQueue.length === 0 && $('bulkProgressWrapper')) {
     $('bulkProgressWrapper').hidden = true;
   }
 };
 
 function renderBulkQueue() {
   const container = $('bulkQueueContainer');
-  const list = $('bulkItemsList');
+  const list = $('bulkQueueList');
   const countEl = $('bulkQueueCount');
 
   if (!container || !list) return;
@@ -646,41 +1009,84 @@ function addFilesToQueue(fileList) {
   toast(`Auto-traced and added ${fileList.length} files to queue!`);
 }
 
-async function executeBulkUpload() {
-  // Sync live inputs
-  bulkQueue.forEach((item, idx) => {
-    const t = $(`bTitle_${idx}`);
-    if (t) item.title = t.value.trim();
-    const s = $(`bSubject_${idx}`);
-    if (s) item.subject = s.value;
-    const l = $(`bLevel_${idx}`);
-    if (l) item.level = l.value;
-    const c = $(`bCategory_${idx}`);
-    if (c) item.category = c.value;
-    const y = $(`bYear_${idx}`);
-    if (y) item.year = parseInt(y.value, 10) || 2024;
-    const ty = $(`bType_${idx}`);
-    if (ty) item.type = ty.value;
+// Bulk Drag & Drop Handlers
+const dropzone = $('bulkDropzone');
+const fileInput = $('bulkFileInput');
+
+if (dropzone && fileInput) {
+  dropzone.addEventListener('click', () => fileInput.click());
+  $('bulkSelectBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+  $('bulkAddMoreBtn')?.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', (e) => {
+    addFilesToQueue(e.target.files);
+    fileInput.value = '';
   });
 
-  const pending = bulkQueue.filter(item => item.status !== 'success');
-  if (pending.length === 0) {
-    return toast('All items in queue have already been published!');
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files) {
+      addFilesToQueue(e.dataTransfer.files);
+    }
+  });
+}
+
+$('bulkClearBtn')?.addEventListener('click', () => {
+  if (confirm('Clear all items in the queue?')) {
+    bulkQueue = [];
+    renderBulkQueue();
+    if ($('bulkProgressWrapper')) $('bulkProgressWrapper').hidden = true;
+  }
+});
+
+$('bulkQuickLevel')?.addEventListener('change', (e) => {
+  const val = e.target.value;
+  if (!val) return;
+  bulkQueue.forEach(item => { item.level = val; });
+  renderBulkQueue();
+  toast(`All files set to ${val}`);
+});
+
+$('bulkQuickCategory')?.addEventListener('change', (e) => {
+  const val = e.target.value;
+  if (!val) return;
+  bulkQueue.forEach(item => {
+    item.category = val;
+    if (val === 'MSCE' || val === 'JCE') item.type = 'books';
+    else item.type = 'papers';
+  });
+  renderBulkQueue();
+  toast(`All files set to ${val}`);
+});
+
+// Bulk Upload Execution
+$('bulkPublishBtn')?.addEventListener('click', async () => {
+  const readyItems = bulkQueue.filter(i => i.status !== 'success');
+  if (readyItems.length === 0) {
+    return alert('All files have already been published!');
   }
 
-  const btn = $('bulkUploadAllBtn');
-  const btnText = $('bulkUploadBtnText');
-  const progressWrap = $('bulkProgressWrapper');
-  const progressBar = $('bulkProgressBar');
-  const progressPercent = $('bulkProgressPercent');
-  const progressTitle = $('bulkProgressTitle');
-  const progressSub = $('bulkProgressSub');
+  const pWrap = $('bulkProgressWrapper');
+  const pBar = $('bulkProgressBar');
+  const pPercent = $('bulkProgressPercent');
+  const pTitle = $('bulkProgressTitle');
+  const pSub = $('bulkProgressSub');
+  const btn = $('bulkPublishBtn');
 
+  if (pWrap) pWrap.hidden = false;
   if (btn) btn.disabled = true;
-  if (progressWrap) progressWrap.hidden = false;
 
-  let uploadedCount = 0;
-  const totalToUpload = pending.length;
+  let completed = 0;
+  const total = readyItems.length;
 
   for (let i = 0; i < bulkQueue.length; i++) {
     const item = bulkQueue[i];
@@ -689,256 +1095,178 @@ async function executeBulkUpload() {
     item.status = 'uploading';
     renderBulkQueue();
 
-    if (progressTitle) {
-      progressTitle.textContent = `Publishing ${uploadedCount + 1} of ${totalToUpload}: "${item.title}"...`;
-    }
-    if (progressSub) {
-      progressSub.textContent = `Syncing "${item.rawName}" to Drime Cloud Storage (OymudINAwCDhPbnTH5Gt4oAIxo5mbC)...`;
-    }
+    if (pTitle) pTitle.textContent = `Publishing [${completed + 1}/${total}]: ${item.title}`;
+    if (pSub) pSub.textContent = `Uploading file to Drime Cloud Storage...`;
 
     try {
       const fd = new FormData();
-      fd.append('file', item.file);
       fd.append('title', item.title);
       fd.append('subject', item.subject);
       fd.append('level', item.level);
       fd.append('category', item.category);
-      fd.append('type', item.type);
-      fd.append('storage', 'drime');
-
+      fd.append('year', item.year);
+      fd.append('exam_board', item.exam_board || item.category);
       if (item.type === 'books') {
         fd.append('author', item.author || 'Ministry of Education');
-      } else {
-        fd.append('year', item.year);
-        fd.append('exam_board', item.exam_board || 'MANEB');
       }
+      fd.append('file', item.file);
 
-      // Upload through /admin/upload-item with fallback
-      try {
-        await API.upload('/admin/upload-item', fd);
-      } catch (adminErr) {
-        const endpoint = item.type === 'books' ? '/books' : '/papers';
-        await API.upload(endpoint, fd);
-      }
+      const endpoint = item.type === 'books' ? '/books' : '/papers';
+      await API.upload(endpoint, fd);
 
       item.status = 'success';
       item.error = null;
-      uploadedCount++;
     } catch (err) {
-      console.error('Failed to upload', item.rawName, err);
       item.status = 'error';
       item.error = err.message || 'Upload failed';
     }
 
-    const pct = Math.round((uploadedCount / totalToUpload) * 100);
-    if (progressBar) progressBar.style.width = pct + '%';
-    if (progressPercent) progressPercent.textContent = pct + '%';
+    completed++;
+    const pct = Math.round((completed / total) * 100);
+    if (pBar) pBar.style.width = `${pct}%`;
+    if (pPercent) pPercent.textContent = `${pct}%`;
     renderBulkQueue();
   }
 
   if (btn) btn.disabled = false;
-  if (btnText) {
-    btnText.textContent = uploadedCount === totalToUpload ? 'All Files Published Successfully ✓' : 'Retry Failed Uploads';
-  }
-  if (progressTitle) {
-    progressTitle.textContent = `Upload completed: ${uploadedCount} of ${totalToUpload} files published to library!`;
-  }
-  if (progressSub) {
-    progressSub.textContent = 'All published resources are instantly available on student pages (Past Papers & Books).';
-  }
-
-  toast(`Successfully published ${uploadedCount} resources!`);
+  if (pTitle) pTitle.textContent = 'Batch Publishing Complete!';
+  if (pSub) pSub.textContent = `Successfully processed ${total} file(s). Files synced to Drime Cloud!`;
+  toast('Bulk upload batch finished!');
   loadStats();
   loadProgression();
-}
+});
 
-// Bulk Dropzone Setup
-const dropzone = $('bulkDropzone');
-const fileInput = $('bulkFileInput');
-
-if (dropzone && fileInput) {
-  dropzone.addEventListener('click', (e) => {
-    if (e.target.closest('#bulkSelectBtn') || e.target === dropzone || dropzone.contains(e.target)) {
-      fileInput.click();
-    }
-  });
-
-  ['dragenter', 'dragover'].forEach(ev => {
-    dropzone.addEventListener(ev, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropzone.classList.add('dragover');
-    });
-  });
-
-  ['dragleave', 'dragend', 'drop'].forEach(ev => {
-    dropzone.addEventListener(ev, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropzone.classList.remove('dragover');
-    });
-  });
-
-  dropzone.addEventListener('drop', (e) => {
-    const dt = e.dataTransfer;
-    if (dt && dt.files && dt.files.length) {
-      addFilesToQueue(dt.files);
-    }
-  });
-
-  fileInput.addEventListener('change', (e) => {
-    if (e.target.files && e.target.files.length) {
-      addFilesToQueue(e.target.files);
-      fileInput.value = '';
-    }
-  });
-
-  $('bulkAddMoreBtn')?.addEventListener('click', () => fileInput.click());
-
-  $('bulkClearBtn')?.addEventListener('click', () => {
-    if (bulkQueue.length && confirm('Clear all files from the upload queue?')) {
-      bulkQueue = [];
-      renderBulkQueue();
-      if ($('bulkProgressWrapper')) $('bulkProgressWrapper').hidden = true;
-    }
-  });
-
-  $('bulkQuickLevel')?.addEventListener('change', (e) => {
-    const val = e.target.value;
-    if (!val) return;
-    bulkQueue.forEach(item => {
-      if (item.status !== 'success') item.level = val;
-    });
-    renderBulkQueue();
-    toast(`Set all pending items to ${val}`);
-    e.target.value = '';
-  });
-
-  $('bulkQuickCategory')?.addEventListener('change', (e) => {
-    const val = e.target.value;
-    if (!val) return;
-    bulkQueue.forEach(item => {
-      if (item.status !== 'success') {
-        item.category = val;
-        if (val === 'MSCE' || val === 'JCE') item.type = 'books';
-        else item.type = 'papers';
-      }
-    });
-    renderBulkQueue();
-    toast(`Set all pending items to ${val}`);
-    e.target.value = '';
-  });
-
-  $('bulkUploadAllBtn')?.addEventListener('click', executeBulkUpload);
-}
-
-// Helper to format bytes nicely
-function fmtBytes(bytes) {
-  if (!bytes) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-// Single Upload Handler with Real-Time Progression
+// Single Resource Upload Handler
 $('uploadForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('uSubmit');
-  btn.disabled = true;
-  btn.textContent = 'Syncing to Drime Cloud & Publishing...';
-
   const pWrap = $('uSingleProgressWrapper');
   const pBar = $('uSingleProgressBar');
-  const pPct = $('uSingleProgressPercent');
+  const pPercent = $('uSingleProgressPercent');
   const pTitle = $('uSingleProgressTitle');
   const pSub = $('uSingleProgressSub');
 
+  const fileInput = $('uFile');
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+    return alert('Please select a document file to upload.');
+  }
+
+  btn.disabled = true;
   if (pWrap) pWrap.hidden = false;
-  if (pBar) pBar.style.width = '0%';
-  if (pPct) pPct.textContent = '0%';
-  if (pTitle) pTitle.innerHTML = '<span>Uploading to Server &amp; Syncing to Drime Cloud...</span>';
-  if (pSub) pSub.textContent = 'Transferring document bytes...';
+  if (pBar) pBar.style.width = '20%';
+  if (pPercent) pPercent.textContent = '20%';
+  if (pTitle) pTitle.textContent = 'Analyzing and uploading file to server...';
+  if (pSub) pSub.textContent = 'Preparing upload payload...';
 
   try {
-    const fd = new FormData();
-    const rawType = $('uType').value;
-    const isBook = rawType === 'books';
+    const isBook = $('uType').value === 'book';
     const endpoint = isBook ? '/books' : '/papers';
+    const fd = new FormData();
 
     fd.append('title', $('uTitle').value.trim());
-    fd.append('subject', $('uSubject').value.trim());
+    fd.append('subject', $('uSubject').value);
     fd.append('level', $('uLevel').value);
     fd.append('category', $('uCategory').value);
-    fd.append('storage', 'drime');
+    fd.append('description', $('uDesc').value.trim());
+    if ($('uDrimeLink') && $('uDrimeLink').value.trim()) {
+      fd.append('drime_url', $('uDrimeLink').value.trim());
+    }
 
-    const drimeLink = $('uDrimeLink') ? $('uDrimeLink').value.trim() : '';
-    if (drimeLink) fd.append('drime_link', drimeLink);
-
-    if ($('uDesc').value.trim()) fd.append('description', $('uDesc').value.trim());
-
-    if (!isBook) {
-      if ($('uYear').value) fd.append('year', $('uYear').value);
-      if ($('uBoard').value.trim()) fd.append('exam_board', $('uBoard').value.trim());
-    } else {
+    if (isBook) {
       if ($('uAuthor').value.trim()) fd.append('author', $('uAuthor').value.trim());
       if ($('uPublisher').value.trim()) fd.append('publisher', $('uPublisher').value.trim());
-      if ($('uCover').files[0]) fd.append('cover', $('uCover').files[0]);
-    }
-
-    if ($('uFile').files[0]) {
-      fd.append('file', $('uFile').files[0]);
+      const cover = $('uCover').files[0];
+      if (cover) fd.append('cover', cover);
     } else {
-      throw new Error('Please select a file to upload.');
+      if ($('uYear').value) fd.append('year', $('uYear').value);
+      if ($('uBoard').value.trim()) fd.append('exam_board', $('uBoard').value.trim());
     }
 
-    const res = await API.uploadWithProgress(endpoint, fd, (pct, loaded, total) => {
-      const displayPct = Math.min(95, pct);
-      if (pBar) pBar.style.width = displayPct + '%';
-      if (pPct) pPct.textContent = displayPct + '%';
-      if (pSub) pSub.textContent = `Uploading bytes: ${fmtBytes(loaded)} of ${fmtBytes(total)} (${pct}%)`;
-      if (pct >= 100) {
-        if (pTitle) pTitle.innerHTML = '<span>Syncing to Drime Cloud Storage...</span>';
-        if (pSub) pSub.textContent = 'Registering in Drime Cloud folder (OymudINAwCDhPbnTH5Gt4oAIxo5mbC)...';
-      }
-    });
+    fd.append('file', fileInput.files[0]);
+
+    if (pBar) pBar.style.width = '60%';
+    if (pPercent) pPercent.textContent = '60%';
+    if (pTitle) pTitle.textContent = 'Syncing to Drime Cloud Storage...';
+
+    const res = await API.upload(endpoint, fd);
 
     if (pBar) pBar.style.width = '100%';
-    if (pPct) pPct.textContent = '100%';
-    if (pTitle) pTitle.innerHTML = '<span style="color:#16a34a">✓ Document Approved &amp; Published!</span>';
-    if (pSub) pSub.innerHTML = '<b style="color:#16a34a">✓ Resource published and synced to Drime Cloud Storage!</b>';
+    if (pPercent) pPercent.textContent = '100%';
+    if (pTitle) pTitle.textContent = 'Published & Live on Website!';
+    if (pSub) pSub.textContent = 'File uploaded directly to Drime Cloud and added to library!';
 
-    toast(res.message || 'Resource published and synced to Drime Cloud Storage!');
+    toast(res.message || 'Resource published successfully!');
     $('uploadForm').reset();
+    setTimeout(() => { if (pWrap) pWrap.hidden = true; }, 3500);
     loadStats();
     loadProgression();
-
-    setTimeout(() => {
-      if (pWrap) pWrap.hidden = true;
-    }, 3500);
   } catch (err) {
-    if (pWrap) pWrap.hidden = true;
-    toast(err.message, true);
+    if (pTitle) pTitle.textContent = 'Upload Failed';
+    if (pSub) pSub.textContent = err.message;
+    alert(`Upload failed: ${err.message}`);
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Publish Resource to Library (Syncs to Drime Cloud)';
   }
 });
 
-// ============ SECTION: GitHub Auto-Deployment & Server Sync ============
+// Password Change Handler (Owner Account Security)
+$('pwForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const currentPassword = $('pwCurrent').value;
+  const newPassword = $('pwNew').value;
+  try {
+    await API.post('/auth/change-password', { currentPassword, newPassword });
+    toast('Owner security credentials updated successfully!');
+    $('pwForm').reset();
+  } catch (err) {
+    alert(`Password change failed: ${err.message}`);
+  }
+});
+
+// Drime Cloud Sync Now
+$('btnSyncDrime')?.addEventListener('click', async () => {
+  const btn = $('btnSyncDrime');
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">⟳</span> Syncing Muhebrew Folder...';
+  try {
+    const res = await fetch(`${API.base}/admin/sync-from-drime`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${API.token()}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`Drime Cloud Sync Successful!\n• Folder: "${data.folderName || 'Muhebrew'}" (fngud8DkQTOTNvd1MmAXhszXKIm60k)\n• ${data.imported} new resource(s) imported\n• ${data.updated} resource(s) updated\n• ${data.removed || 0} file(s) removed\n• Total ${data.total} item(s) in Drime Cloud!`);
+      if ($('drimeCloudCount')) {
+        $('drimeCloudCount').innerHTML = `<b>Status:</b> ${data.total} item(s) active in library from Drime folder "Muhebrew".`;
+      }
+      loadStats();
+      loadProgression();
+      fetchServerStats();
+    } else {
+      alert(`Drime Sync Notice (${data.apiBase || 'https://app.drime.cloud/api/v1'}):\n${data.message || data.error || 'No files returned from Drime folder'}`);
+    }
+  } catch (err) {
+    alert(`Drime Sync error: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+});
+
+// Git status and auto-deployment
 async function loadGitStatus() {
   try {
     const res = await API.get('/admin/git-status');
-    if ($('gitCommitHash')) {
-      $('gitCommitHash').textContent = res.current?.shortHash || 'v2.0.0';
-    }
+    if ($('gitCommitHash')) $('gitCommitHash').textContent = res.current?.shortHash || 'v2.0.0';
     if ($('gitCommitDesc')) {
       const msg = res.current?.message || 'Updated';
       $('gitCommitDesc').textContent = msg.length > 40 ? msg.substring(0, 37) + '...' : msg;
     }
-    if ($('webhookUrlInput')) {
-      $('webhookUrlInput').value = res.webhookUrl || `${location.origin}/api/webhook/github`;
-    }
+    if ($('webhookUrlInput')) $('webhookUrlInput').value = res.webhookUrl || `${location.origin}/api/webhook/github`;
     if ($('gitStatusBadge')) {
       if (res.hasUpdate) {
         $('gitStatusBadge').textContent = 'UPDATE AVAILABLE';
@@ -955,40 +1283,6 @@ async function loadGitStatus() {
   }
 }
 
-// Toggle Webhook Info Details
-// Sync from Drime Cloud Storage Now
-$('btnSyncDrime')?.addEventListener('click', async () => {
-  const btn = $('btnSyncDrime');
-  const origHtml = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin">⟳</span> Syncing Muhebrew Folder...';
-  try {
-    const res = await fetch(`${API.base}/admin/sync-from-drime`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${API.token()}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    const data = await res.json();
-    if (data.ok) {
-      alert(`Drime Cloud Sync Successful!\n• Folder: "${data.folderName || 'Muhebrew'}" (fngud8DkQTOTNvd1MmAXhszXKIm60k)\n• ${data.imported} new resource(s) imported\n• ${data.updated} resource(s) updated\n• Total ${data.total} item(s) synced to website library!`);
-      if ($('drimeCloudCount')) {
-        $('drimeCloudCount').innerHTML = `<b>Status:</b> ${data.total} item(s) synced and active in library from Drime folder "Muhebrew".`;
-      }
-      await loadStats();
-      await loadReview();
-    } else {
-      alert(`Drime Sync Notice (${data.apiBase || 'https://app.drime.cloud/api/v1'}):\n${data.message || data.error || 'No files returned from Drime folder'}`);
-    }
-  } catch (err) {
-    alert(`Drime Sync error: ${err.message}`);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = origHtml;
-  }
-});
-
 $('btnToggleWebhookInfo')?.addEventListener('click', () => {
   const panel = $('gitWebhookDetails');
   if (panel) {
@@ -998,7 +1292,6 @@ $('btnToggleWebhookInfo')?.addEventListener('click', () => {
   }
 });
 
-// Copy Webhook URL
 $('btnCopyWebhookUrl')?.addEventListener('click', () => {
   const input = $('webhookUrlInput');
   if (input) {
@@ -1012,7 +1305,6 @@ $('btnCopyWebhookUrl')?.addEventListener('click', () => {
   }
 });
 
-// Sync from GitHub Now
 $('btnGitPull')?.addEventListener('click', async () => {
   const modal = $('gitPullModal');
   const statusEl = $('gitPullStatusText');

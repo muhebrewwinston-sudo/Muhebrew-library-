@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin & Owner Dashboard - Muhebrew Library</title>
+<title>Admin &amp; Owner Dashboard - Muhebrew Library</title>
 <meta name="theme-color" content="#14532d">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%2314532d' stroke-width='4' stroke-linejoin='round'%3E%3Cpath d='M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z'/%3E%3Cpath d='M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=3.1.0">
+<link rel="stylesheet" href="/css/style.css?v=3.2.0">
 <script>
   (function() {
     document.documentElement.setAttribute('data-theme', localStorage.getItem('ph_theme') || 'light');
@@ -21,29 +21,139 @@
 </script>
 </head>
 <body class="auth-protected has-bottom-tabs">
-<header class="site">
-  <div class="wrap">
-    <a class="logo" href="/" title="Muhebrew Library - Student Account">
-      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg>
-      <span>Muhebrew <b>Library</b></span>
-    </a>
-    <span class="spacer"></span>
-    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-      <a class="switch-student-btn" href="/" id="switchStudentBtn" title="Turn as student">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span>Student</span>
+
+<!-- START BAR BACKDROP -->
+<div class="drawer-backdrop" id="adminDrawerBackdrop"></div>
+
+<!-- START BAR (ADMIN SIDE DRAWER) -->
+<aside class="side-drawer" id="adminSideDrawer" aria-label="Admin Start Menu" aria-hidden="true">
+  <div class="drawer-content">
+    
+    <!-- Profile Card at Top -->
+    <div class="drawer-profile">
+      <div class="profile-avatar" id="adminDrawerAvatar">W</div>
+      <div class="profile-info">
+        <h3 class="profile-name">Winston Muhebrew</h3>
+        <p class="profile-email">muhebrewwinston@gmail.com</p>
+        <div class="profile-badge-row">
+          <span class="role-badge badge-admin">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>SYSTEM OWNER</span>
+          </span>
+        </div>
+      </div>
+      <button class="drawer-close" id="adminDrawerCloseBtn" aria-label="Close menu">&times;</button>
+    </div>
+
+    <!-- Start Bar Navigation Items -->
+    <nav class="drawer-nav" style="margin-top:12px">
+      <!-- 1. Pending Teacher Uploads for Review -->
+      <button class="drawer-item" type="button" id="startBarPendingBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span class="drawer-label">Pending Teachers Review</span>
+        <span class="admin-drawer-badge" id="startBarPendingBadge">0</span>
+      </button>
+
+      <!-- 2. Assign Teacher Access -->
+      <button class="drawer-item" type="button" id="startBarAssignTeacherBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        <span class="drawer-label">Assign Teacher Access</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <!-- 3. Registered Users -->
+      <button class="drawer-item" type="button" id="startBarUsersBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="drawer-label">Registered Users</span>
+        <span class="admin-drawer-badge" id="startBarUsersBadge">0</span>
+      </button>
+
+      <div class="drawer-divider"></div>
+
+      <!-- 4. Live Server Console & System Metrics -->
+      <button class="drawer-item" type="button" id="startBarConsoleBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span class="drawer-label">Live Server Console</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <!-- 5. Drime Cloud & GitHub Sync -->
+      <button class="drawer-item" type="button" id="startBarDrimeBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        <span class="drawer-label">Drime Cloud &amp; Auto-Sync</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <!-- 6. Upload Resources Bar -->
+      <button class="drawer-item" type="button" id="startBarUploadBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span class="drawer-label">Upload Resources Bar</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <!-- 7. Owner Account Security -->
+      <button class="drawer-item" type="button" id="startBarSecurityBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+        <span class="drawer-label">Owner Account Security</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <div class="drawer-divider"></div>
+
+      <!-- 8. Switch to Student View -->
+      <a class="drawer-item" href="/" id="startBarStudentLink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="drawer-label">Turn as Student</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </a>
+
+      <!-- 9. Log out (Red Card) -->
+      <button class="drawer-item signout" type="button" id="startBarSignOutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span class="drawer-label">Log out</span>
+      </button>
+    </nav>
+  </div>
+</aside>
+
+<!-- TOP SITE HEADER -->
+<header class="site">
+  <div class="wrap" style="display:flex;align-items:center;justify-content:space-between">
+    
+    <!-- Left: Start Bar Drawer Toggle & Muhebrew Library Logo -->
+    <div style="display:flex;align-items:center;gap:8px">
+      <!-- Start Bar Hamburger Trigger Button -->
+      <button class="drawer-toggle" id="adminDrawerOpenBtn" aria-label="Open start bar" title="Open Start Menu">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+
+      <!-- Logo Brand: Click stays on Admin Dashboard (no student page redirect) -->
+      <a class="logo" href="/admin.html" id="adminLogoBrand" title="Muhebrew Library - Admin Dashboard">
+        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg>
+        <span>Muhebrew <b>Library</b></span>
+      </a>
+    </div>
+
+    <span class="spacer"></span>
+
+    <!-- Right: Student button REMOVED to leave clean space for Theme and Log Out button -->
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
       <button class="header-icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       </button>
-      <button class="btn sm danger" id="adminSignOutBtn" title="Log out" style="padding:5px 9px;font-size:11.5px;white-space:nowrap">Log out</button>
+
+      <!-- Prominent Log Out button with icon -->
+      <button class="btn sm danger" id="adminSignOutBtn" title="Log out" style="display:inline-flex;align-items:center;gap:6px;padding:6px 13px;font-size:12px;font-weight:700;white-space:nowrap;border-radius:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Log out</span>
+      </button>
     </div>
   </div>
 </header>
 
-<main class="wrap" style="padding-bottom:40px">
+<main class="wrap" style="padding-bottom:50px" id="dashboard">
   <!-- Owner Header -->
-  <div style="margin:18px 0 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+  <div style="margin:16px 0 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
     <div>
       <h1 style="margin:0 0 2px;font-size:20px;font-weight:600;letter-spacing:-0.3px">Admin &amp; Owner Dashboard</h1>
       <p style="color:var(--muted);margin:0;font-size:12.5px">
@@ -59,8 +169,125 @@
     </div>
   </div>
 
-  <!-- SECTION 1: Statistics & Most Favorite Books -->
-  <section class="panel" style="background:var(--surface)">
+  <!-- ==============================================================
+       LIVE SERVER INFRASTRUCTURE & CONSOLE TERMINAL SCREEN
+       "Show the screen where I will be seeing what progressing in the
+       console of the server: networks, ram, storage, and so many more"
+       ============================================================== -->
+  <section class="panel" id="secServerConsole" style="background:var(--surface);border:1.5px solid rgba(20,83,45,0.25);box-shadow:0 4px 18px rgba(0,0,0,0.04)">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span>Live Server Console &amp; Infrastructure Telemetry</span>
+        </h3>
+        <p style="color:var(--muted);margin:2px 0 0;font-size:12px">
+          Real-time metrics: Networks, RAM, Storage, CPU, and live server output log stream:
+        </p>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="tag ok" id="serverLiveIndicator" style="font-size:10.5px;display:inline-flex;align-items:center;gap:4px">
+          <span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block"></span>
+          <span>ONLINE · POLLING</span>
+        </span>
+        <button type="button" class="btn sm" id="btnRefreshServerStats" style="font-size:11.5px;padding:4px 9px">
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Telemetry Cards: RAM, Networks, Storage, CPU -->
+    <div class="server-metrics-grid">
+      <!-- RAM / Memory -->
+      <div class="metric-card">
+        <div class="metric-head">
+          <span>Server RAM (Memory)</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+        </div>
+        <div class="metric-value">
+          <span id="statRamHeap">-</span>
+          <small style="font-size:11px;color:var(--muted);font-weight:500" id="statRamPercent">-%</small>
+        </div>
+        <div class="metric-bar-track">
+          <div class="metric-bar-fill" id="statRamBar" style="width:0%"></div>
+        </div>
+        <div class="metric-sub" id="statRamSub">Heap / RSS: - · Free Sys RAM: -</div>
+      </div>
+
+      <!-- Network & Traffic -->
+      <div class="metric-card">
+        <div class="metric-head">
+          <span>Network &amp; Traffic</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <div class="metric-value">
+          <span id="statNetRpm">-</span>
+          <small style="font-size:11px;color:var(--muted);font-weight:500">req / min</small>
+        </div>
+        <div class="metric-sub" id="statNetSub">Total HTTP: - reqs · Latency: - ms</div>
+        <div class="metric-sub" style="font-size:11px;color:var(--muted)" id="statNetStatus">Status 2xx: - · 4xx/5xx: -</div>
+      </div>
+
+      <!-- Storage & Database -->
+      <div class="metric-card">
+        <div class="metric-head">
+          <span>Storage &amp; Database</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        </div>
+        <div class="metric-value">
+          <span id="statDbSize">-</span>
+          <small style="font-size:11px;color:var(--muted);font-weight:500">SQLite</small>
+        </div>
+        <div class="metric-sub" id="statStorageSub">Thumbnails cache: - · Items: -</div>
+        <div class="metric-sub" style="font-size:11px;color:#2563eb">Cloud: Drime (Zero Server Disk Storage)</div>
+      </div>
+
+      <!-- CPU & Platform -->
+      <div class="metric-card">
+        <div class="metric-head">
+          <span>Host CPU &amp; Uptime</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+        </div>
+        <div class="metric-value">
+          <span id="statUptime">-</span>
+        </div>
+        <div class="metric-sub" id="statPlatform">Node.js · Linux x64</div>
+        <div class="metric-sub" id="statCpuLoad" style="font-size:11px">Load Avg: -</div>
+      </div>
+    </div>
+
+    <!-- Live Interactive Server Console Terminal -->
+    <div class="terminal-box">
+      <div class="terminal-bar">
+        <div class="terminal-dots">
+          <span class="terminal-dot red"></span>
+          <span class="terminal-dot yellow"></span>
+          <span class="terminal-dot green"></span>
+          <span style="font-weight:700;color:#94a3b8;margin-left:6px;font-size:11.5px">server@muhebrew-library:~$ console.log</span>
+        </div>
+        <div class="terminal-actions">
+          <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#94a3b8;cursor:pointer;margin:0">
+            <input type="checkbox" id="chkAutoScroll" checked style="accent-color:#10b981;cursor:pointer">
+            <span>Auto-scroll</span>
+          </label>
+          <button type="button" class="btn sm" id="btnToggleLogStream" style="font-size:10.5px;padding:2px 8px;background:#1e293b;border-color:#334155;color:#e2e8f0">
+            Pause
+          </button>
+          <button type="button" class="btn sm" id="btnClearTerminalLogs" style="font-size:10.5px;padding:2px 8px;background:#1e293b;border-color:#334155;color:#e2e8f0">
+            Clear
+          </button>
+        </div>
+      </div>
+      <div class="terminal-screen" id="serverTerminalScreen">
+        <div class="terminal-line"><span class="terminal-time">[Boot]</span> <span class="terminal-tag info">INFO</span> <span class="terminal-text">Initializing live server console monitor...</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================
+       SECTION 1: Statistics & Flipped Cards for Favorite Books & Papers
+       ============================================================== -->
+  <section class="panel" id="secStats" style="background:var(--surface)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <h3 style="margin:0;font-size:15px;font-weight:600">1. Library Statistics</h3>
       <span style="font-size:12px;color:var(--muted)">Live Real-time Stats</span>
@@ -75,27 +302,43 @@
       </div>
     </div>
 
-    <!-- Sub-section: Most Favorite Books That Mostly Downloaded -->
-    <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
-      <h4 style="margin:0 0 10px;font-size:13.5px;font-weight:600;color:var(--primary);display:flex;align-items:center;gap:6px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
-        <span>Most Favorite Textbooks (Mostly Downloaded)</span>
-      </h4>
-      <div id="favoriteBooksList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <!-- FLIPPED CARDS: Most Favorite Textbooks (No long list!) -->
+    <div class="flipped-card-container" id="favoriteBooksContainer">
+      <div class="flipped-card-head">
+        <h4 class="flipped-card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+          <span>Most Favorite Textbooks (Top Downloaded)</span>
+        </h4>
+        <div class="flipped-nav-controls">
+          <button type="button" class="flipped-nav-btn" id="btnFavBooksPrev" aria-label="Previous card">&lsaquo; Flip Prev</button>
+          <span class="flipped-page-indicator" id="favBooksPageIndicator">1 / 1</span>
+          <button type="button" class="flipped-nav-btn" id="btnFavBooksNext" aria-label="Next card">Flip Next &rsaquo;</button>
+        </div>
+      </div>
+      <div class="flipped-items-wrap" id="favoriteBooksList"></div>
     </div>
 
-    <!-- Sub-section: Most Favorite Past Papers -->
-    <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
-      <h4 style="margin:0 0 10px;font-size:13.5px;font-weight:600;color:var(--primary);display:flex;align-items:center;gap:6px">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <span>Most Favorite Past Papers &amp; Notes</span>
-      </h4>
-      <div id="favoritePapersList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <!-- FLIPPED CARDS: Most Favorite Past Papers & Notes (No long list!) -->
+    <div class="flipped-card-container" id="favoritePapersContainer">
+      <div class="flipped-card-head">
+        <h4 class="flipped-card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>Most Favorite Past Papers &amp; Marking Keys</span>
+        </h4>
+        <div class="flipped-nav-controls">
+          <button type="button" class="flipped-nav-btn" id="btnFavPapersPrev" aria-label="Previous card">&lsaquo; Flip Prev</button>
+          <span class="flipped-page-indicator" id="favPapersPageIndicator">1 / 1</span>
+          <button type="button" class="flipped-nav-btn" id="btnFavPapersNext" aria-label="Next card">Flip Next &rsaquo;</button>
+        </div>
+      </div>
+      <div class="flipped-items-wrap" id="favoritePapersList"></div>
     </div>
   </section>
 
-  <!-- SECTION 2: Issues Faced by Users (Reports & Help Requests) -->
-  <section class="panel" style="background:var(--surface)">
+  <!-- ==============================================================
+       SECTION 2: Issues Faced by Users (Reports & Help Requests)
+       ============================================================== -->
+  <section class="panel" id="secIssues" style="background:var(--surface)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <h3 style="margin:0;font-size:16px">2. Issues Faced by Users</h3>
       <span id="issuesCountBadge" class="tag wait" style="font-size:11px">Open Issues</span>
@@ -106,32 +349,55 @@
     <div id="reports"></div>
   </section>
 
-  <!-- SECTION 3: Live Progression Happening on the Web -->
-  <section class="panel" style="background:var(--surface)">
+  <!-- ==============================================================
+       SECTION 3: Live Progression (Flipped Cards: Downloads, Signups, Uploads)
+       ============================================================== -->
+  <section class="panel" id="secProgression" style="background:var(--surface)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <h3 style="margin:0;font-size:16px">3. Web Progression Activity</h3>
-      <span class="tag ok" style="font-size:11px">Live Feed</span>
+      <span class="tag ok" style="font-size:11px">Live Activity</span>
     </div>
     <p style="color:var(--muted);margin:0 0 12px;font-size:12.5px">
-      Track real-time downloads, new student signups, and community interactions:
+      Track real-time downloads, new student signups, and community interactions in flipped view:
     </p>
     
-    <div style="display:flex;gap:6px;margin-bottom:12px" class="tabs">
+    <div style="display:flex;gap:6px;margin-bottom:10px" class="tabs">
       <button class="btn sm primary" id="progTabDl" type="button">Recent Downloads</button>
       <button class="btn sm" id="progTabUsers" type="button">New Signups</button>
       <button class="btn sm" id="progTabUploads" type="button">Recent Uploads</button>
     </div>
-    <div id="progressionContent"></div>
+
+    <!-- FLIPPED CARDS FOR PROGRESSION ITEMS (No long list!) -->
+    <div class="flipped-card-container" id="progressionContainer" style="margin-top:0">
+      <div class="flipped-card-head">
+        <span style="font-size:12.5px;font-weight:600;color:var(--text)" id="progressionActiveLabel">Recent Downloads</span>
+        <div class="flipped-nav-controls">
+          <button type="button" class="flipped-nav-btn" id="btnProgPrev" aria-label="Previous card">&lsaquo; Flip Prev</button>
+          <span class="flipped-page-indicator" id="progPageIndicator">1 / 1</span>
+          <button type="button" class="flipped-nav-btn" id="btnProgNext" aria-label="Next card">Flip Next &rsaquo;</button>
+        </div>
+      </div>
+      <div class="flipped-items-wrap" id="progressionContent"></div>
+    </div>
   </section>
 
-  <!-- Review Queue for Teacher Uploads -->
-  <section class="panel">
-    <h3>Pending Teacher Uploads for Review</h3>
+  <!-- ==============================================================
+       START BAR LINKED SECTIONS:
+       - Pending Teachers for Review
+       - Assign Teacher Access
+       - Registered Users
+       ============================================================== -->
+  <!-- 1. Pending Teacher Uploads for Review -->
+  <section class="panel" id="secPendingTeachers">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;font-size:16px">Pending Teacher Uploads for Review</h3>
+      <span class="tag wait" id="pendingSectionBadge">0 Pending</span>
+    </div>
     <div id="pending"></div>
   </section>
 
-  <!-- User & Role Management -->
-  <section class="panel">
+  <!-- 2. Assign Teacher Access -->
+  <section class="panel" id="secAssignTeacher">
     <h3>Assign Teacher Access</h3>
     <p style="color:var(--muted);margin:0 0 10px;font-size:12.5px">Public registration enrolls users as students. Only admins can grant teacher status to chosen emails.</p>
     <form id="grantTeacherForm" style="display:flex;gap:8px;flex-wrap:wrap">
@@ -145,8 +411,12 @@
     </form>
   </section>
 
-  <section class="panel">
-    <h3>Registered Users</h3>
+  <!-- 3. Registered Users -->
+  <section class="panel" id="secRegisteredUsers">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3 style="margin:0;font-size:16px">Registered Users</h3>
+      <span class="tag ok" id="usersCountBadge">0 Users</span>
+    </div>
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
       <table id="usersTable">
         <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>School</th><th>Joined</th></tr></thead>
@@ -155,9 +425,10 @@
     </div>
   </section>
 
-  <!-- SECTION 4: THE LAST BAR - UPLOAD RESOURCES -->
-  <!-- "The last bar on admin display should show upload button where I will use to upload resources." -->
-  <section class="panel" style="border:2px solid var(--primary);box-shadow:0 0 18px rgba(27,127,75,0.18)">
+  <!-- ==============================================================
+       SECTION 4: THE LAST BAR - UPLOAD RESOURCES & DRIME CLOUD
+       ============================================================== -->
+  <section class="panel" id="secDrimeCloud" style="border:2px solid var(--primary);box-shadow:0 0 18px rgba(27,127,75,0.18)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <h3 style="margin:0;font-size:17px;color:var(--primary);display:flex;align-items:center;gap:8px">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
@@ -179,7 +450,7 @@
             <span class="tag ok" style="font-size:10px;padding:2px 6px">CONNECTED</span>
           </b>
           <span style="font-size:12px;color:var(--muted);display:block;margin-top:3px;word-break:break-all;overflow-wrap:anywhere">
-            API: <code style="color:#2563eb">https://app.drime.cloud/api/v1</code> · Cloud Folder: <a href="https://dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k" target="_blank" rel="noopener" class="drime-link">dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k ↗</a>
+            API: <code style="color:#2563eb">https://app.drime.cloud/api/v1</code> &middot; Cloud Folder: <a href="https://dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k" target="_blank" rel="noopener" class="drime-link">dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k &nearr;</a>
           </span>
           <span id="drimeCloudCount" style="font-size:11px;color:var(--muted);display:block;margin-top:3px;word-break:break-word;overflow-wrap:anywhere">
             All files under folder <b>Muhebrew</b> (<a href="https://dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k" target="_blank" rel="noopener">dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k</a>) automatically sync and display in the website library.
@@ -192,7 +463,7 @@
           Sync Drime Now
         </button>
         <a href="https://dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k" target="_blank" rel="noopener" class="btn sm" style="font-size:11.5px;background:#2563eb;color:#fff;border-color:#2563eb;white-space:nowrap">
-          View Cloud Folder ↗
+          View Cloud Folder &nearr;
         </a>
       </div>
     </div>
@@ -213,10 +484,10 @@
               <span id="gitStatusBadge" class="tag ok" style="font-size:10px;padding:2px 6px">CONNECTED</span>
             </b>
             <span style="font-size:12px;color:var(--muted);display:block;margin-top:2px">
-              Repo: <a href="https://github.com/muhebrewwinston-sudo/Muhebrew-library-" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">muhebrewwinston-sudo/Muhebrew-library- ↗</a> (branch: <code style="font-weight:700">main</code>)
+              Repo: <a href="https://github.com/muhebrewwinston-sudo/Muhebrew-library-" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">muhebrewwinston-sudo/Muhebrew-library- &nearr;</a> (branch: <code style="font-weight:700">main</code>)
             </span>
             <span id="gitCommitInfo" style="font-size:11.5px;color:var(--muted);display:block;margin-top:2px">
-              Server Commit: <code id="gitCommitHash" style="font-weight:700">checking...</code> · <span id="gitCommitDesc"></span>
+              Server Commit: <code id="gitCommitHash" style="font-weight:700">checking...</code> &middot; <span id="gitCommitDesc"></span>
             </span>
           </div>
         </div>
@@ -227,7 +498,7 @@
             <span>Sync from GitHub Now</span>
           </button>
           <button type="button" class="btn sm" id="btnToggleWebhookInfo" style="font-size:11.5px">
-            Auto-Sync Settings ▾
+            Auto-Sync Settings &blacktriangledown;
           </button>
         </div>
       </div>
@@ -248,7 +519,7 @@
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px">
             <b style="color:var(--primary);display:block;margin-bottom:4px">Method 2: Instant GitHub Push Webhook</b>
             <span style="color:var(--muted);font-size:11.5px;line-height:1.4;display:block">
-              Add a Webhook in <a href="https://github.com/muhebrewwinston-sudo/Muhebrew-library-/settings/hooks" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">GitHub Settings &gt; Webhooks ↗</a> with the URL below. Any push to main triggers instant auto-update!
+              Add a Webhook in <a href="https://github.com/muhebrewwinston-sudo/Muhebrew-library-/settings/hooks" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">GitHub Settings &gt; Webhooks &nearr;</a> with the URL below. Any push to main triggers instant auto-update!
             </span>
           </div>
         </div>
@@ -299,7 +570,7 @@
         </div>
       </div>
 
-      <!-- Queue Container (shown after files are dropped/selected) -->
+      <!-- Queue Container -->
       <div id="bulkQueueContainer" hidden style="margin-top:16px">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 14px">
           <div>
@@ -310,7 +581,6 @@
             <span style="font-size:12px;color:var(--muted)">Review the auto-detected details below. You can tweak any field before uploading.</span>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <!-- Quick Batch Level -->
             <select id="bulkQuickLevel" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
               <option value="">Quick: Set All Forms...</option>
               <option value="Form 1">Form 1 (All)</option>
@@ -318,7 +588,6 @@
               <option value="Form 3">Form 3 (All)</option>
               <option value="Form 4">Form 4 (All)</option>
             </select>
-            <!-- Quick Batch Category -->
             <select id="bulkQuickCategory" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
               <option value="">Quick: Set All Categories...</option>
               <option value="MANEB">MANEB Official</option>
@@ -351,57 +620,71 @@
           </div>
         </div>
 
-        <!-- Traced Items Cards List -->
-        <div id="bulkItemsList" class="bulk-items-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>
+        <div id="bulkQueueList" class="bulk-queue-list"></div>
 
-        <!-- Bulk Action Buttons -->
-        <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px">
-          <button type="button" class="btn primary" id="bulkUploadAllBtn" style="flex:1;padding:14px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
-            <span id="bulkUploadBtnText">Upload All Files &amp; Publish to Student Pages</span>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
+          <button type="button" class="btn lg primary" id="bulkPublishBtn" style="padding:12px 28px;font-size:15px;font-weight:700;display:inline-flex;align-items:center;gap:8px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span id="bulkPublishBtnText">Publish All Files to Library</span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- ================= SINGLE FILE UPLOAD FORM ================= -->
-    <form id="uploadForm" class="form-grid" hidden>
+    <!-- ================= SINGLE FILE UPLOAD PANEL ================= -->
+    <form id="uploadForm" class="form-grid" style="display:none">
       <div>
         <label>Resource Type</label>
         <select id="uType">
-          <option value="papers">Past paper (MANEB / Mock)</option>
-          <option value="books">Textbook / Student Guide</option>
-          <option value="papers-notes">Study Revision Notes</option>
-          <option value="papers-keys">Official Marking Key</option>
+          <option value="paper">Past Paper / Exam</option>
+          <option value="book">Textbook</option>
         </select>
       </div>
       <div>
         <label>Subject</label>
-        <input id="uSubject" required placeholder="e.g. Mathematics, Biology, English">
-      </div>
-      <div>
-        <label>Title</label>
-        <input id="uTitle" required placeholder="e.g. Senior Secondary Mathematics Form 4">
+        <select id="uSubject" required>
+          <option value="">Select subject...</option>
+          <option value="Mathematics">Mathematics</option>
+          <option value="English">English</option>
+          <option value="Chichewa">Chichewa</option>
+          <option value="Biology">Biology</option>
+          <option value="Physical Science">Physical Science</option>
+          <option value="Physics">Physics</option>
+          <option value="Chemistry">Chemistry</option>
+          <option value="Geography">Geography</option>
+          <option value="History">History</option>
+          <option value="Agriculture">Agriculture</option>
+          <option value="Social Studies">Social Studies</option>
+          <option value="Life Skills">Life Skills</option>
+          <option value="Bible Knowledge">Bible Knowledge</option>
+          <option value="Computer Studies">Computer Studies</option>
+          <option value="Commerce">Commerce</option>
+          <option value="Home Economics">Home Economics</option>
+        </select>
       </div>
       <div>
         <label>Class Level</label>
         <select id="uLevel" required>
-          <option>Form 1</option>
-          <option>Form 2</option>
-          <option>Form 3</option>
-          <option>Form 4</option>
+          <option value="Form 4">Form 4 (MSCE)</option>
+          <option value="Form 3">Form 3</option>
+          <option value="Form 2">Form 2 (JCE)</option>
+          <option value="Form 1">Form 1</option>
         </select>
       </div>
-      <div id="categoryWrap">
-        <label>Curriculum Category</label>
+      <div id="catWrap">
+        <label>Exam Category / Classification</label>
         <select id="uCategory">
-          <option value="MSCE">MSCE (Senior Secondary Form 3 & 4)</option>
-          <option value="JCE">JCE (Junior Secondary Form 1 & 2)</option>
-          <option value="MANEB">MANEB Official Exam</option>
-          <option value="Mock">Mock Exam Paper</option>
+          <option value="MANEB">MANEB Official</option>
+          <option value="Mock">Mock Exam</option>
+          <option value="Marking Key">Marking Key</option>
           <option value="Notes">Study Notes</option>
-          <option value="Marking Key">Marking Scheme / Key</option>
+          <option value="Mid-Term">Mid-Term</option>
+          <option value="End of Term">End of Term</option>
         </select>
+      </div>
+      <div>
+        <label>Resource Title</label>
+        <input id="uTitle" required placeholder="e.g. Mathematics Paper 1 2024">
       </div>
       <div id="yearWrap">
         <label>Exam / Publication Year</label>
@@ -463,13 +746,57 @@
     </form>
   </section>
 
-  <!-- Password change for owner -->
-  <section class="panel">
-    <h3>Owner Account Security</h3>
+  <!-- ==============================================================
+       OWNER ACCOUNT SECURITY SECTION (Linked to Profile in Bottom Bar)
+       ============================================================== -->
+  <section class="panel" id="secOwnerSecurity" style="background:var(--surface);border:1.5px solid rgba(20,83,45,0.25)">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div>
+        <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+          <span>Owner Account Security</span>
+        </h3>
+        <p style="color:var(--muted);margin:2px 0 0;font-size:12px">
+          System root owner profile, active session security, and credential management:
+        </p>
+      </div>
+      <span class="role-badge badge-admin" style="font-size:11px;padding:4px 9px">Root Administrator</span>
+    </div>
+
+    <!-- Owner Profile Summary Card -->
+    <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:42px;height:42px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-size:18px;font-weight:700;flex-shrink:0">
+          W
+        </div>
+        <div>
+          <b style="font-size:14px;color:var(--text);display:block">Winston Muhebrew</b>
+          <span style="font-size:12px;color:var(--muted);display:block">Email: <code style="color:var(--primary);font-weight:600">muhebrewwinston@gmail.com</code></span>
+          <span style="font-size:11px;color:var(--muted)">Session: <span class="tag ok" style="font-size:10px;padding:1px 5px">sessionStorage Scoped (Secure)</span></span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button type="button" class="btn sm" id="profileThemeToggleBtn" style="font-size:11.5px;display:inline-flex;align-items:center;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <span>Switch Theme</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Password Change Form -->
+    <h4 style="margin:0 0 8px;font-size:13.5px;color:var(--text);font-weight:600">Change Owner Password</h4>
     <form id="pwForm" class="form-grid">
-      <div><label for="pwCurrent">Current password</label><input id="pwCurrent" type="password" required autocomplete="current-password" autocapitalize="none"></div>
-      <div><label for="pwNew">New password (6+ characters)</label><input id="pwNew" type="password" required minlength="6" autocomplete="new-password" autocapitalize="none"></div>
-      <div><button class="btn primary" type="submit" style="width:100%">Change password</button></div>
+      <div>
+        <label for="pwCurrent">Current Password</label>
+        <input id="pwCurrent" type="password" required autocomplete="current-password" autocapitalize="none" placeholder="Enter current password">
+      </div>
+      <div>
+        <label for="pwNew">New Password (6+ characters)</label>
+        <input id="pwNew" type="password" required minlength="6" autocomplete="new-password" autocapitalize="none" placeholder="Enter new strong password">
+      </div>
+      <div>
+        <button class="btn primary" type="submit" style="width:100%;font-weight:700">Update Security Password</button>
+      </div>
     </form>
   </section>
 
@@ -496,31 +823,38 @@
   </div>
 </main>
 
-<!-- Fixed Bottom Navigation Bar for Admin Mobile View -->
+<!-- FIXED BOTTOM NAVIGATION BAR
+     - Theme replaced with Profile (Owner Account Security)
+     - Student View button to turn as student
+-->
 <nav class="bottom-tabs admin-bottom-tabs" aria-label="Admin Navigation">
-  <a class="tab active" href="/admin.html" id="bottomTabDashboard" aria-label="Admin Dashboard">
+  <a class="tab active" href="#dashboard" id="bottomTabDashboard" aria-label="Dashboard">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
     <span>Dashboard</span>
   </a>
+  <a class="tab" href="#secServerConsole" id="bottomTabConsole" aria-label="Server Console">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+    <span>Console</span>
+  </a>
   <a class="tab" href="/" id="bottomTabStudent" aria-label="Turn as student">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    <span>Student View</span>
+    <span>Student</span>
   </a>
-  <button type="button" class="tab" id="bottomThemeBtn" aria-label="Toggle theme" style="background:none;border:none;cursor:pointer;font:inherit;color:var(--muted)">
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-    <span>Theme</span>
-  </button>
+  <a class="tab" href="#secOwnerSecurity" id="bottomTabProfile" aria-label="Owner Account Security Profile">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+    <span>Profile</span>
+  </a>
   <button type="button" class="tab danger-tab" id="bottomAdminSignOutBtn" aria-label="Log out" style="background:none;border:none;cursor:pointer;font:inherit;color:#dc2626">
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     <span>Log out</span>
   </button>
 </nav>
 
-<footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
-<script src="/js/pdf.min.js?v=3.1.0"></script>
-<script src="/js/icons.js?v=3.1.0"></script>
-<script src="/js/api.js?v=3.1.0"></script>
-<script src="/js/admin.js?v=3.1.0"></script>
-<script src="/js/account.js?v=3.1.0"></script>
+<footer class="foot">Muhebrew Library &middot; Owner &amp; Administration Control Panel</footer>
+<script src="/js/pdf.min.js?v=3.2.0"></script>
+<script src="/js/icons.js?v=3.2.0"></script>
+<script src="/js/api.js?v=3.2.0"></script>
+<script src="/js/admin.js?v=3.2.0"></script>
+<script src="/js/account.js?v=3.2.0"></script>
 </body>
 </html>
