@@ -166,8 +166,7 @@ updateThemeText();
 // Sign out handlers
 function handleSignOut() {
   if (confirm('Are you sure you want to sign out?')) {
-    API.setToken(null);
-    location.replace('/auth.html');
+    API.logout();
   }
 }
 $('drawerSignOutBtn')?.addEventListener('click', handleSignOut);

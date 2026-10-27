@@ -28,8 +28,7 @@ function isAdmin(user) {
 
   function doSignOut() {
     if (confirm('Sign out from owner dashboard?')) {
-      API.setToken(null);
-      location.replace('/auth.html');
+      API.logout();
     }
   }
 
@@ -973,7 +972,10 @@ $('btnSyncDrime')?.addEventListener('click', async () => {
     });
     const data = await res.json();
     if (data.ok) {
-      alert(`Drime Cloud Sync Successful!\n• Folder: "${data.folderName || 'Muhebrew'}" (${data.apiBase || 'https://app.drime.cloud/api/v1'})\n• ${data.imported} new resource(s) imported\n• ${data.updated} resource(s) updated\n• Total ${data.total} item(s) synced from Muhebrew folder`);
+      alert(`Drime Cloud Sync Successful!\n• Folder: "${data.folderName || 'Muhebrew'}" (fngud8DkQTOTNvd1MmAXhszXKIm60k)\n• ${data.imported} new resource(s) imported\n• ${data.updated} resource(s) updated\n• Total ${data.total} item(s) synced to website library!`);
+      if ($('drimeCloudCount')) {
+        $('drimeCloudCount').innerHTML = `<b>Status:</b> ${data.total} item(s) synced and active in library from Drime folder "Muhebrew".`;
+      }
       await loadStats();
       await loadReview();
     } else {

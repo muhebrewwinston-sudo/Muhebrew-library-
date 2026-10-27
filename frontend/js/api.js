@@ -19,8 +19,27 @@ const API = {
     return '/api';
   },
 
-  token: () => localStorage.getItem('ph_token'),
-  setToken(t) { t ? localStorage.setItem('ph_token', t) : localStorage.removeItem('ph_token'); },
+  token: () => {
+    return sessionStorage.getItem('ph_token');
+  },
+  setToken(t) {
+    if (t) {
+      sessionStorage.setItem('ph_token', t);
+      try { localStorage.removeItem('ph_token'); } catch (_) {}
+    } else {
+      sessionStorage.removeItem('ph_token');
+      try { localStorage.removeItem('ph_token'); } catch (_) {}
+    }
+  },
+  logout() {
+    sessionStorage.removeItem('ph_token');
+    sessionStorage.removeItem('ph_user');
+    try {
+      localStorage.removeItem('ph_token');
+      localStorage.removeItem('ph_user');
+    } catch (_) {}
+    location.replace('/auth.html');
+  },
 
   async req(path, { method = 'GET', body, json = true } = {}) {
     const headers = {};
