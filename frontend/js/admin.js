@@ -381,15 +381,6 @@ async function initServerTelemetry() {
     } catch (_) {}
   });
 }
-      await API.post('/admin/clear-logs', {});
-      const screen = $('serverTerminalScreen');
-      if (screen) {
-        screen.innerHTML = '<div class="terminal-line"><span class="terminal-time">[' + new Date().toLocaleTimeString() + ']</span> <span class="terminal-tag info">INFO</span> <span class="terminal-text">Console output cleared.</span></div>';
-      }
-      toast('Console logs cleared');
-    } catch (_) {}
-  });
-}
 
 async function fetchServerStats() {
   try {

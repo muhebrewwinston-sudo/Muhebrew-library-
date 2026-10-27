@@ -76,13 +76,13 @@ body {
   }
 }
 
-/* Auth protection: hide protected page content until verified */
+/* Auth protection */
 body.auth-protected {
-  visibility: hidden;
+  opacity: 0.98;
 }
 
 body.auth-ready {
-  visibility: visible;
+  opacity: 1;
 }
 
 main {
