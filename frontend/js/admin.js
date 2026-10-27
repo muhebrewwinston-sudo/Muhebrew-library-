@@ -222,71 +222,115 @@ function generateAreaChartSvgPaths(dataPoints, maxY, width = 300, height = 120) 
   if (!dataPoints || dataPoints.length < 2) {
     return {
       line: `M 0,${height} L ${width},${height}`,
-      area: `M 0,${height} L ${width},${height} Z`
+      area: `M 0,${height} L ${width},${height} Z`,
+      lastCoord: { x: width, y: height }
     };
   }
 
   const n = dataPoints.length;
-  const safeMax = Math.max(maxY, 1);
+  const safeMax = Math.max(maxY, 0.01);
   const coords = dataPoints.map((val, idx) => {
     const x = (idx / (n - 1)) * width;
     const clamped = Math.max(0, Math.min(val, safeMax));
-    const y = height - (clamped / safeMax) * (height - 10);
+    const y = height - (clamped / safeMax) * (height - 12);
     return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
   });
 
   const lineD = 'M ' + coords.map((c) => `${c.x},${c.y}`).join(' L ');
   const areaD = `M ${coords[0].x},${height} L ` + coords.map((c) => `${c.x},${c.y}`).join(' L ') + ` L ${coords[coords.length - 1].x},${height} Z`;
 
-  return { line: lineD, area: areaD };
+  return { line: lineD, area: areaD, lastCoord: coords[coords.length - 1] };
 }
 
 function updateServerCharts(history, currentStats) {
-  // 1. CPU Chart (Scale: 0 to 200%)
+  if (!currentStats) return;
+
+  // 1. CPU Chart (Real OS CPU: Scale 0 to maxCpuPercent e.g. 200%)
+  const maxCpu = (currentStats.cpu && currentStats.cpu.maxPercent) ? currentStats.cpu.maxPercent : 200;
   const cpuPoints = (history && history.cpu && history.cpu.length >= 2)
     ? history.cpu
-    : [20, 35, 25, 45, 80, 75, 60, 50, 20, 5];
-  const cpuPaths = generateAreaChartSvgPaths(cpuPoints, 200, 300, 120);
+    : [1.0, 1.2, 1.5, 1.1, 1.4];
+  const cpuPaths = generateAreaChartSvgPaths(cpuPoints, maxCpu, 300, 120);
+
   const cpuLine = $('cpuLinePath');
   const cpuArea = $('cpuAreaPath');
   if (cpuLine) cpuLine.setAttribute('d', cpuPaths.line);
   if (cpuArea) cpuArea.setAttribute('d', cpuPaths.area);
-  const currentCpuVal = cpuPoints[cpuPoints.length - 1] || 0;
-  if ($('liveCpuBadge')) $('liveCpuBadge').textContent = `${currentCpuVal.toFixed(2)}%`;
 
-  // 2. RAM Chart (Scale: 0 to maxMib or 4500 MiB)
+  const curCpuVal = (currentStats.cpu && typeof currentStats.cpu.currentPercent === 'number')
+    ? currentStats.cpu.currentPercent
+    : (cpuPoints[cpuPoints.length - 1] || 0);
+
+  if ($('liveCpuBadge')) $('liveCpuBadge').textContent = `${curCpuVal.toFixed(2)}%`;
+  if ($('cpuYAxis')) {
+    $('cpuYAxis').innerHTML = `<span>${maxCpu.toFixed(2)}%</span><span>${(maxCpu / 2).toFixed(2)}%</span><span>0.00%</span>`;
+  }
+  if ($('cpuPulseCircle') && cpuPaths.lastCoord) {
+    $('cpuPulseCircle').setAttribute('cx', cpuPaths.lastCoord.x);
+    $('cpuPulseCircle').setAttribute('cy', cpuPaths.lastCoord.y);
+  }
+  if ($('cpuPulseRing') && cpuPaths.lastCoord) {
+    $('cpuPulseRing').setAttribute('cx', cpuPaths.lastCoord.x);
+    $('cpuPulseRing').setAttribute('cy', cpuPaths.lastCoord.y);
+  }
+
+  // 2. RAM / MEMORY Chart (Real Host 4GB RAM Scale: 0 to 4.00 GiB)
+  const memData = currentStats.memory || {};
+  const totalRamGiB = memData.totalGiB || 4.00;
+  const usedRamGiB = typeof memData.usedGiB === 'number' ? memData.usedGiB : 0.26;
+
   const ramPoints = (history && history.ram && history.ram.length >= 2)
     ? history.ram
-    : [120, 140, 180, 210, 190, 175, 160];
-  const maxRamInHistory = Math.max(...ramPoints, 250);
-  const ramMaxAxis = maxRamInHistory > 2000 ? 4500 : (maxRamInHistory > 1000 ? 2000 : 500);
-  const ramPaths = generateAreaChartSvgPaths(ramPoints, ramMaxAxis, 300, 120);
+    : [usedRamGiB, usedRamGiB];
+  const ramPaths = generateAreaChartSvgPaths(ramPoints, totalRamGiB, 300, 120);
+
   const ramLine = $('ramLinePath');
   const ramArea = $('ramAreaPath');
   if (ramLine) ramLine.setAttribute('d', ramPaths.line);
   if (ramArea) ramArea.setAttribute('d', ramPaths.area);
-  const currentRamVal = ramPoints[ramPoints.length - 1] || 0;
-  if ($('liveRamBadge')) $('liveRamBadge').textContent = `${Math.round(currentRamVal)} MiB`;
+
+  if ($('liveRamBadge')) {
+    $('liveRamBadge').textContent = memData.displayLabel || `${usedRamGiB.toFixed(2)} GiB / ${totalRamGiB.toFixed(2)} GiB`;
+  }
   if ($('ramYAxis')) {
-    $('ramYAxis').innerHTML = `<span>${ramMaxAxis}MiB</span><span>${Math.round(ramMaxAxis / 2)}MiB</span><span>0MiB</span>`;
+    $('ramYAxis').innerHTML = `<span>${totalRamGiB.toFixed(2)} GiB</span><span>${(totalRamGiB / 2).toFixed(2)} GiB</span><span>0.00 GiB</span>`;
+  }
+  if ($('ramPulseCircle') && ramPaths.lastCoord) {
+    $('ramPulseCircle').setAttribute('cx', ramPaths.lastCoord.x);
+    $('ramPulseCircle').setAttribute('cy', ramPaths.lastCoord.y);
+  }
+  if ($('ramPulseRing') && ramPaths.lastCoord) {
+    $('ramPulseRing').setAttribute('cx', ramPaths.lastCoord.x);
+    $('ramPulseRing').setAttribute('cy', ramPaths.lastCoord.y);
   }
 
-  // 3. Network Activity Chart (Scale: 0 to maxMib or 66.76 MiB)
+  // 3. NETWORK Activity Chart (Real Throughput & Network I/O)
+  const netData = currentStats.network || {};
   const netPoints = (history && history.network && history.network.length >= 2)
     ? history.network
-    : [0.2, 0.4, 0.8, 1.5, 4.2, 2.1, 0.6];
-  const maxNetInHistory = Math.max(...netPoints, 2);
-  const netMaxAxis = maxNetInHistory > 30 ? 66.76 : (maxNetInHistory > 10 ? 30 : 5);
+    : [0.02, 0.04, 0.03];
+
+  const highestSample = Math.max(...netPoints, 0.1);
+  const netMaxAxis = highestSample > 30 ? 66.76 : (highestSample > 5 ? 10.00 : (highestSample > 1 ? 2.50 : 1.00));
   const netPaths = generateAreaChartSvgPaths(netPoints, netMaxAxis, 300, 120);
+
   const netLine = $('netLinePath');
   const netArea = $('netAreaPath');
   if (netLine) netLine.setAttribute('d', netPaths.line);
   if (netArea) netArea.setAttribute('d', netPaths.area);
-  const currentNetVal = netPoints[netPoints.length - 1] || 0;
-  if ($('netInboundSpeed')) $('netInboundSpeed').textContent = `${currentNetVal.toFixed(2)} MiB`;
-  if ($('netOutboundSpeed')) $('netOutboundSpeed').textContent = `${(currentNetVal * 0.8).toFixed(2)} MiB`;
+
+  if ($('netInboundSpeed')) $('netInboundSpeed').textContent = netData.inboundSpeed || '0.00 KiB/s';
+  if ($('netOutboundSpeed')) $('netOutboundSpeed').textContent = netData.outboundSpeed || '0.00 KiB/s';
   if ($('netYAxis')) {
-    $('netYAxis').innerHTML = `<span>${netMaxAxis} MiB</span><span>${(netMaxAxis / 2).toFixed(2)} MiB</span><span>0 MiB</span>`;
+    $('netYAxis').innerHTML = `<span>${netMaxAxis.toFixed(2)} MiB</span><span>${(netMaxAxis / 2).toFixed(2)} MiB</span><span>0.00 MiB</span>`;
+  }
+  if ($('netPulseCircle') && netPaths.lastCoord) {
+    $('netPulseCircle').setAttribute('cx', netPaths.lastCoord.x);
+    $('netPulseCircle').setAttribute('cy', netPaths.lastCoord.y);
+  }
+  if ($('netPulseRing') && netPaths.lastCoord) {
+    $('netPulseRing').setAttribute('cx', netPaths.lastCoord.x);
+    $('netPulseRing').setAttribute('cy', netPaths.lastCoord.y);
   }
 }
 
@@ -295,6 +339,7 @@ async function initServerTelemetry() {
   fetchServerLogs();
 
   if (telemetryPollInterval) clearInterval(telemetryPollInterval);
+  // Real 1-second live telemetry polling interval for moving graphs
   telemetryPollInterval = setInterval(() => {
     if (!isLogStreamPaused) {
       fetchServerStats();
@@ -302,7 +347,7 @@ async function initServerTelemetry() {
         fetchServerLogs();
       }
     }
-  }, 2500);
+  }, 1000);
 
   $('btnRefreshServerStats')?.addEventListener('click', () => {
     fetchServerStats();
@@ -336,6 +381,15 @@ async function initServerTelemetry() {
     } catch (_) {}
   });
 }
+      await API.post('/admin/clear-logs', {});
+      const screen = $('serverTerminalScreen');
+      if (screen) {
+        screen.innerHTML = '<div class="terminal-line"><span class="terminal-time">[' + new Date().toLocaleTimeString() + ']</span> <span class="terminal-tag info">INFO</span> <span class="terminal-text">Console output cleared.</span></div>';
+      }
+      toast('Console logs cleared');
+    } catch (_) {}
+  });
+}
 
 async function fetchServerStats() {
   try {
@@ -345,6 +399,9 @@ async function fetchServerStats() {
     if (!res.ok) return;
     const s = await res.json();
     updateServerCharts(s.history, s);
+    if ($('serverLiveTicker')) {
+      $('serverLiveTicker').textContent = 'Live · ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
   } catch (_) {}
 }
 

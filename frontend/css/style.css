@@ -3077,6 +3077,20 @@ body {
   overflow: visible;
 }
 
+.server-chart-svg-wrap path {
+  transition: d 0.35s ease-out;
+}
+
+@keyframes chartPingAnim {
+  0% { r: 3.5px; opacity: 0.95; stroke-width: 1.5px; }
+  50% { r: 7.5px; opacity: 0.4; stroke-width: 1.2px; }
+  100% { r: 12px; opacity: 0; stroke-width: 0.5px; }
+}
+
+.chart-pulse-ring {
+  animation: chartPingAnim 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
 /* View Navigation Header */
 .view-header-bar {
   display: flex;

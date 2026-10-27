@@ -579,6 +579,7 @@
           <span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block"></span>
           ONLINE &middot; LIVE
         </span>
+        <span id="serverLiveTicker" style="font-size:11px;color:#94a3b8;font-family:ui-monospace,monospace">Live &middot; 1s</span>
         <button type="button" class="btn sm" id="btnRefreshServerStats">Refresh</button>
       </div>
     </div>
@@ -590,7 +591,7 @@
         <span id="liveCpuBadge" style="font-size:12px;color:#f87171;font-weight:700;font-family:ui-monospace,monospace">0.00%</span>
       </div>
       <div class="server-chart-body">
-        <div class="server-chart-y-axis">
+        <div class="server-chart-y-axis" id="cpuYAxis">
           <span>200.00%</span>
           <span>100.00%</span>
           <span>0.00%</span>
@@ -605,22 +606,24 @@
             </defs>
             <path id="cpuAreaPath" fill="url(#cpuGrad)" d="M0,120 L300,120 Z"/>
             <path id="cpuLinePath" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M0,120 L300,120"/>
+            <circle id="cpuPulseCircle" cx="300" cy="120" r="3.5" fill="#ef4444"/>
+            <circle id="cpuPulseRing" cx="300" cy="120" r="5" fill="none" stroke="#ef4444" stroke-width="1.5" class="chart-pulse-ring"/>
           </svg>
         </div>
       </div>
     </div>
 
-    <!-- 2. RAM CHART CARD (Real Live Chart matching Screenshot) -->
+    <!-- 2. RAM CHART CARD (Real Live Chart matching Screenshot with 4GB Server RAM) -->
     <div class="server-chart-card">
       <div class="server-chart-header">
-        <div class="server-chart-title">RAM</div>
-        <span id="liveRamBadge" style="font-size:12px;color:#f87171;font-weight:700;font-family:ui-monospace,monospace">0 MiB</span>
+        <div class="server-chart-title">MEMORY</div>
+        <span id="liveRamBadge" style="font-size:12px;color:#f87171;font-weight:700;font-family:ui-monospace,monospace">0.00 GiB / 4.00 GiB</span>
       </div>
       <div class="server-chart-body">
         <div class="server-chart-y-axis" id="ramYAxis">
-          <span>4500MiB</span>
-          <span>2250MiB</span>
-          <span>0MiB</span>
+          <span>4.00 GiB</span>
+          <span>2.00 GiB</span>
+          <span>0.00 GiB</span>
         </div>
         <div class="server-chart-svg-wrap">
           <svg id="chartSvgRam" preserveAspectRatio="none" viewBox="0 0 300 120">
@@ -632,6 +635,8 @@
             </defs>
             <path id="ramAreaPath" fill="url(#ramGrad)" d="M0,120 L300,120 Z"/>
             <path id="ramLinePath" fill="none" stroke="#f87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M0,120 L300,120"/>
+            <circle id="ramPulseCircle" cx="300" cy="120" r="3.5" fill="#f87171"/>
+            <circle id="ramPulseRing" cx="300" cy="120" r="5" fill="none" stroke="#f87171" stroke-width="1.5" class="chart-pulse-ring"/>
           </svg>
         </div>
       </div>
@@ -641,7 +646,7 @@
     <div class="server-chart-card">
       <div class="server-chart-header">
         <div class="server-chart-title">
-          <span>Network Activity</span>
+          <span>NETWORK</span>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
           <span style="display:inline-flex;align-items:center;gap:4px;color:#f59e0b;font-size:12px;font-weight:600">
@@ -670,6 +675,8 @@
             </defs>
             <path id="netAreaPath" fill="url(#netGrad)" d="M0,120 L300,120 Z"/>
             <path id="netLinePath" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M0,120 L300,120"/>
+            <circle id="netPulseCircle" cx="300" cy="120" r="3.5" fill="#3b82f6"/>
+            <circle id="netPulseRing" cx="300" cy="120" r="5" fill="none" stroke="#3b82f6" stroke-width="1.5" class="chart-pulse-ring"/>
           </svg>
         </div>
       </div>
