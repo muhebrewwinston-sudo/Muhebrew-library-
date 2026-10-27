@@ -962,7 +962,7 @@ $('btnSyncDrime')?.addEventListener('click', async () => {
   const btn = $('btnSyncDrime');
   const origHtml = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin">⟳</span> Syncing Drime...';
+  btn.innerHTML = '<span class="spin">⟳</span> Syncing Muhebrew Folder...';
   try {
     const res = await fetch(`${API.base}/admin/sync-from-drime`, {
       method: 'POST',
@@ -973,11 +973,11 @@ $('btnSyncDrime')?.addEventListener('click', async () => {
     });
     const data = await res.json();
     if (data.ok) {
-      alert(`Drime Cloud Sync Successful!\n• ${data.imported} new resource(s) imported\n• ${data.updated} resource(s) updated\n• Total ${data.total} item(s) scanned in Drime folder`);
+      alert(`Drime Cloud Sync Successful!\n• Folder: "${data.folderName || 'Muhebrew'}" (${data.apiBase || 'https://app.drime.cloud/api/v1'})\n• ${data.imported} new resource(s) imported\n• ${data.updated} resource(s) updated\n• Total ${data.total} item(s) synced from Muhebrew folder`);
       await loadStats();
       await loadReview();
     } else {
-      alert(`Drime Sync: ${data.message || data.error || 'No new files returned from Drime folder'}`);
+      alert(`Drime Sync Notice (${data.apiBase || 'https://app.drime.cloud/api/v1'}):\n${data.message || data.error || 'No files returned from Drime folder'}`);
     }
   } catch (err) {
     alert(`Drime Sync error: ${err.message}`);

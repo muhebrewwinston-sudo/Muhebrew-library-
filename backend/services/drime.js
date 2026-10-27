@@ -1,15 +1,25 @@
 /**
  * Drime Cloud = primary file storage for Muhebrew Library
- * Website server talks to Drime API: list, upload, download/stream, and sync
+ * Website server communicates with Drime Cloud API (https://app.drime.cloud/api/v1):
+ * Auto-locates the "Muhebrew" folder, scans all subfolders/files, and syncs them directly to the website library.
  */
 const fs = require('fs');
 const path = require('path');
 const { autoTraceFile } = require('../utils/autotrace');
 
-const DRIME_API_KEY = process.env.DRIME_API_KEY || '';
+// Default API base provided by user: https://app.drime.cloud/api/v1
+const DRIME_API_BASE = (process.env.DRIME_API_BASE || 'https://app.drime.cloud/api/v1').replace(/\/$/, '');
+const DRIME_API_KEY = process.env.DRIME_API_KEY || '75742|BShm3EM0mJPNumW9qZphDpHCCkJK1koYZb3HBMFA0aedf331';
+const DRIME_FOLDER_NAME = process.env.DRIME_FOLDER_NAME || 'Muhebrew';
 const DRIME_FOLDER_ID = process.env.DRIME_FOLDER_ID || 'BiWwc46CM0eJ0yzuDOJu5jxg1L8yfw';
 const DRIME_FOLDER_URL = process.env.DRIME_FOLDER_URL || 'https://dri.me/BiWwc46CM0eJ0yzuDOJu5jxg1L8yfw';
-const DRIME_API_BASE = (process.env.DRIME_API_BASE || 'https://app.drime.com/api/v1').replace(/\/$/, '');
+
+// Fallback API hosts if needed
+const API_BASES = [
+  DRIME_API_BASE,
+  'https://app.drime.cloud/api/v1',
+  'https://app.drime.com/api/v1'
+].filter((v, i, a) => a.indexOf(v) === i);
 
 const FOLDER_MAP = {
   paper: process.env.DRIME_FOLDER_PAPERS || DRIME_FOLDER_ID,
@@ -42,6 +52,8 @@ function getStatus() {
     enabled: true,
     provider: 'drime',
     name: 'Drime Cloud Storage',
+    apiBase: DRIME_API_BASE,
+    folderName: DRIME_FOLDER_NAME,
     folderId: DRIME_FOLDER_ID,
     folderUrl: DRIME_FOLDER_URL,
     folders: FOLDER_MAP,
@@ -80,7 +92,7 @@ function extractFilesInHtml(html, folderId) {
         || [];
       if (Array.isArray(entries)) {
         for (const e of entries) {
-          if (e.type === 'folder') continue;
+          if (e.type === 'folder' || e.is_dir) continue;
           files.push({
             id: String(e.id || e.hash || ''),
             name: e.name || e.file_name || 'document.pdf',
@@ -101,7 +113,7 @@ function extractFilesInHtml(html, folderId) {
       const entries = data.entries || data.files || [];
       if (Array.isArray(entries)) {
         for (const e of entries) {
-          if (e.type === 'folder') continue;
+          if (e.type === 'folder' || e.is_dir) continue;
           files.push({
             id: String(e.id || ''),
             name: e.name || 'document.pdf',
@@ -119,99 +131,230 @@ function extractFilesInHtml(html, folderId) {
 }
 
 /**
- * List files in a Drime folder (for sync / browse)
+ * Locate the "Muhebrew" folder inside Drime Cloud Storage
  */
-async function listFiles(folderId) {
-  const fid = folderId || DRIME_FOLDER_ID;
+async function locateMuhebrewFolder() {
+  if (!DRIME_API_KEY) {
+    return { id: DRIME_FOLDER_ID, name: DRIME_FOLDER_NAME, source: 'fallback' };
+  }
 
-  // 1. Try authenticated API endpoints if key is present
-  if (DRIME_API_KEY) {
-    const endpoints = [
-      `${DRIME_API_BASE}/folders/${fid}/files`,
-      `${DRIME_API_BASE}/files?folder_id=${encodeURIComponent(fid)}`,
-      `${DRIME_API_BASE}/files?parent_id=${encodeURIComponent(fid)}`,
-      `${DRIME_API_BASE}/entries?folder_id=${encodeURIComponent(fid)}`,
-      `${DRIME_API_BASE}/shares/${encodeURIComponent(fid)}/entries`,
-      `${DRIME_API_BASE}/shares/${encodeURIComponent(fid)}`
+  const folderKeywords = ['muhebrew', 'library'];
+
+  for (const base of API_BASES) {
+    const folderEndpoints = [
+      `${base}/folders`,
+      `${base}/file-entries?type=folder&per_page=100`,
+      `${base}/drive/file-entries?type=folder&per_page=100`,
+      `${base}/file-entries?query=muhebrew`,
+      `${base}/search?query=muhebrew`
     ];
 
-    for (const url of endpoints) {
+    for (const url of folderEndpoints) {
       try {
         const res = await fetch(url, { headers: authHeaders() });
         if (!res.ok) continue;
         const data = await res.json();
-        const list = Array.isArray(data)
+        const items = Array.isArray(data)
           ? data
-          : data.files || data.data || data.items || data.entries || [];
-        if (!Array.isArray(list) || list.length === 0) continue;
-        return {
-          ok: true,
-          files: list.map((f) => ({
-            id: String(f.id || f.file_id || f.uuid || ''),
-            name: f.name || f.filename || f.title || f.original_name || 'file.pdf',
-            size: Number(f.size || f.bytes || 0),
-            mime: f.mime || f.mime_type || f.content_type || 'application/pdf',
-            url: f.url || f.download_url || f.link || null,
-            folderId: fid
-          })).filter((f) => f.id || f.name)
-        };
-      } catch (e) {
-        // Continue to next endpoint
-      }
+          : data.data || data.folders || data.entries || data.items || [];
+        if (!Array.isArray(items)) continue;
+
+        const match = items.find((f) => {
+          const name = String(f.name || f.title || '').toLowerCase();
+          return folderKeywords.some((kw) => name.includes(kw));
+        });
+
+        if (match) {
+          const fid = String(match.id || match.hash || match.uuid || '');
+          const fname = match.name || match.title || DRIME_FOLDER_NAME;
+          console.log(`[Drime Cloud API] Located Muhebrew folder: "${fname}" (ID: ${fid})`);
+          return { id: fid, name: fname, hash: match.hash, source: 'api' };
+        }
+      } catch (_) {}
     }
-  }
 
-  // 2. Try public folder page / public share endpoint
-  const publicUrls = [
-    `https://dri.me/${encodeURIComponent(fid)}`,
-    `${DRIME_API_BASE}/shares/${encodeURIComponent(fid)}`,
-    `${DRIME_API_BASE}/shareable-links/${encodeURIComponent(fid)}`
-  ];
-
-  for (const pUrl of publicUrls) {
+    // Try configured DRIME_FOLDER_ID directly
     try {
-      const res = await fetch(pUrl, { headers: { Accept: 'text/html,application/json' } });
-      if (!res.ok) continue;
-      const ct = (res.headers.get('content-type') || '').toLowerCase();
-      if (ct.includes('application/json')) {
+      const res = await fetch(`${base}/folders/${encodeURIComponent(DRIME_FOLDER_ID)}`, { headers: authHeaders() });
+      if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data)
-          ? data
-          : data.files || data.entries || data.data || (data.link && data.link.entry && data.link.entry.children) || [];
-        if (Array.isArray(list) && list.length > 0) {
-          return {
-            ok: true,
-            files: list.map((f) => ({
-              id: String(f.id || f.hash || ''),
-              name: f.name || 'document.pdf',
-              size: Number(f.size || 0),
-              mime: f.mime || 'application/pdf',
-              url: f.url || `https://dri.me/${fid}/${f.id}`,
-              folderId: fid
-            }))
-          };
-        }
-      } else {
-        const html = await res.text();
-        const parsed = extractFilesInHtml(html, fid);
-        if (parsed.length > 0) {
-          return { ok: true, files: parsed };
-        }
+        const f = data.folder || data.data || data;
+        return {
+          id: String(f.id || DRIME_FOLDER_ID),
+          name: f.name || DRIME_FOLDER_NAME,
+          source: 'configured_id'
+        };
       }
-    } catch (_) {
-      // Continue
-    }
+    } catch (_) {}
   }
 
-  return {
-    ok: false,
-    files: [],
-    error: 'No files currently retrieved from Drime folder'
-  };
+  return { id: DRIME_FOLDER_ID, name: DRIME_FOLDER_NAME, source: 'default' };
 }
 
 /**
- * Get a direct download URL or stream buffer from Drime for a file id or URL
+ * Recursively list all files under the Muhebrew folder in Drime Cloud Storage
+ */
+async function listFilesUnderMuhebrew(rootFolderId, rootFolderName = 'Muhebrew') {
+  const visitedFolders = new Set();
+  const folderQueue = [{ id: rootFolderId, path: rootFolderName }];
+  const allFiles = [];
+  const seenFileIds = new Set();
+
+  while (folderQueue.length > 0) {
+    const current = folderQueue.shift();
+    const fid = current.id;
+    if (!fid || visitedFolders.has(String(fid))) continue;
+    visitedFolders.add(String(fid));
+
+    let folderEntries = [];
+
+    // Query API endpoints across bases
+    for (const base of API_BASES) {
+      if (!DRIME_API_KEY) break;
+      const endpoints = [
+        `${base}/folders/${encodeURIComponent(fid)}/files`,
+        `${base}/folders/${encodeURIComponent(fid)}/entries`,
+        `${base}/folders/${encodeURIComponent(fid)}`,
+        `${base}/file-entries?parent_id=${encodeURIComponent(fid)}&per_page=150`,
+        `${base}/drive/file-entries?parent_id=${encodeURIComponent(fid)}&per_page=150`,
+        `${base}/entries?folder_id=${encodeURIComponent(fid)}`,
+        `${base}/shares/${encodeURIComponent(fid)}/entries`,
+        `${base}/shares/${encodeURIComponent(fid)}`
+      ];
+
+      for (const url of endpoints) {
+        try {
+          const res = await fetch(url, { headers: authHeaders() });
+          if (!res.ok) continue;
+          const data = await res.json();
+          const list = Array.isArray(data)
+            ? data
+            : data.files || data.entries || data.data || (data.folder && (data.folder.entries || data.folder.children)) || (data.link && data.link.entry && data.link.entry.children) || [];
+          if (Array.isArray(list) && list.length > 0) {
+            folderEntries = list;
+            break;
+          }
+        } catch (_) {}
+      }
+      if (folderEntries.length > 0) break;
+    }
+
+    // Fallback: public share page scraping if root folder
+    if (folderEntries.length === 0 && fid === rootFolderId) {
+      const publicUrls = [
+        `https://dri.me/${encodeURIComponent(fid)}`,
+        `${DRIME_API_BASE}/shares/${encodeURIComponent(fid)}`,
+        `${DRIME_API_BASE}/shareable-links/${encodeURIComponent(fid)}`
+      ];
+      for (const pUrl of publicUrls) {
+        try {
+          const res = await fetch(pUrl, { headers: { Accept: 'text/html,application/json' } });
+          if (!res.ok) continue;
+          const ct = (res.headers.get('content-type') || '').toLowerCase();
+          if (ct.includes('application/json')) {
+            const data = await res.json();
+            const list = Array.isArray(data)
+              ? data
+              : data.files || data.entries || data.data || (data.link && data.link.entry && data.link.entry.children) || [];
+            if (Array.isArray(list) && list.length > 0) {
+              folderEntries = list;
+              break;
+            }
+          } else {
+            const html = await res.text();
+            const parsed = extractFilesInHtml(html, fid);
+            if (parsed.length > 0) {
+              folderEntries = parsed;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    // Process entries in current folder
+    for (const item of folderEntries) {
+      const isFolder = item.type === 'folder' || item.is_dir || item.mime === 'directory' || item.mime_type === 'directory';
+      if (isFolder) {
+        const subId = String(item.id || item.hash || '');
+        const subName = item.name || item.title || 'subfolder';
+        if (subId && !visitedFolders.has(subId)) {
+          folderQueue.push({ id: subId, path: `${current.path}/${subName}` });
+        }
+      } else {
+        const fileId = String(item.id || item.hash || item.file_id || item.uuid || '');
+        const fileName = item.name || item.filename || item.title || item.original_name || 'document.pdf';
+        const key = fileId || fileName;
+        if (!seenFileIds.has(key)) {
+          seenFileIds.add(key);
+          allFiles.push({
+            id: fileId || `drime_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            name: fileName,
+            size: Number(item.file_size || item.size || item.bytes || 0),
+            mime: item.mime || item.mime_type || item.content_type || 'application/pdf',
+            url: item.url || item.download_url || item.link || (item.hash ? `https://dri.me/${item.hash}` : null),
+            folderId: fid,
+            folderPath: current.path
+          });
+        }
+      }
+    }
+  }
+
+  // Fallback: check if file-entries returns files whose path includes "muhebrew"
+  if (allFiles.length === 0 && DRIME_API_KEY) {
+    for (const base of API_BASES) {
+      try {
+        const res = await fetch(`${base}/file-entries?per_page=200`, { headers: authHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : data.data || data.entries || [];
+          if (Array.isArray(list)) {
+            for (const f of list) {
+              const isFolder = f.type === 'folder' || f.is_dir;
+              if (isFolder) continue;
+              const fPath = String(f.path || f.parent_name || '').toLowerCase();
+              const fName = String(f.name || '').toLowerCase();
+              if (fPath.includes('muhebrew') || fName.includes('muhebrew') || f.parent_id === rootFolderId) {
+                const fid = String(f.id || f.hash || '');
+                if (!seenFileIds.has(fid)) {
+                  seenFileIds.add(fid);
+                  allFiles.push({
+                    id: fid,
+                    name: f.name || 'document.pdf',
+                    size: Number(f.file_size || f.size || 0),
+                    mime: f.mime || f.mime_type || 'application/pdf',
+                    url: f.url || f.download_url || null,
+                    folderId: f.parent_id || rootFolderId,
+                    folderPath: f.path || rootFolderName
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {}
+      if (allFiles.length > 0) break;
+    }
+  }
+
+  return allFiles;
+}
+
+/**
+ * List files (backward-compatible wrapper)
+ */
+async function listFiles(folderId) {
+  const fid = folderId || DRIME_FOLDER_ID;
+  const files = await listFilesUnderMuhebrew(fid, DRIME_FOLDER_NAME);
+  if (files && files.length > 0) {
+    return { ok: true, files };
+  }
+  return { ok: false, files: [], error: `No files found in Drime folder "${DRIME_FOLDER_NAME}"` };
+}
+
+/**
+ * Get a direct download URL or stream buffer from Drime Cloud for a file id or URL
  */
 async function downloadFile(fileIdOrUrl) {
   if (!fileIdOrUrl) return { ok: false, error: 'Missing file id or url' };
@@ -234,20 +377,29 @@ async function downloadFile(fileIdOrUrl) {
         }
       }
     } catch (e) {
-      console.warn('[Drime] Direct URL download failed:', e.message);
+      console.warn('[Drime Cloud API] Direct URL download failed:', e.message);
     }
   }
 
   const cleanId = String(fileIdOrUrl).replace(/^drime:\/\//, '');
 
-  const endpoints = [
-    `${DRIME_API_BASE}/files/${cleanId}/download`,
-    `${DRIME_API_BASE}/files/${cleanId}/content`,
-    `${DRIME_API_BASE}/downloads/${cleanId}`,
-    `${DRIME_API_BASE}/files/${cleanId}`,
+  const endpoints = [];
+  for (const base of API_BASES) {
+    endpoints.push(
+      `${base}/file-entries/${cleanId}/download`,
+      `${base}/files/${cleanId}/download`,
+      `${base}/file-entries/download?entry_ids=${cleanId}`,
+      `${base}/files/${cleanId}/content`,
+      `${base}/downloads/${cleanId}`,
+      `${base}/file-entries/${cleanId}`,
+      `${base}/files/${cleanId}`
+    );
+  }
+  endpoints.push(
     `https://dri.me/d/${cleanId}`,
-    `https://dri.me/${cleanId}`
-  ];
+    `https://dri.me/${cleanId}`,
+    `https://app.drime.cloud/drive/s/${cleanId}`
+  );
 
   for (const url of endpoints) {
     try {
@@ -260,7 +412,7 @@ async function downloadFile(fileIdOrUrl) {
       // JSON metadata with download url inside
       if (ct.includes('application/json')) {
         const data = await res.json();
-        const direct = data.url || data.download_url || data.link || (data.file && data.file.url);
+        const direct = data.url || data.download_url || data.direct_url || data.link || (data.file && data.file.url) || (data.entry && data.entry.url);
         if (direct) {
           const fileRes = await fetch(direct, { redirect: 'follow' });
           if (fileRes.ok) {
@@ -288,7 +440,7 @@ async function downloadFile(fileIdOrUrl) {
     }
   }
 
-  return { ok: false, error: 'Could not download file from Drime' };
+  return { ok: false, error: 'Could not download file from Drime Cloud Storage' };
 }
 
 /**
@@ -329,7 +481,7 @@ async function uploadToDrime({ filePath, originalName, mimeType, folderId, categ
     if (subject) formData.append('subject', subject);
     if (level) formData.append('level', level);
     const folderGroup = isMarking ? 'Marking Keys' : (category || 'Past Papers');
-    formData.append('path', `${folderGroup}/${subject || 'General'}/${level || 'Form 4'}`);
+    formData.append('path', `${DRIME_FOLDER_NAME}/${folderGroup}/${subject || 'General'}/${level || 'Form 4'}`);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
@@ -374,20 +526,28 @@ async function uploadToDrime({ filePath, originalName, mimeType, folderId, categ
 }
 
 /**
- * Automatically scan Drime folder and sync files to the database
+ * Automatically scan Drime "Muhebrew" folder (and all subfolders) and sync files to the database
  * Creates or updates records in papers/books tables
  */
 async function syncDrimeFilesToDatabase(db) {
   if (!db) return { ok: false, error: 'Database instance required' };
 
   try {
-    const listRes = await listFiles(DRIME_FOLDER_ID);
-    if (!listRes.ok || !Array.isArray(listRes.files) || listRes.files.length === 0) {
+    // 1. Locate the Muhebrew folder in Drime Cloud Storage
+    const muhebrewFolder = await locateMuhebrewFolder();
+    const folderId = muhebrewFolder.id || DRIME_FOLDER_ID;
+    const folderName = muhebrewFolder.name || DRIME_FOLDER_NAME;
+
+    // 2. Scan all files under the Muhebrew folder (recursively scanning all subfolders)
+    const files = await listFilesUnderMuhebrew(folderId, folderName);
+
+    if (!Array.isArray(files) || files.length === 0) {
       return {
         ok: false,
-        message: listRes.error || 'No files returned from Drime folder',
-        folderId: DRIME_FOLDER_ID,
-        folderUrl: DRIME_FOLDER_URL,
+        message: `No files found under Drime folder "${folderName}" (${DRIME_API_BASE})`,
+        apiBase: DRIME_API_BASE,
+        folderName,
+        folderId,
         imported: 0,
         updated: 0,
         total: 0
@@ -398,21 +558,37 @@ async function syncDrimeFilesToDatabase(db) {
     let updatedCount = 0;
     const syncedList = [];
 
-    for (const f of listRes.files) {
+    for (const f of files) {
       const fileName = f.name || 'document.pdf';
       const fileSize = Number(f.size) || 1024;
       const fileId = String(f.id || `drime_${Date.now()}`);
       const fileUrl = f.url || `${DRIME_FOLDER_URL}/${encodeURIComponent(fileId)}`;
 
       const traced = autoTraceFile(fileName, fileSize);
-      const isBook = traced.type === 'books';
+      const isBook = traced.type === 'books' || String(f.folderPath || '').toLowerCase().includes('book') || String(f.folderPath || '').toLowerCase().includes('text');
       const table = isBook ? 'books' : 'papers';
 
+      // Detect category context from subfolder paths
+      const pathLower = String(f.folderPath || '').toLowerCase();
+      let category = traced.category;
+      if (pathLower.includes('mark') || pathLower.includes('scheme') || pathLower.includes('key')) {
+        category = 'Marking Key';
+      } else if (pathLower.includes('mock')) {
+        category = 'Cluster Mock';
+      } else if (pathLower.includes('maneb')) {
+        category = 'MANEB';
+      }
+
       // Clean title - eliminate redundant form labels at end
-      const cleanTitle = (traced.title || fileName.replace(/\.[^/.]+$/, ''))
+      let cleanTitle = (traced.title || fileName.replace(/\.[^/.]+$/, ''))
         .replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '')
         .replace(/\s+Form\s*[1-4]\s*$/i, '')
         .trim();
+
+      if (category === 'Marking Key' && !cleanTitle.toLowerCase().includes('marking key')) {
+        cleanTitle = cleanTitle.replace(/^Sample\s*-\s*/i, '');
+        cleanTitle = `Marking Key - ${cleanTitle}`;
+      }
 
       // Check if item already exists by drime_file_id or file_name
       const existing = db.prepare(
@@ -422,17 +598,18 @@ async function syncDrimeFilesToDatabase(db) {
       if (existing) {
         db.prepare(`
           UPDATE ${table} SET
+            title = ?,
             drime_file_id = ?,
             drime_url = ?,
             drime_folder_id = ?,
             file_size = ?,
             status = 'approved'
           WHERE id = ?
-        `).run(fileId, fileUrl, f.folderId || DRIME_FOLDER_ID, fileSize, existing.id);
+        `).run(cleanTitle, fileId, fileUrl, f.folderId || folderId, fileSize, existing.id);
         updatedCount++;
-        syncedList.push({ id: existing.id, title: cleanTitle, action: 'updated' });
+        syncedList.push({ id: existing.id, title: cleanTitle, action: 'updated', folder: f.folderPath });
       } else {
-        const defaultCategory = isBook ? 'MSCE' : (traced.category || 'MANEB');
+        const defaultCategory = isBook ? 'MSCE' : (category || 'MANEB');
         if (isBook) {
           db.prepare(`
             INSERT INTO books (
@@ -447,14 +624,14 @@ async function syncDrimeFilesToDatabase(db) {
             traced.level || 'Form 4',
             defaultCategory,
             traced.author || 'Ministry of Education',
-            traced.description || 'Imported automatically from Drime Cloud Storage',
+            `Synced from Drime folder "${folderName}" (${f.folderPath || ''})`,
             'drime://' + fileId,
             fileName,
             fileSize,
             f.mime || 'application/pdf',
             fileId,
             fileUrl,
-            f.folderId || DRIME_FOLDER_ID
+            f.folderId || folderId
           );
         } else {
           db.prepare(`
@@ -471,28 +648,30 @@ async function syncDrimeFilesToDatabase(db) {
             defaultCategory,
             traced.year || new Date().getFullYear(),
             traced.exam_board || (defaultCategory === 'Cluster Mock' ? 'Cluster Mock' : 'MANEB'),
-            traced.description || 'Imported automatically from Drime Cloud Storage',
+            `Synced from Drime folder "${folderName}" (${f.folderPath || ''})`,
             'drime://' + fileId,
             fileName,
             fileSize,
             f.mime || 'application/pdf',
             fileId,
             fileUrl,
-            f.folderId || DRIME_FOLDER_ID
+            f.folderId || folderId
           );
         }
         importedCount++;
-        syncedList.push({ title: cleanTitle, action: 'imported' });
+        syncedList.push({ title: cleanTitle, action: 'imported', folder: f.folderPath });
       }
     }
 
-    console.log(`[Drime Auto-Sync] Synced ${importedCount} new, ${updatedCount} updated (${listRes.files.length} total in Drime)`);
+    console.log(`[Drime Auto-Sync] Synced ${importedCount} new, ${updatedCount} updated from Drime folder "${folderName}" (${files.length} total files)`);
     return {
       ok: true,
+      apiBase: DRIME_API_BASE,
+      folderName,
+      folderId,
       imported: importedCount,
       updated: updatedCount,
-      total: listRes.files.length,
-      folderId: DRIME_FOLDER_ID,
+      total: files.length,
       files: syncedList
     };
   } catch (err) {
@@ -503,11 +682,14 @@ async function syncDrimeFilesToDatabase(db) {
 
 module.exports = {
   DRIME_API_KEY,
+  DRIME_FOLDER_NAME,
   DRIME_FOLDER_ID,
   DRIME_FOLDER_URL,
   DRIME_API_BASE,
   getStatus,
   getFolderIdForType,
+  locateMuhebrewFolder,
+  listFilesUnderMuhebrew,
   listFiles,
   downloadFile,
   uploadToDrime,
