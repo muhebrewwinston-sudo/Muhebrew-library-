@@ -32,6 +32,52 @@ router.post('/clear-logs', (_req, res) => {
   res.json({ ok: true, message: 'Server console logs cleared.' });
 });
 
+router.get('/database-stats', (_req, res) => {
+  const rootDir = path.join(__dirname, '..');
+  const dbPath = path.join(rootDir, 'db', 'pasthub.db');
+  let dbSize = 0;
+  if (fs.existsSync(dbPath)) {
+    dbSize = fs.statSync(dbPath).size;
+  }
+  
+  const tables = ['papers', 'books', 'users', 'downloads', 'bookmarks', 'reports'];
+  const tableStats = tables.map(t => {
+    let count = 0;
+    try {
+      count = db.prepare(`SELECT COUNT(*) c FROM ${t}`).get().c;
+    } catch (_) {}
+    return { name: t, rows: count };
+  });
+
+  res.json({
+    dbPath,
+    dbSizeBytes: dbSize,
+    dbSizeFormatted: (dbSize / 1024).toFixed(1) + ' KB',
+    tables: tableStats,
+    sqliteVersion: process.versions.node
+  });
+});
+
+router.post('/database-optimize', (_req, res) => {
+  try {
+    db.prepare('VACUUM').run();
+    db.prepare('PRAGMA optimize').run();
+    res.json({ ok: true, message: 'Database optimized successfully (VACUUM and PRAGMA optimize executed).' });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.get('/database-download', (_req, res) => {
+  const rootDir = path.join(__dirname, '..');
+  const dbPath = path.join(rootDir, 'db', 'pasthub.db');
+  if (fs.existsSync(dbPath)) {
+    res.download(dbPath, 'muhebrew-database-backup.sqlite');
+  } else {
+    res.status(404).json({ error: 'Database file not found' });
+  }
+});
+
 router.get('/drime-status', (_req, res) => {
   const one = (sql) => db.prepare(sql).get().c;
   const cloudPapers = one("SELECT COUNT(*) c FROM papers WHERE storage_provider = 'drime'");
