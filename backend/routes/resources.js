@@ -266,7 +266,17 @@ function buildRouter(table, type) {
     db.prepare('INSERT INTO downloads (user_id,item_type,item_id) VALUES (?,?,?)')
       .run(req.user.id, type, row.id);
 
-    // Stream mode (default): file bytes through our server — page does not navigate if client uses fetch+blob
+    // Redirect mode: 302 redirect directly to Drime Cloud download link (saves server bandwidth)
+    if (req.query.mode === 'redirect' || process.env.DOWNLOAD_MODE === 'redirect') {
+      if (directUrl) return res.redirect(directUrl);
+      const drimeTarget = row.drime_file_id || (String(row.file_path || '').startsWith('drime://') ? row.file_path.replace('drime://', '') : null);
+      if (drimeTarget) {
+        const shareLink = await drimeService.createShareableLink(drimeTarget);
+        if (shareLink) return res.redirect(shareLink);
+      }
+    }
+
+    // Stream mode (default): file bytes through our server without permanent storage
     const abs = absPath(row);
     if (abs && fs.existsSync(abs)) {
       return res.download(abs, filename);
@@ -275,6 +285,13 @@ function buildRouter(table, type) {
     const drimeId = row.drime_file_id || (String(row.file_path || '').startsWith('drime://') ? row.file_path.replace('drime://', '') : null);
     if (drimeId || row.drime_url) {
       try {
+        const streamed = await drimeService.streamFile(drimeId || row.drime_url, res, filename);
+        if (streamed) return;
+      } catch (e) {
+        console.error('[Download] Drime streaming proxy error:', e.message);
+      }
+
+      try {
         const fromCloud = await drimeService.downloadFile(drimeId || row.drime_url);
         if (fromCloud.ok && fromCloud.buffer) {
           res.setHeader('Content-Disposition', 'attachment; filename="' + filename.replace(/"/g, '') + '"');
@@ -282,7 +299,7 @@ function buildRouter(table, type) {
           return res.send(fromCloud.buffer);
         }
       } catch (e) {
-        console.error('[Download] Drime API stream failed:', e.message);
+        console.error('[Download] Drime API buffer stream failed:', e.message);
       }
     }
 
