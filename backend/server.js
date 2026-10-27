@@ -108,6 +108,7 @@ app.use('/api/admin', adminRoutes);
 // Only book covers are public. Papers and books are served through the API
 // (so pending uploads stay hidden until approved).
 app.use('/uploads/covers', express.static(path.join(__dirname, 'uploads', 'covers'), { maxAge: '7d' }));
+app.use('/uploads/thumbnails', express.static(path.join(__dirname, 'uploads', 'thumbnails'), { maxAge: '7d' }));
 
 // Direct download for complete backend package
 const { buildBackendZip } = require('./utils/zip');
@@ -187,6 +188,23 @@ if (!process.env.VERCEL) {
       if (process.env.AUTO_UPDATE === 'true' || process.env.AUTO_UPDATE_POLL === 'true') {
         const pollMin = parseInt(process.env.AUTO_UPDATE_POLL_INTERVAL, 10) || 5;
         autoUpdater.startAutoPolling(pollMin);
+      }
+
+      // Automatic Drime Cloud sync on startup and 5-minute background polling
+      try {
+        const db = require('./db/database');
+        const drimeService = require('./services/drime');
+        drimeService.syncDrimeFilesToDatabase(db).then((res) => {
+          if (res.ok) {
+            console.log(`[Drime Auto-Sync] Startup sync: ${res.imported} imported, ${res.updated} updated (${res.total} files in Drime folder)`);
+          }
+        }).catch((e) => console.log('[Drime Auto-Sync] Startup note:', e.message));
+
+        setInterval(() => {
+          drimeService.syncDrimeFilesToDatabase(db).catch(() => {});
+        }, 5 * 60 * 1000);
+      } catch (e) {
+        console.warn('[Drime Auto-Sync] Init note:', e.message);
       }
     });
 

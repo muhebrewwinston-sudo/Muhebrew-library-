@@ -197,11 +197,15 @@
             Storage Folder: <a href="https://dri.me/BiWwc46CM0eJ0yzuDOJu5jxg1L8yfw" target="_blank" rel="noopener" class="drime-link">dri.me/BiWwc46CM0eJ0yzuDOJu5jxg1L8yfw ↗</a>
           </span>
           <span id="drimeCloudCount" style="font-size:11px;color:var(--muted);display:block;margin-top:3px;word-break:break-word;overflow-wrap:anywhere">
-            All uploads by Owner or Admin sync to Drime cloud storage.
+            All uploads store directly in Drime cloud storage. Files in Drime folder automatically display in library.
           </span>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap">
+        <button id="btnSyncDrime" class="btn sm" type="button" style="font-size:11.5px;background:var(--surface);border:1px solid var(--border);display:inline-flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          Sync Drime Now
+        </button>
         <a href="https://dri.me/BiWwc46CM0eJ0yzuDOJu5jxg1L8yfw" target="_blank" rel="noopener" class="btn sm" style="font-size:11.5px;background:#2563eb;color:#fff;border-color:#2563eb;white-space:nowrap">
           View Cloud Folder ↗
         </a>
@@ -528,6 +532,7 @@
 </nav>
 
 <footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
+<script src="/js/pdf.min.js?v=3.1.0"></script>
 <script src="/js/icons.js?v=3.1.0"></script>
 <script src="/js/api.js?v=3.1.0"></script>
 <script src="/js/admin.js?v=3.1.0"></script>

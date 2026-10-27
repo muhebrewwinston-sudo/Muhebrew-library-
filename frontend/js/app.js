@@ -413,16 +413,15 @@ function card(item) {
   const lvlShort = item.level ? item.level.replace(/Form\s*/i, 'F') : (item.year ? String(item.year) : '');
   const cleanTitleStr = formatDocumentTitle(item.title);
 
-  let visualCol = '';
-  if (item.cover_path) {
-    visualCol = 
-      '<div class="card-cover-sheet" aria-label="Document Cover Page">' +
-        '<img src="/' + esc(item.cover_path) + '" alt="' + esc(cleanTitleStr) + '" class="card-cover-thumb" loading="lazy">' +
-        '<span class="cover-type-tag ' + (isPaper ? 'tag-pdf' : 'tag-book') + '" style="position:absolute;bottom:2px;right:2px">' + (isPaper ? 'PDF' : 'BOOK') + '</span>' +
-      '</div>';
-  } else {
-    visualCol = 
-      '<div class="card-cover-sheet" aria-label="Document Cover Page">' +
+  const thumbUrl = item.cover_path
+    ? ('/' + esc(item.cover_path))
+    : ('/api/' + (isPaper ? 'papers' : 'books') + '/' + item.id + '/thumbnail');
+
+  const visualCol =
+    '<div class="card-cover-sheet" aria-label="Document Cover Page">' +
+      '<img src="' + thumbUrl + '" alt="' + esc(cleanTitleStr) + '" class="card-cover-thumb" loading="lazy" ' +
+        'onerror="this.style.display=\'none\'; if(this.nextElementSibling) this.nextElementSibling.style.display=\'flex\';" />' +
+      '<div class="cover-sheet-fallback" style="display:none; width:100%; height:100%; flex-direction:column;">' +
         '<div class="cover-sheet-header ' + headerClass + '">' + esc(boardHeader) + '</div>' +
         '<div class="cover-sheet-body">' +
           '<div class="cover-sheet-subject">' + esc(subAbbr) + '</div>' +
@@ -431,8 +430,9 @@ function card(item) {
         '<div class="cover-sheet-footer">' +
           '<span class="cover-type-tag ' + (isPaper ? 'tag-pdf' : 'tag-book') + '">' + (isPaper ? 'PDF' : 'BOOK') + '</span>' +
         '</div>' +
-      '</div>';
-  }
+      '</div>' +
+      '<span class="cover-type-tag ' + (isPaper ? 'tag-pdf' : 'tag-book') + '" style="position:absolute;bottom:2px;right:2px">' + (isPaper ? 'PDF' : 'BOOK') + '</span>' +
+    '</div>';
 
   return '<article class="card">' +
     '<div class="card-header">' +

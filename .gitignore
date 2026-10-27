@@ -13,5 +13,8 @@ backend/db/*.db-shm
 backend/db/*.db-journal
 *.DS_Store
 *.log
+backend/uploads/thumbnails/*.jpg
+backend/uploads/thumbnails/*.png
+backend/uploads/thumbnails/*.jpeg
 *.zip
 !muhebrew-backend-updated.zip
