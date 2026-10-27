@@ -4,6 +4,7 @@ const path = require('path');
 const db = require('../db/database');
 const { requireAdmin } = require('../middleware/auth');
 const drimeService = require('../services/drime');
+const thumbnailService = require('../services/thumbnail');
 const { parseFilename } = require('../services/bulkUpload');
 const multer = require('multer');
 const { processBulkZip } = require('../services/bulkUpload');
@@ -24,6 +25,15 @@ router.get('/drime-status', (_req, res) => {
     cloudBooks,
     totalCloudFiles: cloudPapers + cloudBooks
   });
+});
+
+router.post('/sync-from-drime', async (_req, res) => {
+  try {
+    const result = await drimeService.syncDrimeFilesToDatabase(db);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 router.get('/stats', (_req, res) => {
@@ -264,8 +274,7 @@ router.post('/upload-item', upload.single('file'), async (req, res) => {
       drimeFolderId = drimeService.DRIME_FOLDER_ID;
     }
 
-    const relPath = path.relative(path.join(__dirname, '..'), file.path).split(path.sep).join('/');
-    const storedPath = relPath;
+    const storedPath = 'drime://' + (drimeFileId || `admin_${Date.now()}`);
 
     let info;
     if (isBook) {
@@ -279,6 +288,14 @@ router.post('/upload-item', upload.single('file'), async (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')
       `).run(title, subject, level, category, year, exam_board, description, storedPath, file.originalname, file.size, file.mimetype, storageProvider, drimeFileId, drimeUrl, drimeFolderId, req.user.id);
     }
+
+    // Pre-generate thumbnail before removing local temporary file
+    try {
+      await thumbnailService.generateThumbnailFromLocalUpload(file.path, isBook ? 'book' : 'paper', info.lastInsertRowid);
+    } catch (_) {}
+
+    // Exclusively store in Drime: remove temporary local file
+    fs.promises.unlink(file.path).catch(() => {});
 
     const createdItem = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(info.lastInsertRowid);
     res.status(201).json({

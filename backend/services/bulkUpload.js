@@ -12,6 +12,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const db = require('../db/database');
 const drimeService = require('./drime');
+const thumbnailService = require('./thumbnail');
 
 const SUBJECTS = [
   'mathematics', 'math', 'maths', 'biology', 'chemistry', 'physics',
@@ -142,10 +143,11 @@ async function processBulkZip({ zipPath, uploadedBy, defaultStatus = 'approved' 
           storageProvider = 'local';
         }
 
-        const storedPath = relPath; // always local path so downloads work on website
+        const storedPath = 'drime://' + (drimeFileId || originalName);
 
+        let insertedId;
         if (isBook) {
-          db.prepare(`
+          const info = db.prepare(`
             INSERT INTO books (title, author, subject, level, category, description, file_path, file_name, file_size, mime_type,
               storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -155,8 +157,9 @@ async function processBulkZip({ zipPath, uploadedBy, defaultStatus = 'approved' 
             storageProvider, drimeFileId, drimeUrl, drimeFolderId,
             uploadedBy || null, defaultStatus
           );
+          insertedId = info.lastInsertRowid;
         } else {
-          db.prepare(`
+          const info = db.prepare(`
             INSERT INTO papers (title, subject, level, category, year, exam_board, description, file_path, file_name, file_size, mime_type,
               storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -166,7 +169,16 @@ async function processBulkZip({ zipPath, uploadedBy, defaultStatus = 'approved' 
             storageProvider, drimeFileId, drimeUrl, drimeFolderId,
             uploadedBy || null, defaultStatus
           );
+          insertedId = info.lastInsertRowid;
         }
+
+        // Pre-generate thumbnail before removing local extracted file
+        try {
+          await thumbnailService.generateThumbnailFromLocalUpload(destPath, isBook ? 'book' : 'paper', insertedId);
+        } catch (_) {}
+
+        // Exclusively store in Drime: unlink local extracted file
+        fs.promises.unlink(destPath).catch(() => {});
 
         results.success.push({
           file: originalName,

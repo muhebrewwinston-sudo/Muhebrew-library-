@@ -7,6 +7,7 @@ const { optionalAuth, requireAuth, requireAdmin, requireUploader } = require('..
 const { upload } = require('../middleware/upload');
 const { calculateQuota } = require('../db/quota');
 const drimeService = require('../services/drime');
+const thumbnailService = require('../services/thumbnail');
 
 const SORTS = { recent: 'created_at DESC', popular: 'downloads DESC', title: 'title ASC', year: 'year DESC' };
 const reportLimit = rateLimit({ windowMs: 60 * 60 * 1000, max: 20, message: { error: 'Too many reports. Try again later.' } });
@@ -154,6 +155,24 @@ function buildRouter(table, type) {
     res.json({ item: row, saved });
   });
 
+  router.get('/:id/thumbnail', async (req, res) => {
+    const row = getRow(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Resource not found.' });
+
+    try {
+      const thumb = await thumbnailService.getOrGenerateThumbnail(type, row.id, row, drimeService);
+      if (thumb && thumb.ok && thumb.path && fs.existsSync(thumb.path)) {
+        res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+        res.type('image/jpeg');
+        return res.sendFile(path.resolve(thumb.path));
+      }
+    } catch (err) {
+      console.warn(`[Thumbnail Route] Error for ${type} ${row.id}:`, err.message);
+    }
+
+    return res.status(404).json({ error: 'Thumbnail not available' });
+  });
+
   router.get('/:id/preview', async (req, res) => {
     const row = getRow(req.params.id);
     if (!row) return res.status(404).json({ error: 'Resource not found.' });
@@ -165,9 +184,10 @@ function buildRouter(table, type) {
       return res.sendFile(abs);
     }
 
-    if (row.drime_file_id) {
+    const drimeId = row.drime_file_id || (String(row.file_path || '').startsWith('drime://') ? row.file_path.replace('drime://', '') : null);
+    if (drimeId || row.drime_url) {
       try {
-        const fromCloud = await drimeService.downloadFile(row.drime_file_id);
+        const fromCloud = await drimeService.downloadFile(drimeId || row.drime_url);
         if (fromCloud.ok && fromCloud.buffer) {
           res.setHeader('Content-Disposition', 'inline; filename="' + (row.file_name || 'preview.pdf') + '"');
           res.type(fromCloud.contentType || 'application/pdf');
@@ -176,6 +196,10 @@ function buildRouter(table, type) {
       } catch (e) {
         console.error('[Preview] Drime failed:', e.message);
       }
+    }
+
+    if (row.drime_url && !/dri\.me\/Oymud/i.test(String(row.drime_url))) {
+      return res.redirect(row.drime_url);
     }
 
     return res.status(404).json({ error: 'No preview available for this file.' });
@@ -248,9 +272,10 @@ function buildRouter(table, type) {
       return res.download(abs, filename);
     }
 
-    if (row.drime_file_id) {
+    const drimeId = row.drime_file_id || (String(row.file_path || '').startsWith('drime://') ? row.file_path.replace('drime://', '') : null);
+    if (drimeId || row.drime_url) {
       try {
-        const fromCloud = await drimeService.downloadFile(row.drime_file_id);
+        const fromCloud = await drimeService.downloadFile(drimeId || row.drime_url);
         if (fromCloud.ok && fromCloud.buffer) {
           res.setHeader('Content-Disposition', 'attachment; filename="' + filename.replace(/"/g, '') + '"');
           res.type(fromCloud.contentType || 'application/pdf');
@@ -364,10 +389,8 @@ function buildRouter(table, type) {
         drimeFolderId = drimeService.DRIME_FOLDER_ID;
       }
 
-      // Keep LOCAL file so students can download through our website (no broken stream).
-      // Also sync a copy to Drime for backup / extra space.
-      const rel = (f) => path.relative(path.join(__dirname, '..'), f.path).split(path.sep).join('/');
-      const storedPath = rel(file);
+      // Store exclusively in Drime Cloud Storage (drime:// URI)
+      const storedPath = 'drime://' + (drimeFileId || `file_${Date.now()}`);
       const cols = [
         ...fields,
         'file_path',
@@ -399,11 +422,25 @@ function buildRouter(table, type) {
         req.user.id,
         'approved' // All verified uploads immediately appear under respective categories and are downloadable
       );
-      if (isBook) { cols.push('cover_path'); vals.push(cover ? rel(cover) : null); }
+      if (isBook) {
+        const rel = (f) => path.relative(path.join(__dirname, '..'), f.path).split(path.sep).join('/');
+        cols.push('cover_path');
+        vals.push(cover ? rel(cover) : null);
+      }
 
       const info = db.prepare(
         'INSERT INTO ' + table + ' (' + cols.join(',') + ') VALUES (' + cols.map(() => '?').join(',') + ')'
       ).run(...vals);
+
+      // Pre-generate thumbnail from upload file before deleting it from local disk
+      try {
+        await thumbnailService.generateThumbnailFromLocalUpload(file.path, type, info.lastInsertRowid);
+      } catch (e) {
+        console.warn('[Thumbnail Pre-render Error]:', e.message);
+      }
+
+      // EXCLUSIVELY STORE IN DRIME: Delete temporary local uploaded file immediately
+      fs.promises.unlink(file.path).catch(() => {});
 
       const quota = calculateQuota(req.user.id, req.user.role);
 
