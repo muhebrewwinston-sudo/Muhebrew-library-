@@ -532,6 +532,118 @@ async function downloadFile(fileIdOrUrl) {
 }
 
 /**
+ * Stream a file from Drime Cloud directly to an Express response stream
+ * Zero local disk usage: pipes incoming remote chunks directly to client socket
+ */
+async function streamFile(fileIdOrUrl, res, filename = 'document.pdf') {
+  if (!fileIdOrUrl) return false;
+
+  const { Readable } = require('stream');
+  const cleanId = String(fileIdOrUrl).replace(/^drime:\/\//, '');
+  const candidateUrls = [];
+
+  if (String(fileIdOrUrl).startsWith('http://') || String(fileIdOrUrl).startsWith('https://')) {
+    candidateUrls.push(fileIdOrUrl);
+  }
+
+  for (const base of API_BASES) {
+    candidateUrls.push(
+      `${base}/file-entries/${cleanId}/download`,
+      `${base}/files/${cleanId}/download`,
+      `${base}/file-entries/download?entry_ids=${cleanId}`,
+      `${base}/downloads/${cleanId}`
+    );
+  }
+  candidateUrls.push(
+    `https://dri.me/d/${cleanId}`,
+    `https://dri.me/${cleanId}`
+  );
+
+  for (const url of candidateUrls) {
+    try {
+      const upstream = await fetch(url, {
+        headers: DRIME_API_KEY ? { ...authHeaders() } : { Accept: '*/*' },
+        redirect: 'follow'
+      });
+      if (!upstream.ok) continue;
+
+      const ct = (upstream.headers.get('content-type') || '').toLowerCase();
+      // If endpoint returns a JSON payload containing the actual direct link
+      if (ct.includes('application/json')) {
+        const data = await upstream.json();
+        const direct = data.url || data.download_url || data.direct_url || data.link || (data.file && data.file.url) || (data.entry && data.entry.url);
+        if (direct) {
+          const directRes = await fetch(direct, { redirect: 'follow' });
+          if (directRes.ok && directRes.body) {
+            res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"`);
+            res.setHeader('Content-Type', directRes.headers.get('content-type') || 'application/pdf');
+            if (directRes.headers.get('content-length')) {
+              res.setHeader('Content-Length', directRes.headers.get('content-length'));
+            }
+            Readable.fromWeb(directRes.body).pipe(res);
+            return true;
+          }
+        }
+        continue;
+      }
+
+      if (upstream.body) {
+        res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"`);
+        res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/pdf');
+        if (upstream.headers.get('content-length')) {
+          res.setHeader('Content-Length', upstream.headers.get('content-length'));
+        }
+        Readable.fromWeb(upstream.body).pipe(res);
+        return true;
+      }
+    } catch (_) {}
+  }
+
+  return false;
+}
+
+/**
+ * Create or retrieve a shareable download link for a Drime file
+ * Official Drime Cloud API: POST /shares or public share resolution
+ */
+async function createShareableLink(fileIdOrHash) {
+  if (!fileIdOrHash) return null;
+  const cleanId = String(fileIdOrHash).replace(/^drime:\/\//, '');
+
+  if (String(fileIdOrHash).startsWith('http://') || String(fileIdOrHash).startsWith('https://')) {
+    return fileIdOrHash;
+  }
+
+  if (!DRIME_API_KEY) {
+    return `https://dri.me/${cleanId}`;
+  }
+
+  for (const base of API_BASES) {
+    try {
+      const res = await fetch(`${base}/shares`, {
+        method: 'POST',
+        headers: {
+          ...authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          entry_id: cleanId,
+          allow_download: true,
+          type: 'file'
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const link = data.link || (data.share && data.share.link) || data.url;
+        if (link) return link;
+      }
+    } catch (_) {}
+  }
+
+  return `https://dri.me/${cleanId}`;
+}
+
+/**
  * Upload a file to Drime Cloud Storage
  */
 async function uploadToDrime({ filePath, originalName, mimeType, folderId, category, subject, level }) {
@@ -644,7 +756,9 @@ async function syncDrimeFilesToDatabase(db) {
 
     let importedCount = 0;
     let updatedCount = 0;
+    let removedCount = 0;
     const syncedList = [];
+    const activeRowIdsByTable = { books: new Set(), papers: new Set() };
 
     // Lazy-require thumbnail service to pre-warm thumbnails
     let thumbnailService = null;
@@ -766,6 +880,10 @@ async function syncDrimeFilesToDatabase(db) {
         syncedList.push({ id: rowId, title: cleanTitle, action: 'imported', folder: f.folderPath });
       }
 
+      if (rowId) {
+        activeRowIdsByTable[table].add(rowId);
+      }
+
       // Pre-warm thumbnail
       if (thumbnailService && rowId) {
         try {
@@ -775,7 +893,28 @@ async function syncDrimeFilesToDatabase(db) {
       }
     }
 
-    console.log(`[Drime Auto-Sync] Synced ${importedCount} new, ${updatedCount} updated from Drime folder "${folderName}" (${files.length} total files)`);
+    // Reconcile deleted / removed files from Drime:
+    // If files were successfully scanned, remove database records whose Drime file is no longer present
+    if (files.length > 0) {
+      for (const t of ['books', 'papers']) {
+        const drimeRows = db.prepare(`
+          SELECT id, title, drime_file_id FROM ${t}
+          WHERE storage_provider = 'drime'
+            AND (drime_folder_id = ? OR drime_folder_id = ? OR drime_folder_id IS NULL OR drime_folder_id = '')
+        `).all(folderId, DRIME_FOLDER_ID);
+
+        for (const r of drimeRows) {
+          if (!activeRowIdsByTable[t].has(r.id)) {
+            db.prepare(`DELETE FROM ${t} WHERE id = ?`).run(r.id);
+            db.prepare('DELETE FROM bookmarks WHERE item_type = ? AND item_id = ?').run(t === 'books' ? 'book' : 'paper', r.id);
+            removedCount++;
+            syncedList.push({ id: r.id, title: r.title, action: 'removed', folder: folderName });
+          }
+        }
+      }
+    }
+
+    console.log(`[Drime Auto-Sync] Synced ${importedCount} new, ${updatedCount} updated, ${removedCount} removed from Drime folder "${folderName}" (${files.length} total files)`);
     return {
       ok: true,
       apiBase: DRIME_API_BASE,
@@ -784,6 +923,7 @@ async function syncDrimeFilesToDatabase(db) {
       folderUrl: DRIME_FOLDER_URL,
       imported: importedCount,
       updated: updatedCount,
+      removed: removedCount,
       total: files.length,
       files: syncedList
     };
@@ -807,6 +947,8 @@ module.exports = {
   listFilesUnderMuhebrew,
   listFiles,
   downloadFile,
+  streamFile,
+  createShareableLink,
   uploadToDrime,
   syncDrimeFilesToDatabase
 };
