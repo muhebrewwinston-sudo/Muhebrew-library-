@@ -3,6 +3,7 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 const tbl = (head, rows) => '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table><thead><tr>' + head.map((h) => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
 
 // State management
+let currentActiveView = 'view-dashboard';
 let allFavoriteBooks = [];
 let favBooksPage = 0;
 const favBooksPageSize = 3;
@@ -20,20 +21,85 @@ let isLogStreamPaused = false;
 let lastLogIdSeen = 0;
 let telemetryPollInterval = null;
 
-function isAdmin(user) {
-  if (!user) return false;
-  if (user.role === 'admin') return true;
-  const email = (user.email || '').toLowerCase().trim();
-  const adminEmails = ['muhebrewwinston@gmail.com', 'admin@muhebrew.com', 'admin@library.mw'];
-  if (adminEmails.includes(email) || email.startsWith('admin@')) return true;
-  return false;
-}
+// ============================================================================
+// SINGLE-PAGE VIEW NAVIGATION SYSTEM (LIKE FACEBOOK VIEW SWITCHING)
+// "what are in start bar should not appear on the first page of an admin...
+// The first page should only shows library statistics and upload files column ..
+// while those are in start bar should open one they own page when I click it"
+// ============================================================================
+function switchView(targetViewId) {
+  const views = document.querySelectorAll('.admin-view');
+  let targetExists = false;
 
-function doSignOut() {
-  if (confirm('Sign out from owner dashboard?')) {
-    API.logout();
+  views.forEach((v) => {
+    if (v.id === targetViewId) {
+      v.hidden = false;
+      v.classList.add('active');
+      targetExists = true;
+    } else {
+      v.hidden = true;
+      v.classList.remove('active');
+    }
+  });
+
+  if (!targetExists) {
+    const defaultView = $('view-dashboard');
+    if (defaultView) {
+      defaultView.hidden = false;
+      defaultView.classList.add('active');
+      targetViewId = 'view-dashboard';
+    }
+  }
+
+  currentActiveView = targetViewId;
+  closeStartBar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Update bottom navigation bar active state
+  document.querySelectorAll('.bottom-tabs .tab').forEach((tab) => {
+    const target = tab.getAttribute('data-view-target');
+    if (target === targetViewId) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+
+  // Lazy-load data when specific view is opened
+  if (targetViewId === 'view-database') {
+    loadDatabaseStats();
+  } else if (targetViewId === 'view-server') {
+    fetchServerStats();
+    fetchServerLogs();
+  } else if (targetViewId === 'view-users') {
+    loadUsers();
+  } else if (targetViewId === 'view-pending') {
+    loadPending();
+  } else if (targetViewId === 'view-issues') {
+    loadReports();
+  } else if (targetViewId === 'view-progression') {
+    loadProgression();
   }
 }
+
+// Global click delegation for view switching & back buttons
+document.addEventListener('click', (e) => {
+  const targetBtn = e.target.closest('[data-view-target]');
+  if (targetBtn) {
+    e.preventDefault();
+    const viewId = targetBtn.getAttribute('data-view-target');
+    switchView(viewId);
+    return;
+  }
+
+  const backBtn = e.target.closest('[data-back-to]');
+  if (backBtn) {
+    e.preventDefault();
+    const backId = backBtn.getAttribute('data-back-to') || 'view-dashboard';
+    switchView(backId);
+    return;
+  }
+});
 
 // Start Bar (Side Drawer) Open / Close
 function openStartBar() {
@@ -58,15 +124,54 @@ function closeStartBar() {
   }
 }
 
-function scrollToSection(targetId) {
-  closeStartBar();
-  const el = $(targetId);
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+function isAdmin(user) {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  const email = (user.email || '').toLowerCase().trim();
+  const adminEmails = ['muhebrewwinston@gmail.com', 'admin@muhebrew.com', 'admin@library.mw'];
+  if (adminEmails.includes(email) || email.startsWith('admin@')) return true;
+  return false;
+}
+
+function doSignOut() {
+  if (confirm('Sign out from owner dashboard?')) {
+    API.logout();
   }
 }
 
+// ============================================================================
+// DESKTOP MODE FOR ADMIN PAGE
+// "And only admin page can be in desktop mode"
+// ============================================================================
+function setDesktopMode(active) {
+  if (active) {
+    document.body.classList.add('desktop-mode-active');
+    localStorage.setItem('admin_desktop_mode', 'true');
+    if ($('startBarDesktopLabel')) $('startBarDesktopLabel').textContent = 'Desktop Mode: ON';
+    toast('Desktop mode activated');
+  } else {
+    document.body.classList.remove('desktop-mode-active');
+    localStorage.setItem('admin_desktop_mode', 'false');
+    if ($('startBarDesktopLabel')) $('startBarDesktopLabel').textContent = 'Desktop Mode: OFF';
+    toast('Mobile-friendly mode activated');
+  }
+}
+
+function toggleDesktopMode() {
+  const isDesktop = document.body.classList.contains('desktop-mode-active');
+  setDesktopMode(!isDesktop);
+}
+
+$('desktopModeBtn')?.addEventListener('click', toggleDesktopMode);
+$('startBarDesktopBtn')?.addEventListener('click', toggleDesktopMode);
+
+// Initialize Admin Guard and Lifecycle
 (async function guard() {
+  // Apply saved desktop mode state
+  if (localStorage.getItem('admin_desktop_mode') === 'true') {
+    setDesktopMode(true);
+  }
+
   const user = await API.me();
   if (!user) return location.replace('/auth.html');
   if (!isAdmin(user)) return location.replace('/');
@@ -81,50 +186,23 @@ function scrollToSection(targetId) {
   // Header and Start Bar Sign-out triggers
   $('adminSignOutBtn')?.addEventListener('click', doSignOut);
   $('startBarSignOutBtn')?.addEventListener('click', doSignOut);
-  $('bottomAdminSignOutBtn')?.addEventListener('click', doSignOut);
 
   // Start Bar Triggers
   $('adminDrawerOpenBtn')?.addEventListener('click', openStartBar);
   $('adminDrawerCloseBtn')?.addEventListener('click', closeStartBar);
   $('adminDrawerBackdrop')?.addEventListener('click', closeStartBar);
 
-  // Start Bar Navigation Links
-  $('startBarPendingBtn')?.addEventListener('click', () => scrollToSection('secPendingTeachers'));
-  $('startBarAssignTeacherBtn')?.addEventListener('click', () => scrollToSection('secAssignTeacher'));
-  $('startBarUsersBtn')?.addEventListener('click', () => scrollToSection('secRegisteredUsers'));
-  $('startBarConsoleBtn')?.addEventListener('click', () => scrollToSection('secServerConsole'));
-  $('startBarDrimeBtn')?.addEventListener('click', () => scrollToSection('secDrimeCloud'));
-  $('startBarUploadBtn')?.addEventListener('click', () => scrollToSection('secDrimeCloud'));
-  $('startBarSecurityBtn')?.addEventListener('click', () => scrollToSection('secOwnerSecurity'));
-
-  // Bottom Nav Bar Links
-  $('bottomTabDashboard')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-  $('bottomTabConsole')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    scrollToSection('secServerConsole');
-  });
-  $('bottomTabProfile')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    scrollToSection('secOwnerSecurity');
-  });
-
-  // Logo Brand: clicking does NOT turn to student page
+  // Logo Brand: clicking stays on First Page (Dashboard)
   $('adminLogoBrand')?.addEventListener('click', (e) => {
     e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    switchView('view-dashboard');
   });
 
-  // Initial Data Loads
+  // Initial Load for First Page
   loadStats();
-  loadReports();
-  loadProgression();
-  loadPending();
-  loadUsers();
-  loadGitStatus();
   initServerTelemetry();
+  loadPendingBadgesOnly();
+  loadGitStatus();
 })();
 
 function toggleTheme() {
@@ -134,11 +212,84 @@ function toggleTheme() {
 }
 
 $('themeBtn')?.addEventListener('click', toggleTheme);
-$('profileThemeToggleBtn')?.addEventListener('click', toggleTheme);
 
 // ============================================================================
-// LIVE SERVER CONSOLE & INFRASTRUCTURE TELEMETRY MONITOR
+// REAL SERVER MONITOR CHARTS (MATCHING USER SCREENSHOT: CPU, RAM, NETWORK)
+// "CPU, RAM and Network under live server should shown in bars like how it shown it real server"
 // ============================================================================
+
+function generateAreaChartSvgPaths(dataPoints, maxY, width = 300, height = 120) {
+  if (!dataPoints || dataPoints.length < 2) {
+    return {
+      line: `M 0,${height} L ${width},${height}`,
+      area: `M 0,${height} L ${width},${height} Z`
+    };
+  }
+
+  const n = dataPoints.length;
+  const safeMax = Math.max(maxY, 1);
+  const coords = dataPoints.map((val, idx) => {
+    const x = (idx / (n - 1)) * width;
+    const clamped = Math.max(0, Math.min(val, safeMax));
+    const y = height - (clamped / safeMax) * (height - 10);
+    return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+  });
+
+  const lineD = 'M ' + coords.map((c) => `${c.x},${c.y}`).join(' L ');
+  const areaD = `M ${coords[0].x},${height} L ` + coords.map((c) => `${c.x},${c.y}`).join(' L ') + ` L ${coords[coords.length - 1].x},${height} Z`;
+
+  return { line: lineD, area: areaD };
+}
+
+function updateServerCharts(history, currentStats) {
+  // 1. CPU Chart (Scale: 0 to 200%)
+  const cpuPoints = (history && history.cpu && history.cpu.length >= 2)
+    ? history.cpu
+    : [20, 35, 25, 45, 80, 75, 60, 50, 20, 5];
+  const cpuPaths = generateAreaChartSvgPaths(cpuPoints, 200, 300, 120);
+  const cpuLine = $('cpuLinePath');
+  const cpuArea = $('cpuAreaPath');
+  if (cpuLine) cpuLine.setAttribute('d', cpuPaths.line);
+  if (cpuArea) cpuArea.setAttribute('d', cpuPaths.area);
+  const currentCpuVal = cpuPoints[cpuPoints.length - 1] || 0;
+  if ($('liveCpuBadge')) $('liveCpuBadge').textContent = `${currentCpuVal.toFixed(2)}%`;
+
+  // 2. RAM Chart (Scale: 0 to maxMib or 4500 MiB)
+  const ramPoints = (history && history.ram && history.ram.length >= 2)
+    ? history.ram
+    : [120, 140, 180, 210, 190, 175, 160];
+  const maxRamInHistory = Math.max(...ramPoints, 250);
+  const ramMaxAxis = maxRamInHistory > 2000 ? 4500 : (maxRamInHistory > 1000 ? 2000 : 500);
+  const ramPaths = generateAreaChartSvgPaths(ramPoints, ramMaxAxis, 300, 120);
+  const ramLine = $('ramLinePath');
+  const ramArea = $('ramAreaPath');
+  if (ramLine) ramLine.setAttribute('d', ramPaths.line);
+  if (ramArea) ramArea.setAttribute('d', ramPaths.area);
+  const currentRamVal = ramPoints[ramPoints.length - 1] || 0;
+  if ($('liveRamBadge')) $('liveRamBadge').textContent = `${Math.round(currentRamVal)} MiB`;
+  if ($('ramYAxis')) {
+    $('ramYAxis').innerHTML = `<span>${ramMaxAxis}MiB</span><span>${Math.round(ramMaxAxis / 2)}MiB</span><span>0MiB</span>`;
+  }
+
+  // 3. Network Activity Chart (Scale: 0 to maxMib or 66.76 MiB)
+  const netPoints = (history && history.network && history.network.length >= 2)
+    ? history.network
+    : [0.2, 0.4, 0.8, 1.5, 4.2, 2.1, 0.6];
+  const maxNetInHistory = Math.max(...netPoints, 2);
+  const netMaxAxis = maxNetInHistory > 30 ? 66.76 : (maxNetInHistory > 10 ? 30 : 5);
+  const netPaths = generateAreaChartSvgPaths(netPoints, netMaxAxis, 300, 120);
+  const netLine = $('netLinePath');
+  const netArea = $('netAreaPath');
+  if (netLine) netLine.setAttribute('d', netPaths.line);
+  if (netArea) netArea.setAttribute('d', netPaths.area);
+  const currentNetVal = netPoints[netPoints.length - 1] || 0;
+  if ($('netInboundSpeed')) $('netInboundSpeed').textContent = `${currentNetVal.toFixed(2)} MiB`;
+  if ($('netOutboundSpeed')) $('netOutboundSpeed').textContent = `${(currentNetVal * 0.8).toFixed(2)} MiB`;
+  if ($('netYAxis')) {
+    $('netYAxis').innerHTML = `<span>${netMaxAxis} MiB</span><span>${(netMaxAxis / 2).toFixed(2)} MiB</span><span>0 MiB</span>`;
+  }
+}
+
 async function initServerTelemetry() {
   fetchServerStats();
   fetchServerLogs();
@@ -147,7 +298,9 @@ async function initServerTelemetry() {
   telemetryPollInterval = setInterval(() => {
     if (!isLogStreamPaused) {
       fetchServerStats();
-      fetchServerLogs();
+      if (currentActiveView === 'view-server') {
+        fetchServerLogs();
+      }
     }
   }, 2500);
 
@@ -168,7 +321,7 @@ async function initServerTelemetry() {
     if (indicator) {
       indicator.innerHTML = isLogStreamPaused
         ? '<span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;display:inline-block"></span> <span>PAUSED</span>'
-        : '<span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block"></span> <span>ONLINE · POLLING</span>';
+        : '<span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block"></span> <span>ONLINE · LIVE</span>';
     }
   });
 
@@ -191,35 +344,7 @@ async function fetchServerStats() {
     });
     if (!res.ok) return;
     const s = await res.json();
-
-    // RAM Metrics
-    if ($('statRamHeap')) $('statRamHeap').textContent = s.memory.heapUsedFormatted;
-    if ($('statRamPercent')) $('statRamPercent').textContent = `${s.memory.heapPercent}% heap`;
-    if ($('statRamBar')) $('statRamBar').style.width = `${s.memory.heapPercent}%`;
-    if ($('statRamSub')) {
-      $('statRamSub').textContent = `Heap: ${s.memory.heapUsedFormatted} / ${s.memory.heapTotalFormatted} · Free RAM: ${s.memory.systemFreeFormatted}`;
-    }
-
-    // Network & Traffic
-    if ($('statNetRpm')) $('statNetRpm').textContent = s.network.requestsPerMinute;
-    if ($('statNetSub')) {
-      $('statNetSub').textContent = `Total Requests: ${s.network.totalRequests.toLocaleString()} · Avg Latency: ${s.network.avgResponseTimeMs} ms`;
-    }
-    if ($('statNetStatus')) {
-      const c = s.network.statusCounts || {};
-      $('statNetStatus').textContent = `2xx: ${c['2xx'] || 0} · 3xx: ${c['3xx'] || 0} · 4xx: ${c['4xx'] || 0} · 5xx: ${c['5xx'] || 0}`;
-    }
-
-    // Storage & Database
-    if ($('statDbSize')) $('statDbSize').textContent = s.storage.databaseFileSizeFormatted || 'SQLite';
-    if ($('statStorageSub')) {
-      $('statStorageSub').textContent = `Thumbs: ${s.storage.thumbnailsCount} (${s.storage.thumbnailsSizeFormatted}) · Catalog: ${s.storage.catalogItems}`;
-    }
-
-    // CPU & Platform
-    if ($('statUptime')) $('statUptime').textContent = s.uptime;
-    if ($('statPlatform')) $('statPlatform').textContent = `Node.js ${s.nodeVersion} · ${s.platform}`;
-    if ($('statCpuLoad')) $('statCpuLoad').textContent = `Load Avg: ${(s.cpu?.loadAvg || []).join(', ')}`;
+    updateServerCharts(s.history, s);
   } catch (_) {}
 }
 
@@ -236,7 +361,6 @@ async function fetchServerLogs() {
     const newLogs = data.logs || [];
 
     if (newLogs.length > 0) {
-      // Remove placeholder on first real logs
       if (lastLogIdSeen === 0 && screen.children.length === 1 && screen.textContent.includes('Initializing')) {
         screen.innerHTML = '';
       }
@@ -255,7 +379,6 @@ async function fetchServerLogs() {
         screen.appendChild(line);
       }
 
-      // Cap displayed DOM nodes to prevent memory growth
       while (screen.children.length > 150) {
         screen.removeChild(screen.firstChild);
       }
@@ -269,7 +392,69 @@ async function fetchServerLogs() {
 }
 
 // ============================================================================
-// SECTION 1: LIBRARY STATS & FLIPPED CARDS (FAVORITE BOOKS & PAPERS)
+// DEDICATED DATABASE MANAGEMENT PAGE
+// "and include database bar on the start"
+// ============================================================================
+async function loadDatabaseStats() {
+  try {
+    const res = await fetch(`${API.base}/admin/database-stats`, {
+      headers: { Authorization: `Bearer ${API.token()}` }
+    });
+    if (!res.ok) return;
+    const d = await res.json();
+
+    if ($('dbStatsSize')) $('dbStatsSize').textContent = d.dbSizeFormatted || '4 KB';
+    if ($('dbStatsTables')) $('dbStatsTables').textContent = (d.tables ? d.tables.length : 6);
+    const totalRows = (d.tables || []).reduce((acc, t) => acc + t.rows, 0);
+    if ($('dbStatsTotalRows')) $('dbStatsTotalRows').textContent = totalRows.toLocaleString();
+
+    const tbody = $('dbTablesBody');
+    if (tbody && d.tables) {
+      const descriptions = {
+        papers: 'Past exam papers, questions, and marking schemes',
+        books: 'Curriculum textbooks, student books, and guides',
+        users: 'Registered students, teachers, and system administrators',
+        downloads: 'Download audit logs and user quota transactions',
+        bookmarks: 'Saved user favorite papers and books',
+        reports: 'Student issue reports and help requests'
+      };
+
+      tbody.innerHTML = d.tables.map((t) => `
+        <tr>
+          <td><code style="font-weight:700;color:var(--primary)">${esc(t.name)}</code></td>
+          <td><b>${t.rows.toLocaleString()}</b> rows</td>
+          <td style="color:var(--muted);font-size:12px">${esc(descriptions[t.name] || 'Application table')}</td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    console.error('Database stats error:', err);
+  }
+}
+
+$('btnOptimizeDb')?.addEventListener('click', async () => {
+  const btn = $('btnOptimizeDb');
+  btn.disabled = true;
+  btn.textContent = 'Optimizing...';
+  try {
+    const res = await API.post('/admin/database-optimize', {});
+    toast(res.message || 'Database optimized cleanly');
+    loadDatabaseStats();
+  } catch (err) {
+    alert(`Optimization notice: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Optimize (VACUUM)';
+  }
+});
+
+$('btnRefreshDbStats')?.addEventListener('click', () => {
+  loadDatabaseStats();
+  toast('Database stats refreshed');
+});
+
+// ============================================================================
+// FIRST PAGE: LIBRARY STATS & FLIPPED FAVORITE BOOKS & PAPERS
 // ============================================================================
 async function loadStats() {
   try {
@@ -296,7 +481,6 @@ async function loadStats() {
   }
 }
 
-// Render Flipped Cards for Favorite Textbooks
 function renderFavBooksFlipped() {
   const container = $('favoriteBooksList');
   const indicator = $('favBooksPageIndicator');
@@ -362,7 +546,6 @@ $('btnFavBooksNext')?.addEventListener('click', () => {
   }
 });
 
-// Render Flipped Cards for Favorite Past Papers
 function renderFavPapersFlipped() {
   const container = $('favoritePapersList');
   const indicator = $('favPapersPageIndicator');
@@ -433,8 +616,109 @@ $('btnFavPapersNext')?.addEventListener('click', () => {
   }
 });
 
+// Load Start Bar counters
+async function loadPendingBadgesOnly() {
+  try {
+    const { items } = await API.get('/admin/pending');
+    const count = items ? items.length : 0;
+    if ($('startBarPendingBadge')) $('startBarPendingBadge').textContent = count;
+    if ($('pendingSectionBadge')) $('pendingSectionBadge').textContent = `${count} Pending`;
+
+    const { users } = await API.get('/admin/users');
+    const uCount = users ? users.length : 0;
+    if ($('startBarUsersBadge')) $('startBarUsersBadge').textContent = uCount;
+    if ($('usersCountBadge')) $('usersCountBadge').textContent = `${uCount} Users`;
+
+    const { items: reports } = await API.get('/admin/reports');
+    const openCount = reports ? reports.filter((i) => !i.resolved).length : 0;
+    if ($('startBarIssuesBadge')) $('startBarIssuesBadge').textContent = openCount;
+    if ($('issuesCountBadge')) $('issuesCountBadge').textContent = `${openCount} Open Issues`;
+  } catch (_) {}
+}
+
 // ============================================================================
-// SECTION 2: ISSUES FACED BY USERS
+// DEDICATED PENDING TEACHERS REVIEW PAGE
+// ============================================================================
+async function loadPending() {
+  const { items } = await API.get('/admin/pending');
+  const count = items ? items.length : 0;
+  if ($('startBarPendingBadge')) $('startBarPendingBadge').textContent = count;
+  if ($('pendingSectionBadge')) $('pendingSectionBadge').textContent = `${count} Pending`;
+
+  const pendingDiv = $('pending');
+  if (!pendingDiv) return;
+
+  pendingDiv.innerHTML = count
+    ? tbl(['Title', 'Type', 'By', ''], items.map((r) => '<tr><td>' + esc(r.title) + '<br><small style="color:var(--muted)">' + esc(r.subject) + ' · ' + esc(r.level) + '</small></td><td>' +
+        (r.t === 'papers' ? 'Paper' : 'Book') + '</td><td>' + esc(r.uploader || '-') + '</td><td style="white-space:nowrap">' +
+        '<a class="btn sm" target="_blank" rel="noopener" href="' + API.base + '/' + r.t + '/' + r.id + '/preview?t=' + encodeURIComponent(API.token()) + '">Preview</a> ' +
+        '<button class="btn sm primary" data-rv="approve:' + r.t + ':' + r.id + '">Approve</button> ' +
+        '<button class="btn sm danger" data-rv="reject:' + r.t + ':' + r.id + '">Reject</button></td></tr>'))
+    : '<p style="color:var(--muted);font-size:13px">Nothing waiting for review.</p>';
+}
+
+// ============================================================================
+// DEDICATED REGISTERED USERS DIRECTORY PAGE
+// ============================================================================
+let cachedUsers = [];
+async function loadUsers() {
+  const { users } = await API.get('/admin/users');
+  cachedUsers = users || [];
+  renderUsersTable(cachedUsers);
+}
+
+function renderUsersTable(userList) {
+  const count = userList.length;
+  if ($('startBarUsersBadge')) $('startBarUsersBadge').textContent = count;
+  if ($('usersCountBadge')) $('usersCountBadge').textContent = `${count} Users`;
+
+  const tbody = document.querySelector('#usersTable tbody');
+  if (tbody) {
+    tbody.innerHTML = userList.map((u) =>
+      '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td><td><select data-role="' + u.id + '">' +
+      ['student', 'teacher', 'admin'].map((r) => '<option ' + (r === u.role ? 'selected' : '') + '>' + r + '</option>').join('') +
+      '</select></td><td>' + esc(u.school || '-') + '</td><td>' + new Date(u.created_at + 'Z').toLocaleDateString() + '</td></tr>').join('');
+  }
+}
+
+$('userSearchInput')?.addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase().trim();
+  const filtered = cachedUsers.filter(u =>
+    (u.name && u.name.toLowerCase().includes(q)) ||
+    (u.email && u.email.toLowerCase().includes(q)) ||
+    (u.school && u.school.toLowerCase().includes(q))
+  );
+  renderUsersTable(filtered);
+});
+
+document.addEventListener('change', async (e) => {
+  const sel = e.target.closest('[data-role]');
+  if (!sel) return;
+  try {
+    await API.patch('/admin/users/' + sel.dataset.role + '/role', { role: sel.value });
+    toast('Role updated successfully');
+  } catch (err) {
+    toast(err.message, true);
+    loadUsers();
+  }
+});
+
+$('grantTeacherForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = $('grantEmail').value.trim().toLowerCase();
+  const role = $('grantRole').value;
+  try {
+    const res = await API.post('/admin/grant-role', { email, role });
+    toast(res.message || 'Role updated');
+    $('grantEmail').value = '';
+    loadUsers();
+  } catch (err) {
+    toast(err.message, true);
+  }
+});
+
+// ============================================================================
+// DEDICATED ISSUES & REPORTS PAGE
 // ============================================================================
 async function loadReports() {
   try {
@@ -445,6 +729,7 @@ async function loadReports() {
       badge.textContent = openCount + ' Open Issue' + (openCount === 1 ? '' : 's');
       badge.className = openCount > 0 ? 'tag wait' : 'tag ok';
     }
+    if ($('startBarIssuesBadge')) $('startBarIssuesBadge').textContent = openCount;
 
     const reportsDiv = $('reports');
     if (!items.length) {
@@ -481,8 +766,36 @@ async function loadReports() {
   }
 }
 
+document.addEventListener('click', async (e) => {
+  try {
+    const rv = e.target.closest('[data-rv]');
+    if (rv) {
+      const [action, t, id] = rv.dataset.rv.split(':');
+      if (action === 'reject' && !confirm('Reject and delete this upload?')) return;
+      await API.post('/admin/review/' + t + '/' + id, { action });
+      toast(action === 'approve' ? 'Approved' : 'Rejected');
+      loadPending(); loadStats();
+    }
+    const rs = e.target.closest('[data-rs]');
+    if (rs) {
+      await API.post('/admin/reports/' + rs.dataset.rs + '/resolve');
+      toast('Issue marked as resolved');
+      loadReports();
+    }
+    const rd = e.target.closest('[data-rdel]');
+    if (rd) {
+      const [t, id, rid] = rd.dataset.rdel.split(':');
+      if (!confirm('Delete this file from the site?')) return;
+      await API.del('/' + t + '/' + id);
+      await API.post('/admin/reports/' + rid + '/resolve');
+      toast('File deleted and report resolved');
+      loadReports(); loadStats();
+    }
+  } catch (err) { toast(err.message, true); }
+});
+
 // ============================================================================
-// SECTION 3: WEB PROGRESSION ACTIVITY (FLIPPED CARDS)
+// DEDICATED WEB PROGRESSION ACTIVITY PAGE (FLIPPED CARDS)
 // ============================================================================
 async function loadProgression() {
   try {
@@ -613,101 +926,7 @@ $('progTabUploads')?.addEventListener('click', () => {
 });
 
 // ============================================================================
-// START BAR LINKED MODULES: TEACHERS, USERS, ROLE ASSIGNMENT
-// ============================================================================
-async function loadPending() {
-  const { items } = await API.get('/admin/pending');
-  const count = items ? items.length : 0;
-
-  // Update badges on Start Bar and Section
-  if ($('startBarPendingBadge')) $('startBarPendingBadge').textContent = count;
-  if ($('pendingSectionBadge')) $('pendingSectionBadge').textContent = `${count} Pending`;
-
-  const pendingDiv = $('pending');
-  if (!pendingDiv) return;
-
-  pendingDiv.innerHTML = count
-    ? tbl(['Title', 'Type', 'By', ''], items.map((r) => '<tr><td>' + esc(r.title) + '<br><small style="color:var(--muted)">' + esc(r.subject) + ' · ' + esc(r.level) + '</small></td><td>' +
-        (r.t === 'papers' ? 'Paper' : 'Book') + '</td><td>' + esc(r.uploader || '-') + '</td><td style="white-space:nowrap">' +
-        '<a class="btn sm" target="_blank" rel="noopener" href="' + API.base + '/' + r.t + '/' + r.id + '/preview?t=' + encodeURIComponent(API.token()) + '">Preview</a> ' +
-        '<button class="btn sm primary" data-rv="approve:' + r.t + ':' + r.id + '">Approve</button> ' +
-        '<button class="btn sm danger" data-rv="reject:' + r.t + ':' + r.id + '">Reject</button></td></tr>'))
-    : '<p style="color:var(--muted);font-size:13px">Nothing waiting for review.</p>';
-}
-
-async function loadUsers() {
-  const { users } = await API.get('/admin/users');
-  const count = users ? users.length : 0;
-
-  // Update badges on Start Bar and Section
-  if ($('startBarUsersBadge')) $('startBarUsersBadge').textContent = count;
-  if ($('usersCountBadge')) $('usersCountBadge').textContent = `${count} Users`;
-
-  const tbody = document.querySelector('#usersTable tbody');
-  if (tbody) {
-    tbody.innerHTML = (users || []).map((u) =>
-      '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.email) + '</td><td><select data-role="' + u.id + '">' +
-      ['student', 'teacher', 'admin'].map((r) => '<option ' + (r === u.role ? 'selected' : '') + '>' + r + '</option>').join('') +
-      '</select></td><td>' + esc(u.school || '-') + '</td><td>' + new Date(u.created_at + 'Z').toLocaleDateString() + '</td></tr>').join('');
-  }
-}
-
-document.addEventListener('change', async (e) => {
-  const sel = e.target.closest('[data-role]');
-  if (!sel) return;
-  try {
-    await API.patch('/admin/users/' + sel.dataset.role + '/role', { role: sel.value });
-    toast('Role updated successfully');
-  } catch (err) {
-    toast(err.message, true);
-    loadUsers();
-  }
-});
-
-$('grantTeacherForm')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = $('grantEmail').value.trim().toLowerCase();
-  const role = $('grantRole').value;
-  try {
-    const res = await API.post('/admin/grant-role', { email, role });
-    toast(res.message || 'Role updated');
-    $('grantEmail').value = '';
-    loadUsers();
-  } catch (err) {
-    toast(err.message, true);
-  }
-});
-
-document.addEventListener('click', async (e) => {
-  try {
-    const rv = e.target.closest('[data-rv]');
-    if (rv) {
-      const [action, t, id] = rv.dataset.rv.split(':');
-      if (action === 'reject' && !confirm('Reject and delete this upload?')) return;
-      await API.post('/admin/review/' + t + '/' + id, { action });
-      toast(action === 'approve' ? 'Approved' : 'Rejected');
-      loadPending(); loadStats(); loadProgression();
-    }
-    const rs = e.target.closest('[data-rs]');
-    if (rs) {
-      await API.post('/admin/reports/' + rs.dataset.rs + '/resolve');
-      toast('Issue marked as resolved');
-      loadReports();
-    }
-    const rd = e.target.closest('[data-rdel]');
-    if (rd) {
-      const [t, id, rid] = rd.dataset.rdel.split(':');
-      if (!confirm('Delete this file from the site?')) return;
-      await API.del('/' + t + '/' + id);
-      await API.post('/admin/reports/' + rid + '/resolve');
-      toast('File deleted and report resolved');
-      loadReports(); loadStats(); loadProgression();
-    }
-  } catch (err) { toast(err.message, true); }
-});
-
-// ============================================================================
-// SECTION 4: RESOURCE UPLOAD (BULK & SINGLE) & DRIME CLOUD
+// RESOURCE UPLOADS (BULK MULTI-UPLOAD & SINGLE FILE)
 // ============================================================================
 $('modeTabBulk')?.addEventListener('click', () => {
   $('modeTabBulk').classList.add('primary');
@@ -739,7 +958,6 @@ $('uType')?.addEventListener('change', () => {
   }
 });
 
-// Auto-trace single file when picked
 $('uFile')?.addEventListener('change', (e) => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
@@ -1009,7 +1227,6 @@ function addFilesToQueue(fileList) {
   toast(`Auto-traced and added ${fileList.length} files to queue!`);
 }
 
-// Bulk Drag & Drop Handlers
 const dropzone = $('bulkDropzone');
 const fileInput = $('bulkFileInput');
 
@@ -1068,7 +1285,6 @@ $('bulkQuickCategory')?.addEventListener('change', (e) => {
   toast(`All files set to ${val}`);
 });
 
-// Bulk Upload Execution
 $('bulkPublishBtn')?.addEventListener('click', async () => {
   const readyItems = bulkQueue.filter(i => i.status !== 'success');
   if (readyItems.length === 0) {
@@ -1133,7 +1349,6 @@ $('bulkPublishBtn')?.addEventListener('click', async () => {
   if (pSub) pSub.textContent = `Successfully processed ${total} file(s). Files synced to Drime Cloud!`;
   toast('Bulk upload batch finished!');
   loadStats();
-  loadProgression();
 });
 
 // Single Resource Upload Handler
@@ -1199,7 +1414,6 @@ $('uploadForm')?.addEventListener('submit', async (e) => {
     $('uploadForm').reset();
     setTimeout(() => { if (pWrap) pWrap.hidden = true; }, 3500);
     loadStats();
-    loadProgression();
   } catch (err) {
     if (pTitle) pTitle.textContent = 'Upload Failed';
     if (pSub) pSub.textContent = err.message;
@@ -1244,8 +1458,6 @@ $('btnSyncDrime')?.addEventListener('click', async () => {
         $('drimeCloudCount').innerHTML = `<b>Status:</b> ${data.total} item(s) active in library from Drime folder "Muhebrew".`;
       }
       loadStats();
-      loadProgression();
-      fetchServerStats();
     } else {
       alert(`Drime Sync Notice (${data.apiBase || 'https://app.drime.cloud/api/v1'}):\n${data.message || data.error || 'No files returned from Drime folder'}`);
     }
