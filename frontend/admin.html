@@ -16,7 +16,7 @@
     if (localStorage.getItem('admin_desktop_mode') === 'true') {
       document.body && document.body.classList.add('desktop-mode-active');
     }
-    var token = sessionStorage.getItem('ph_token');
+    var token = sessionStorage.getItem('ph_token') || localStorage.getItem('ph_token');
     if (!token) {
       location.replace('/auth.html');
     }

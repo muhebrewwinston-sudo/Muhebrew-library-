@@ -177,6 +177,11 @@ function buildRouter(table, type) {
     const row = getRow(req.params.id);
     if (!row) return res.status(404).json({ error: 'Resource not found.' });
 
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+    res.setHeader('Accept-Ranges', 'bytes');
+
     const abs = absPath(row);
     if (abs && fs.existsSync(abs) && abs.toLowerCase().endsWith('.pdf')) {
       res.setHeader('Content-Disposition', 'inline; filename="' + (row.file_name || 'preview.pdf') + '"');
@@ -324,11 +329,16 @@ function buildRouter(table, type) {
   router.post('/:id/report', reportLimit, optionalAuth, (req, res) => {
     const row = getRow(req.params.id);
     if (!row || row.status !== 'approved') return res.status(404).json({ error: 'Resource not found.' });
-    const reason = String((req.body || {}).reason || '').trim().slice(0, 300) || 'File is broken or wrong';
+    const body = req.body || {};
+    const reason = String(body.reason || '').trim().slice(0, 300) || 'File is broken or wrong';
+    const details = String(body.details || '').trim().slice(0, 500);
+    const email = String(body.email || (req.user ? req.user.email : '')).trim().slice(0, 150);
     const dup = req.user && db.prepare('SELECT 1 FROM reports WHERE user_id=? AND item_type=? AND item_id=? AND resolved=0')
       .get(req.user.id, type, row.id);
-    if (!dup) db.prepare('INSERT INTO reports (user_id,item_type,item_id,reason) VALUES (?,?,?,?)')
-      .run(req.user ? req.user.id : null, type, row.id, reason);
+    if (!dup) {
+      db.prepare('INSERT INTO reports (user_id, item_type, item_id, reason, details, email) VALUES (?,?,?,?,?,?)')
+        .run(req.user ? req.user.id : null, type, row.id, reason, details || null, email || null);
+    }
     res.json({ ok: true });
   });
 

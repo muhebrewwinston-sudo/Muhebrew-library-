@@ -181,6 +181,7 @@ router.patch('/users/:id/role', (req, res) => {
   if (!['student', 'teacher', 'admin'].includes(role)) return res.status(400).json({ error: 'Invalid role.' });
   if (Number(req.params.id) === req.user.id) return res.status(400).json({ error: "You can't change your own role." });
   const r = db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, Number(req.params.id));
+  db.saveUsersToRegistry?.();
   if (!r.changes) return res.status(404).json({ error: 'User not found.' });
   res.json({ ok: true });
 });
@@ -196,6 +197,7 @@ router.post('/grant-role', (req, res) => {
     return res.status(404).json({ error: 'No user registered with that email.' });
   }
   db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, user.id);
+  db.saveUsersToRegistry?.();
   res.json({ success: true, message: `Updated ${user.name} (${cleanEmail}) to ${role}.` });
 });
 
@@ -243,7 +245,7 @@ router.get('/reports', (_req, res) => {
       title,
       reason: r.reason || 'Issue reported',
       details: r.details || '',
-      reporter: r.reporter || r.email || r.reporter_email || 'Student',
+      reporter: r.email || r.reporter_email || r.reporter || 'Student',
       resolved: r.resolved,
       created_at: r.created_at
     };

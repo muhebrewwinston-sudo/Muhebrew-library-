@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Winston Kamiza",
+    "email": "muhebrewwinston@gmail.com",
+    "password_hash": "$2a$10$NmFzXAM3DvU1Qcxzbw.z9.9t/an6jPvU0l4C9waE8LlsWxQwh4it2",
+    "role": "admin",
+    "school": "Lilongwe Secondary",
+    "level": "Admin",
+    "bonus_downloads": 0,
+    "is_verified": 1,
+    "created_at": "2026-01-01 00:00:00"
+  },
+  {
+    "id": 2,
+    "name": "Chifundo Phiri",
+    "email": "chifundo@example.com",
+    "password_hash": "$2a$10$IjkUgeKw.UabXFuGWl5aFOiyqhj/OsW.WSec.5EAMtfbAzierSDPm",
+    "role": "student",
+    "school": "Lilongwe Girls",
+    "level": "Form 4",
+    "bonus_downloads": 0,
+    "is_verified": 0,
+    "created_at": "2026-10-29 09:13:29"
+  }
+]

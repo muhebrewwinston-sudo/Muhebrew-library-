@@ -13,25 +13,23 @@ const telemetry = require('./services/telemetry');
 // Initialize in-memory console interceptor to power live admin telemetry
 telemetry.initConsoleInterceptor();
 
-// Ensure JWT_SECRET is set; auto-generate and create .env if missing to prevent hosting crash
+// Ensure stable, persistent JWT_SECRET so existing user logins remain valid across restarts and deploys
+const PERMANENT_JWT_SECRET = 'muhebrew-production-auth-permanent-jwt-secret-key-2026-persistent';
 if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = PERMANENT_JWT_SECRET;
   const envPath = path.join(__dirname, '.env');
-  const genSecret = require('crypto').randomBytes(32).toString('hex');
-  process.env.JWT_SECRET = genSecret;
   if (!fs.existsSync(envPath)) {
     try {
       fs.writeFileSync(envPath, [
         'PORT=' + (process.env.PORT || process.env.SERVER_PORT || 3000),
-        'JWT_SECRET=' + genSecret,
+        'JWT_SECRET=' + PERMANENT_JWT_SECRET,
         'JWT_EXPIRES=30d',
         'DB_PATH=./db/pasthub.db',
         'MAX_UPLOAD_MB=40',
         ''
       ].join('\n'));
-      console.log('[Setup] Automatically created .env with fresh JWT_SECRET.');
-    } catch (_) {
-      console.warn('[Warning] Running with in-memory JWT_SECRET (could not write .env).');
-    }
+      console.log('[Setup] Automatically initialized .env with permanent JWT_SECRET.');
+    } catch (_) {}
   }
 }
 

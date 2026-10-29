@@ -229,4 +229,65 @@ try {
   }
 } catch (_) {}
 
+// Persistent User Registry: keeps users registered even across restarts, Vercel redeploys, or backend changes
+const registryFile = path.join(__dirname, 'users_registry.json');
+
+function syncUsersFromRegistry() {
+  try {
+    if (!fs.existsSync(registryFile)) return;
+    const users = JSON.parse(fs.readFileSync(registryFile, 'utf8') || '[]');
+    if (!Array.isArray(users)) return;
+
+    for (const u of users) {
+      if (!u || !u.email) continue;
+      const cleanEmail = String(u.email).trim().toLowerCase();
+      const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(cleanEmail);
+      if (!existing) {
+        db.prepare(`
+          INSERT INTO users (id, name, email, password_hash, role, school, level, bonus_downloads, is_verified, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          u.id || null,
+          u.name || 'User',
+          cleanEmail,
+          u.password_hash,
+          u.role || 'student',
+          u.school || null,
+          u.level || null,
+          u.bonus_downloads || 0,
+          u.is_verified ?? 1,
+          u.created_at || new Date().toISOString()
+        );
+      } else {
+        db.prepare(`
+          UPDATE users SET 
+            password_hash = COALESCE(?, password_hash),
+            role = COALESCE(?, role),
+            is_verified = COALESCE(?, is_verified),
+            bonus_downloads = COALESCE(?, bonus_downloads)
+          WHERE id = ?
+        `).run(u.password_hash || null, u.role || null, u.is_verified ?? null, u.bonus_downloads ?? null, existing.id);
+      }
+    }
+  } catch (err) {
+    console.warn('[DB] User restore from registry error:', err.message);
+  }
+}
+
+function saveUsersToRegistry() {
+  try {
+    const allUsers = db.prepare('SELECT id, name, email, password_hash, role, school, level, bonus_downloads, is_verified, created_at FROM users').all();
+    fs.writeFileSync(registryFile, JSON.stringify(allUsers, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('[DB] User backup to registry error:', err.message);
+  }
+}
+
+// Automatically sync previously registered users upon database boot
+syncUsersFromRegistry();
+
+// Export helpers alongside database instance
+db.saveUsersToRegistry = saveUsersToRegistry;
+db.syncUsersFromRegistry = syncUsersFromRegistry;
+
 module.exports = db;
