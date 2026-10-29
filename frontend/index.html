@@ -13,7 +13,7 @@
 <script>
   (function() {
     document.documentElement.setAttribute('data-theme', localStorage.getItem('ph_theme') || 'light');
-    var token = sessionStorage.getItem('ph_token');
+    var token = sessionStorage.getItem('ph_token') || localStorage.getItem('ph_token');
     if (!token) {
       location.replace('/auth.html');
     }

@@ -78,6 +78,7 @@ router.post('/register', async (req, res) => {
   );
 
   const user = db.prepare('SELECT id, name, email, role, school, level, created_at FROM users WHERE id = ?').get(info.lastInsertRowid);
+  db.saveUsersToRegistry?.();
 
   if (isAdminEmail) {
     const token = sign(user);
@@ -127,6 +128,7 @@ router.post('/verify-email', (req, res) => {
 
   // Mark user as verified
   db.prepare('UPDATE users SET is_verified = 1, verify_code = NULL, verify_expires = NULL WHERE id = ?').run(user.id);
+  db.saveUsersToRegistry?.();
 
   const safeUser = {
     id: user.id,
@@ -261,6 +263,7 @@ router.post('/reset-password', (req, res) => {
   const newHash = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password_hash = ?, reset_code = NULL, reset_expires = NULL WHERE id = ?')
     .run(newHash, user.id);
+  db.saveUsersToRegistry?.();
 
   res.json({ success: true, message: 'Password reset successfully! You can now sign in with your new password.' });
 });
@@ -291,6 +294,7 @@ router.post('/password', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Current password is incorrect.' });
   }
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(next, 10), user.id);
+  db.saveUsersToRegistry?.();
   res.json({ ok: true });
 });
 

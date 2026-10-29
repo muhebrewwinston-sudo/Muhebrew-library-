@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const db = require('../db/database');
 
-const SECRET = process.env.JWT_SECRET || 'muhebrew-fallback-jwt-secret-key-change-me';
+const SECRET = process.env.JWT_SECRET || 'muhebrew-production-auth-permanent-jwt-secret-key-2026-persistent';
 const EXPIRES = process.env.JWT_EXPIRES || '30d';
 
 const sign = (u) => jwt.sign({ id: u.id, role: u.role, name: u.name, email: u.email }, SECRET, { expiresIn: EXPIRES });

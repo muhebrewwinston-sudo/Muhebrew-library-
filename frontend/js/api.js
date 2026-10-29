@@ -20,14 +20,21 @@ const API = {
   },
 
   token: () => {
-    return sessionStorage.getItem('ph_token');
+    let t = sessionStorage.getItem('ph_token');
+    if (!t) {
+      t = localStorage.getItem('ph_token');
+      if (t) {
+        try { sessionStorage.setItem('ph_token', t); } catch (_) {}
+      }
+    }
+    return t;
   },
   setToken(t) {
     if (t) {
-      sessionStorage.setItem('ph_token', t);
-      try { localStorage.removeItem('ph_token'); } catch (_) {}
+      try { sessionStorage.setItem('ph_token', t); } catch (_) {}
+      try { localStorage.setItem('ph_token', t); } catch (_) {}
     } else {
-      sessionStorage.removeItem('ph_token');
+      try { sessionStorage.removeItem('ph_token'); } catch (_) {}
       try { localStorage.removeItem('ph_token'); } catch (_) {}
     }
   },
@@ -96,11 +103,22 @@ const API = {
       const data = await this.get('/auth/me');
       if (data && data.user) {
         data.user.quota = data.quota || null;
+        try { localStorage.setItem('ph_user', JSON.stringify(data.user)); } catch (_) {}
         return data.user;
       }
       return null;
+    } catch (err) {
+      if (err && err.status === 401) {
+        this.setToken(null);
+        return null;
+      }
+      // Keep session intact if temporary backend reboot or network delay
+      try {
+        const cached = localStorage.getItem('ph_user');
+        if (cached) return JSON.parse(cached);
+      } catch (_) {}
+      return null;
     }
-    catch { this.setToken(null); return null; }
   },
 
   async getQuota() {
