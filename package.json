@@ -5,6 +5,7 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
+    "build": "echo 'Static web build ready'",
     "setup": "node backend/db/setup.js",
     "start": "node server.js",
     "start:auto": "bash startup.sh",

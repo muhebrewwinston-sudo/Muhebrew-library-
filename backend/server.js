@@ -151,12 +151,22 @@ app.get('/backend.zip', handleZipDownload);
 app.get('/download-zip', handleZipDownload);
 
 // Determine static frontend directory (supports frontend/, public/, parent folder, or current directory)
-const frontendDir = path.join(__dirname, '..', 'frontend');
-const publicDir = fs.existsSync(frontendDir)
-  ? frontendDir
-  : (fs.existsSync(path.join(__dirname, 'public'))
-    ? path.join(__dirname, 'public')
-    : (fs.existsSync(path.join(__dirname, '..', 'index.html')) ? path.join(__dirname, '..') : __dirname));
+const candidateDirs = [
+  path.join(__dirname, '..', 'frontend'),
+  path.join(__dirname, 'frontend'),
+  path.join(__dirname, 'public'),
+  path.join(__dirname, '..', 'public'),
+  path.join(__dirname, '..'),
+  __dirname
+];
+
+let publicDir = __dirname;
+for (const dir of candidateDirs) {
+  if (fs.existsSync(path.join(dir, 'index.html'))) {
+    publicDir = dir;
+    break;
+  }
+}
 
 app.use(express.static(publicDir, {
   etag: false,

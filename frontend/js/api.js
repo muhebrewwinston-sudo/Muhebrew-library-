@@ -6,16 +6,20 @@ const API = {
     const custom = (window.API_BASE_URL || (meta && meta.content) || localStorage.getItem('ph_api_base') || '').replace(/\/$/, '');
     if (custom) return custom + '/api';
 
-    // If running from file:// or a local static dev server on different port without reverse proxy:
     if (typeof window !== 'undefined' && window.location) {
-      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const isSamePort = window.location.port === '25692';
-      if (window.location.protocol === 'file:' || (isLocalhost && !isSamePort && !window.location.port)) {
+      // If opened directly from file:// protocol:
+      if (window.location.protocol === 'file:') {
         return BACKEND_URL + '/api';
+      }
+      // If opened from a known local static development server port without reverse proxy:
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const isDevStaticPort = ['5500', '5173', '8080', '8000', '3001', '4173'].includes(String(window.location.port));
+      if (isLocalhost && isDevStaticPort) {
+        return 'http://localhost:3000/api';
       }
     }
 
-    // Default to '/api' which works natively and proxies through Vercel rewrites to 195.123.189.186:25692
+    // Default to relative '/api' which works natively and proxies on Vercel & Pterodactyl
     return '/api';
   },
 
@@ -48,15 +52,38 @@ const API = {
     location.replace('/auth.html');
   },
 
-  async req(path, { method = 'GET', body, json = true } = {}) {
+  async req(path, { method = 'GET', body, json = true, timeoutMs = 12000 } = {}) {
     const headers = {};
     if (json && body) headers['Content-Type'] = 'application/json';
     const t = this.token();
     if (t) headers.Authorization = 'Bearer ' + t;
-    const res = await fetch(this.base + path, { method, headers, body: json && body ? JSON.stringify(body) : body });
-    const data = res.status === 204 ? null : await res.json().catch(() => null);
-    if (!res.ok) throw Object.assign(new Error((data && data.error) || 'Error ' + res.status), { status: res.status });
-    return data;
+
+    let signal;
+    let timer;
+    if (typeof AbortController !== 'undefined') {
+      const controller = new AbortController();
+      signal = controller.signal;
+      timer = setTimeout(() => controller.abort(), timeoutMs);
+    }
+
+    try {
+      const res = await fetch(this.base + path, {
+        method,
+        headers,
+        body: json && body ? JSON.stringify(body) : body,
+        signal
+      });
+      const data = res.status === 204 ? null : await res.json().catch(() => null);
+      if (!res.ok) throw Object.assign(new Error((data && data.error) || 'Error ' + res.status), { status: res.status });
+      return data;
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw Object.assign(new Error('Request timed out after ' + Math.round(timeoutMs / 1000) + 's. Backend may be restarting.'), { status: 408 });
+      }
+      throw err;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   },
 
   get: (p) => API.req(p),
