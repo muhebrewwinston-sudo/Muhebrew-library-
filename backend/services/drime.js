@@ -933,6 +933,219 @@ async function syncDrimeFilesToDatabase(db) {
   }
 }
 
+/**
+ * Live search against Drime Cloud Storage
+ * Coordinates querying Drime Cloud API & share targets for a search query,
+ * auto-traces and indexes any new/unindexed files into SQLite,
+ * and returns the matched items so the server coordinator reflects them to the web.
+ */
+async function searchDrimeCloud(query, db) {
+  if (!query || String(query).trim().length < 2) return [];
+  const qClean = String(query).trim();
+  const qLower = qClean.toLowerCase();
+
+  const matchedDrimeFiles = [];
+  const seenIds = new Set();
+
+  // 1. Check Drime API search endpoints if API key is present
+  if (DRIME_API_KEY) {
+    for (const base of API_BASES) {
+      const searchUrls = [
+        `${base}/file-entries?query=${encodeURIComponent(qClean)}&per_page=50`,
+        `${base}/search?query=${encodeURIComponent(qClean)}`,
+        `${base}/drive/file-entries?query=${encodeURIComponent(qClean)}`
+      ];
+
+      for (const url of searchUrls) {
+        try {
+          const res = await fetch(url, { headers: authHeaders() });
+          if (!res.ok) continue;
+          const data = await res.json();
+          const items = Array.isArray(data) ? data : (data.data || data.entries || data.files || []);
+          if (Array.isArray(items)) {
+            for (const item of items) {
+              const fid = String(item.id || item.hash || item.uuid || '');
+              const fname = item.name || item.title || item.file_name || '';
+              if (!fname || seenIds.has(fid)) continue;
+              seenIds.add(fid);
+              matchedDrimeFiles.push({
+                id: fid,
+                name: fname,
+                size: Number(item.file_size || item.size || item.file_size_bytes || 1024),
+                mime: item.mime || item.type || 'application/pdf',
+                url: item.url || `${DRIME_FOLDER_URL}/${encodeURIComponent(fid)}`,
+                folderId: item.folder_id || item.parent_id || DRIME_FOLDER_ID
+              });
+            }
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  // 2. Also search across all discovered files in the Muhebrew folder targets
+  try {
+    for (const targetId of FOLDER_TARGETS) {
+      const shareFiles = await fetchShareEntries(targetId);
+      for (const sf of shareFiles) {
+        const nameLower = String(sf.name || '').toLowerCase();
+        const fid = String(sf.id || sf.name);
+        if (nameLower.includes(qLower) && !seenIds.has(fid)) {
+          seenIds.add(fid);
+          matchedDrimeFiles.push(sf);
+        }
+      }
+    }
+  } catch (_) {}
+
+  if (!db || matchedDrimeFiles.length === 0) {
+    return matchedDrimeFiles;
+  }
+
+  // 3. Coordinator: ingest / reflect matched Drime files into database so they appear in search results
+  const reflectedItems = [];
+
+  for (const f of matchedDrimeFiles) {
+    try {
+      const fileName = f.name || 'document.pdf';
+      const fileSize = Number(f.size) || 1024;
+      const fileId = String(f.id || `drime_${Date.now()}`);
+      const fileUrl = f.url || `${DRIME_FOLDER_URL}/${encodeURIComponent(fileId)}`;
+
+      const traced = autoTraceFile(fileName, fileSize);
+      const isBook = traced.type === 'books' || String(f.folderPath || '').toLowerCase().includes('book');
+      const table = isBook ? 'books' : 'papers';
+      const category = traced.category || (isBook ? 'MSCE' : 'MANEB');
+
+      let cleanTitle = (traced.title || fileName.replace(/\.[^/.]+$/, ''))
+        .replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '')
+        .replace(/\s+Form\s*[1-4]\s*$/i, '')
+        .trim();
+
+      let existing = db.prepare(`SELECT id FROM ${table} WHERE drime_file_id = ? OR file_name = ?`).get(fileId, fileName);
+
+      let rowId;
+      if (!existing) {
+        if (isBook) {
+          const info = db.prepare(`
+            INSERT INTO books (
+              title, subject, level, category, author, description,
+              file_path, file_name, file_size, mime_type,
+              storage_provider, drime_file_id, drime_url, drime_folder_id, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, 'approved')
+          `).run(
+            cleanTitle,
+            traced.subject || 'General Studies',
+            traced.level || 'Form 4',
+            category,
+            traced.author || 'Ministry of Education',
+            `Sourced from Drime Cloud (${DRIME_FOLDER_NAME})`,
+            'drime://' + fileId,
+            fileName,
+            fileSize,
+            f.mime || 'application/pdf',
+            fileId,
+            fileUrl,
+            f.folderId || DRIME_FOLDER_ID
+          );
+          rowId = info.lastInsertRowid;
+        } else {
+          const info = db.prepare(`
+            INSERT INTO papers (
+              title, subject, level, category, year, exam_board, description,
+              file_path, file_name, file_size, mime_type,
+              storage_provider, drime_file_id, drime_url, drime_folder_id, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, 'approved')
+          `).run(
+            cleanTitle,
+            traced.subject || 'General Studies',
+            traced.level || 'Form 4',
+            category,
+            traced.year || new Date().getFullYear(),
+            traced.exam_board || (category === 'Cluster Mock' ? 'Cluster Mock' : 'MANEB'),
+            `Sourced from Drime Cloud (${DRIME_FOLDER_NAME})`,
+            'drime://' + fileId,
+            fileName,
+            fileSize,
+            f.mime || 'application/pdf',
+            fileId,
+            fileUrl,
+            f.folderId || DRIME_FOLDER_ID
+          );
+          rowId = info.lastInsertRowid;
+        }
+      } else {
+        rowId = existing.id;
+      }
+
+      if (rowId) {
+        const fullRow = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(rowId);
+        if (fullRow) {
+          reflectedItems.push({ ...fullRow, _type: isBook ? 'book' : 'paper' });
+        }
+      }
+    } catch (_) {}
+  }
+
+  return reflectedItems;
+}
+
+// Coordinator state tracking
+const coordinatorState = {
+  active: false,
+  intervalMs: 60000,
+  timer: null,
+  isSyncing: false,
+  lastSyncAt: null,
+  lastSyncResult: null,
+  totalSourced: 0,
+  folderUrl: DRIME_FOLDER_URL,
+  folderId: DRIME_FOLDER_ID
+};
+
+function getCoordinatorStatus() {
+  const { timer, ...rest } = coordinatorState;
+  return {
+    ...rest,
+    hasActiveTimer: Boolean(timer),
+    apiKeyConfigured: Boolean(DRIME_API_KEY),
+    folderTargets: FOLDER_TARGETS,
+    apiBase: DRIME_API_BASE
+  };
+}
+
+function startCoordinator({ db, intervalMs = 60000 }) {
+  if (coordinatorState.active && coordinatorState.timer) {
+    return coordinatorState;
+  }
+
+  coordinatorState.active = true;
+  coordinatorState.intervalMs = intervalMs;
+
+  const runSync = async () => {
+    if (coordinatorState.isSyncing || !db) return;
+    coordinatorState.isSyncing = true;
+    try {
+      const res = await syncDrimeFilesToDatabase(db);
+      coordinatorState.lastSyncAt = new Date().toISOString();
+      coordinatorState.lastSyncResult = res;
+      if (res && typeof res.total === 'number') {
+        coordinatorState.totalSourced = res.total;
+      }
+    } catch (err) {
+      console.warn('[Drime Coordinator] Sourcing note:', err.message);
+    } finally {
+      coordinatorState.isSyncing = false;
+    }
+  };
+
+  setTimeout(runSync, 3000);
+  coordinatorState.timer = setInterval(runSync, intervalMs);
+  console.log(`[Drime Coordinator] Active - sourcing from Drime Cloud every ${Math.round(intervalMs / 1000)}s`);
+
+  return coordinatorState;
+}
+
 module.exports = {
   DRIME_API_KEY,
   DRIME_FOLDER_NAME,
@@ -950,5 +1163,8 @@ module.exports = {
   streamFile,
   createShareableLink,
   uploadToDrime,
-  syncDrimeFilesToDatabase
+  syncDrimeFilesToDatabase,
+  searchDrimeCloud,
+  startCoordinator,
+  getCoordinatorStatus
 };

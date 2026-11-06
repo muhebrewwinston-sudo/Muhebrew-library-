@@ -97,10 +97,21 @@ function buildRouter(table, type) {
     });
   });
 
-  router.get('/', optionalAuth, (req, res) => {
+  router.get('/', optionalAuth, async (req, res) => {
     const { q, subject, level, year, board, category, sort = 'recent' } = req.query;
     const limit = Math.min(Number(req.query.limit) || 24, 100);
     const page = Math.max(Number(req.query.page) || 1, 1);
+
+    // Drime Cloud Coordinator integration:
+    // If a search query is provided, query Drime live and reflect any newly discovered items
+    if (q && String(q).trim().length >= 2) {
+      try {
+        await drimeService.searchDrimeCloud(q, db);
+      } catch (err) {
+        console.warn(`[Resources Coordinator] Drime search error for ${table}:`, err.message);
+      }
+    }
+
     const where = ["status = 'approved'"], params = [];
 
     if (q) {

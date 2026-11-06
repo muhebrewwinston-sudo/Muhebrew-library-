@@ -1,13 +1,26 @@
 const express = require('express');
 const db = require('../db/database');
 const { requireAuth } = require('../middleware/auth');
+const drime = require('../services/drime');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const q = String(req.query.q || '').trim();
   const level = req.query.level || null;
   const limit = Math.min(Number(req.query.limit) || 10, 50);
+
+  // Direct Drime Cloud Sourcing Coordinator:
+  // When a student searches, trigger live coordination with Drime Cloud
+  // to fetch, auto-trace, and reflect newly discovered matching files into SQLite.
+  if (q.length >= 2) {
+    try {
+      await drime.searchDrimeCloud(q, db);
+    } catch (err) {
+      console.warn('[Search Coordinator] Drime search error:', err.message);
+    }
+  }
+
   const like = '%' + q + '%';
 
   const pw = ["status = 'approved'", '(title LIKE ? OR subject LIKE ? OR exam_board LIKE ?)'], pa = [like, like, like];
@@ -18,7 +31,7 @@ router.get('/', (req, res) => {
     pw.join(' AND ') + ' ORDER BY downloads DESC LIMIT ?').all(...pa, limit);
   const books = db.prepare("SELECT id,title,subject,level,author,publisher,category,cover_path,file_size,storage_provider,drime_url,downloads,'book' AS type FROM books WHERE " +
     bw.join(' AND ') + ' ORDER BY downloads DESC LIMIT ?').all(...ba, limit);
-  res.json({ papers, books, total: papers.length + books.length });
+  res.json({ papers, books, total: papers.length + books.length, sourced_from: 'drime_coordinator' });
 });
 
 // Saved items of the signed-in user
