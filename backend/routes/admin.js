@@ -427,82 +427,20 @@ router.post('/bulk-upload', bulkUploadMw.single('zip'), async (req, res) => {
 // Sync files that were uploaded directly on Drime into the library database
 // Student search uses the database; files are served from Drime via the server
 router.post('/sync-from-drime', async (req, res) => {
-  const typeHint = String((req.body || {}).type || 'paper').toLowerCase(); // paper | book | marking
-  const folderId = (req.body || {}).folderId || drimeService.getFolderIdForType(typeHint);
-
-  const listed = await drimeService.listFiles(folderId);
-  if (!listed.ok) {
-    return res.status(502).json({
-      error: listed.error || 'Could not list files from Drime. Check DRIME_API_KEY and folder IDs.',
-      status: drimeService.getStatus()
+  try {
+    const result = await drimeService.syncDrimeFilesToDatabase(db);
+    res.json({
+      ok: result.ok,
+      success: result.ok,
+      message: result.ok
+        ? `Synced ${result.imported} new and ${result.updated} updated files from Drime Cloud (${result.total} total).`
+        : (result.message || result.error || 'No files returned from Drime folder'),
+      ...result
     });
+  } catch (err) {
+    console.error('[Admin Sync Drime Error]', err);
+    res.status(500).json({ ok: false, success: false, error: err.message });
   }
-
-  const imported = [];
-  const skipped = [];
-  const { isPrimarySchoolFile } = require('../utils/autotrace');
-
-  for (const f of listed.files) {
-    const name = f.name || 'file.pdf';
-    // Strictly exclude every primary school file (Standard 1–8 / PSLCE)
-    if (isPrimarySchoolFile(name, f.folderPath || '')) {
-      skipped.push({ name, reason: 'Primary school file excluded (Form 1 to Form 4 only)' });
-      continue;
-    }
-
-    if (!/\.(pdf|doc|docx)$/i.test(name)) {
-      skipped.push({ name, reason: 'Not a document' });
-      continue;
-    }
-
-    const meta = parseFilename(name);
-    const isBook = typeHint === 'book' || meta.type === 'book';
-    const table = isBook ? 'books' : 'papers';
-
-    const exists = db.prepare(
-      'SELECT id FROM ' + table + ' WHERE drime_file_id = ? OR LOWER(file_name) = ?'
-    ).get(f.id, name.toLowerCase());
-    if (exists) {
-      skipped.push({ name, reason: 'Already in library' });
-      continue;
-    }
-
-    if (isBook) {
-      db.prepare(`
-        INSERT INTO books (title, subject, level, category, file_path, file_name, file_size, mime_type,
-          storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, NULL, 'approved')
-      `).run(
-        meta.title, meta.subject, meta.level, meta.category || 'Textbook',
-        'drime://' + (f.id || name), name, f.size || 0, f.mime || 'application/pdf',
-        f.id || null, f.url || drimeService.DRIME_FOLDER_URL, folderId
-      );
-    } else {
-      db.prepare(`
-        INSERT INTO papers (title, subject, level, category, year, file_path, file_name, file_size, mime_type,
-          storage_provider, drime_file_id, drime_url, drime_folder_id, uploaded_by, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, NULL, 'approved')
-      `).run(
-        meta.title, meta.subject, meta.level, meta.category || 'MANEB', meta.year,
-        'drime://' + (f.id || name), name, f.size || 0, f.mime || 'application/pdf',
-        f.id || null, f.url || drimeService.DRIME_FOLDER_URL, folderId
-      );
-    }
-    imported.push({ name, title: meta.title, subject: meta.subject, level: meta.level });
-  }
-
-  if (imported.length > 0 && typeof db.saveCatalogToRegistry === 'function') {
-    try { db.saveCatalogToRegistry(); } catch (_) {}
-  }
-
-  res.json({
-    success: true,
-    message: 'Synced from Drime: ' + imported.length + ' new, ' + skipped.length + ' skipped.',
-    imported: imported.length,
-    skipped: skipped.length,
-    details: { imported, skipped },
-    folderId
-  });
 });
 
 router.get('/drime-files', async (req, res) => {

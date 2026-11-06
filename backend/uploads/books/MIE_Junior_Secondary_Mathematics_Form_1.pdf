@@ -1,0 +1,71 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [7 0 R 9 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>
+endobj
+6 0 obj
+<< /Length 785 >>
+stream
+BT
+/F1 12 Tf 1 0 0 1 54 780 Tm (MALAWI INSTITUTE OF EDUCATION) Tj
+/F1 10.5 Tf 1 0 0 1 54 760 Tm (MINISTRY OF EDUCATION, SCIENCE AND TECHNOLOGY) Tj
+/F1 12 Tf 1 0 0 1 54 728 Tm (JUNIOR SECONDARY MATHEMATICS - FORM 1) Tj
+/F1 10.5 Tf 1 0 0 1 54 708 Tm (Student Curriculum Textbook) Tj
+/F2 10 Tf 1 0 0 1 54 671 Tm (Approved for secondary schools across Malawi.) Tj
+/F2 10 Tf 1 0 0 1 54 656 Tm (Published by the Malawi Institute of Education \(Domasi\).) Tj
+/F1 12 Tf 1 0 0 1 54 616 Tm (TABLE OF CONTENTS:) Tj
+/F2 10 Tf 1 0 0 1 54 596 Tm (Unit 1: Number Bases and Place Values) Tj
+/F2 10 Tf 1 0 0 1 54 581 Tm (Unit 2: Fractions, Decimals, and Percentages) Tj
+/F2 10 Tf 1 0 0 1 54 566 Tm (Unit 3: Basic Algebraic Expressions) Tj
+/F2 10 Tf 1 0 0 1 54 551 Tm (Unit 4: Angles and Polygons) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 6 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> >>
+endobj
+8 0 obj
+<< /Length 569 >>
+stream
+BT
+/F1 12 Tf 1 0 0 1 54 780 Tm (UNIT 1: NUMBER BASES & ARITHMETIC) Tj
+/F1 10.5 Tf 1 0 0 1 54 760 Tm (1.1 Base Ten and Base Two Systems) Tj
+/F2 10 Tf 1 0 0 1 54 743 Tm (The decimal system uses ten symbols \(0 to 9\) with base 10.) Tj
+/F2 10 Tf 1 0 0 1 54 728 Tm (In digital computing and binary representation, base 2 is utilized.) Tj
+/F1 10.5 Tf 1 0 0 1 54 698 Tm (Worked Example 1.1) Tj
+/F2 10 Tf 1 0 0 1 54 681 Tm (Convert binary 1101_2 into decimal notation:) Tj
+/F2 10 Tf 1 0 0 1 54 666 Tm (1*\(2^3\) + 1*\(2^2\) + 0*\(2^1\) + 1*\(2^0\) = 8 + 4 + 0 + 1 = 13.) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 8 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> >>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000196 00000 n 
+0000000266 00000 n 
+0000000344 00000 n 
+0000001180 00000 n 
+0000001326 00000 n 
+0000001946 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R >>
+startxref
+2092
+%%EOF

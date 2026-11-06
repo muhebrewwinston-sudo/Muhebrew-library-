@@ -398,6 +398,11 @@ async function getOrGenerateThumbnail(rawType, id, item, drimeService) {
   const jpgPath = path.join(THUMBNAIL_DIR, jpgFile);
   const svgPath = path.join(THUMBNAIL_DIR, svgFile);
 
+  // 0. Check if item has remote cover URL (e.g. from Drime Cloud)
+  if (item && item.cover_path && /^https?:\/\//i.test(item.cover_path)) {
+    return { ok: true, url: item.cover_path, type: 'remote' };
+  }
+
   // 1. Check if cached JPEG thumbnail exists
   try {
     if (fs.existsSync(jpgPath) && fs.statSync(jpgPath).size > 200) {

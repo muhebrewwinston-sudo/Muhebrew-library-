@@ -180,6 +180,12 @@ for (const t of ['papers', 'books']) {
   if (!cols.includes('drime_folder_id')) db.exec('ALTER TABLE ' + t + ' ADD COLUMN drime_folder_id TEXT');
 }
 
+// Ensure papers table has cover_path column
+try {
+  const paperCols = db.prepare('PRAGMA table_info(papers)').all().map((c) => c.name);
+  if (!paperCols.includes('cover_path')) db.exec('ALTER TABLE papers ADD COLUMN cover_path TEXT');
+} catch (_) {}
+
 // Ensure reports table has details and email columns
 try {
   const reportCols = db.prepare('PRAGMA table_info(reports)').all().map((c) => c.name);
@@ -302,6 +308,18 @@ function syncCatalogFromRegistry() {
         OR LOWER(level) LIKE '%standard%' OR LOWER(level) LIKE '%primary%'
     `).run();
 
+    // Purge any dummy sample test placeholders (official government project standard)
+    db.prepare(`
+      DELETE FROM papers WHERE 
+        LOWER(title) LIKE '%sample%' OR LOWER(file_name) LIKE '%sample%' OR LOWER(file_path) LIKE '%sample%'
+        OR LOWER(file_name) LIKE 'key-%'
+    `).run();
+    db.prepare(`
+      DELETE FROM books WHERE 
+        LOWER(title) LIKE '%sample%' OR LOWER(file_name) LIKE '%sample%' OR LOWER(file_path) LIKE '%sample%'
+        OR LOWER(file_name) LIKE 'book-%'
+    `).run();
+
     if (!fs.existsSync(catalogFile)) return;
     const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8') || '{}');
     const papers = Array.isArray(catalog.papers) ? catalog.papers : [];
@@ -344,6 +362,32 @@ function syncCatalogFromRegistry() {
           p.status || 'approved',
           p.downloads || 0
         );
+      } else {
+        db.prepare(`
+          UPDATE papers SET
+            title = ?, subject = ?, level = ?, category = ?, year = ?, exam_board = ?, paper_no = ?,
+            description = ?, file_path = ?, file_name = ?, file_size = ?, mime_type = ?,
+            storage_provider = ?, drime_file_id = ?, drime_url = ?, drime_folder_id = ?, status = 'approved'
+          WHERE id = ?
+        `).run(
+          cleanTitle,
+          p.subject || 'General Studies',
+          p.level || 'Form 4',
+          p.category || 'MANEB',
+          p.year || new Date().getFullYear(),
+          p.exam_board || 'MANEB',
+          p.paper_no || null,
+          p.description || 'Drime Cloud past paper',
+          p.file_path || ('drime://' + (p.drime_file_id || 'file')),
+          p.file_name || (cleanTitle + '.pdf'),
+          p.file_size || 1024,
+          p.mime_type || 'application/pdf',
+          p.storage_provider || 'drime',
+          p.drime_file_id || null,
+          p.drime_url || 'https://dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k',
+          p.drime_folder_id || 'fngud8DkQTOTNvd1MmAXhszXKIm60k',
+          existing.id
+        );
       }
     }
 
@@ -379,6 +423,34 @@ function syncCatalogFromRegistry() {
           b.drime_folder_id || 'fngud8DkQTOTNvd1MmAXhszXKIm60k',
           b.status || 'approved',
           b.downloads || 0
+        );
+      } else {
+        db.prepare(`
+          UPDATE books SET
+            title = ?, author = ?, publisher = ?, subject = ?, level = ?, category = ?, edition = ?, isbn = ?,
+            description = ?, cover_path = ?, file_path = ?, file_name = ?, file_size = ?, mime_type = ?,
+            storage_provider = ?, drime_file_id = ?, drime_url = ?, drime_folder_id = ?, status = 'approved'
+          WHERE id = ?
+        `).run(
+          cleanTitle,
+          b.author || 'Ministry of Education',
+          b.publisher || null,
+          b.subject || 'General Studies',
+          b.level || 'Form 4',
+          b.category || 'MSCE',
+          b.edition || null,
+          b.isbn || null,
+          b.description || 'Drime Cloud textbook',
+          b.cover_path || null,
+          b.file_path || ('drime://' + (b.drime_file_id || 'file')),
+          b.file_name || (cleanTitle + '.pdf'),
+          b.file_size || 1024,
+          b.mime_type || 'application/pdf',
+          b.storage_provider || 'drime',
+          b.drime_file_id || null,
+          b.drime_url || 'https://dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k',
+          b.drime_folder_id || 'fngud8DkQTOTNvd1MmAXhszXKIm60k',
+          existing.id
         );
       }
     }

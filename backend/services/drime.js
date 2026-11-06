@@ -100,32 +100,83 @@ function extractEntriesFromObject(obj, results = [], parentPath = 'Muhebrew') {
     return results;
   }
 
-  // Check if obj represents a file
-  const hasFileName = obj.name || obj.file_name || obj.original_name || obj.title;
-  const isExplicitFolder = obj.type === 'folder' || obj.is_dir === true || obj.mime === 'directory' || obj.mime_type === 'directory';
-  const hasExtension = hasFileName && /\.[a-z0-9]{2,5}$/i.test(String(hasFileName));
-  const isPdfOrDoc = hasFileName && /\.(pdf|doc|docx|epub|jpg|jpeg|png)$/i.test(String(hasFileName));
-  const isFile = !isExplicitFolder && (obj.type === 'file' || isPdfOrDoc || (hasExtension && (obj.file_size || obj.size || obj.bytes)));
+  // 1. Check if obj represents explicitly a folder/directory
+  const isExplicitFolder = (
+    obj.type === 'folder' ||
+    obj.type === 'directory' ||
+    obj.is_dir === true ||
+    obj.mime === 'directory' ||
+    obj.mime_type === 'directory' ||
+    (Boolean(obj.children) && !obj.file_size && !obj.mime && !obj.extension)
+  );
+
+  // 2. Extract potential filename and extension
+  const rawName = String(obj.file_name || obj.name || obj.original_name || obj.title || '').trim();
+  const ext = String(
+    obj.extension ||
+    (rawName.includes('.') ? rawName.split('.').pop() : '')
+  ).toLowerCase();
+  const mime = String(obj.mime || obj.mime_type || obj.content_type || '').toLowerCase();
+  const objType = String(obj.type || '').toLowerCase();
+
+  // Document types recognized by BeDrive / Drime
+  const isDocType = [
+    'file', 'pdf', 'document', 'doc', 'sheet', 'presentation', 'text', 'archive'
+  ].includes(objType)
+    || mime.includes('pdf')
+    || mime.includes('document')
+    || mime.includes('word')
+    || mime.includes('epub')
+    || mime.includes('octet-stream')
+    || ['pdf', 'doc', 'docx', 'epub', 'txt', 'rtf'].includes(ext)
+    || /\.(pdf|doc|docx|epub|txt)$/i.test(rawName);
+
+  const hasIdentifier = Boolean(obj.id || obj.hash || obj.file_id || obj.uuid);
+  const hasFileSize = Number(obj.file_size || obj.size || obj.bytes || 0) > 0;
+  const hasFileLink = Boolean(obj.url || obj.download_url || obj.link);
+
+  const isFile = !isExplicitFolder && rawName && (
+    isDocType ||
+    hasFileSize ||
+    (hasIdentifier && hasFileLink) ||
+    /\.[a-z0-9]{2,5}$/i.test(rawName)
+  );
 
   if (isFile) {
+    let finalName = rawName;
+    if (!finalName.includes('.')) {
+      finalName = `${finalName}.${ext || 'pdf'}`;
+    }
+
     const fileId = String(obj.id || obj.hash || obj.file_id || obj.uuid || '');
-    const fileName = String(hasFileName || 'document.pdf');
-    const size = Number(obj.file_size || obj.size || obj.bytes || 0);
-    const mime = String(obj.mime || obj.mime_type || obj.content_type || 'application/pdf');
-    const url = obj.url || obj.download_url || obj.link || (obj.hash ? `https://dri.me/${obj.hash}` : null);
+    const hash = String(obj.hash || fileId);
+    const size = Number(obj.file_size || obj.size || obj.bytes || 1024);
+    const cleanMime = mime && mime.includes('/') ? mime : 'application/pdf';
+
+    let url = obj.url || obj.download_url || obj.link || null;
+    if (!url && hash) {
+      url = `https://dri.me/${hash}`;
+    } else if (!url && fileId) {
+      url = `${DRIME_API_BASE}/file-entries/${fileId}/download`;
+    }
+
+    const thumbnailUrl = obj.thumbnail_url || obj.thumbnail || obj.preview_url || null;
 
     results.push({
       id: fileId || `drime_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      name: fileName,
+      hash,
+      name: finalName,
       size: size > 0 ? size : 1024,
-      mime: mime.includes('/') ? mime : 'application/pdf',
+      mime: cleanMime,
       url,
-      folderPath: parentPath
+      thumbnailUrl,
+      folderPath: parentPath,
+      folderId: obj.parent_id || obj.folder_id || null
     });
   }
 
   // If this object is a folder or contains sub-items, recurse into children
-  const folderName = isExplicitFolder && hasFileName ? String(hasFileName) : '';
+  const folderName = isExplicitFolder && rawName ? rawName : '';
   const nextPath = folderName && folderName !== parentPath ? `${parentPath}/${folderName}` : parentPath;
 
   const childArrays = [obj.children, obj.entries, obj.files, obj.subfolders, obj.items, obj.data];
@@ -135,8 +186,8 @@ function extractEntriesFromObject(obj, results = [], parentPath = 'Muhebrew') {
     }
   }
 
-  // Common wrapper properties
-  const wrapperProps = ['link', 'entry', 'folder', 'props', 'share'];
+  // Common wrapper properties (BeDrive response pagination, link, entry, etc.)
+  const wrapperProps = ['pagination', 'link', 'entry', 'folder', 'props', 'share', 'response'];
   for (const prop of wrapperProps) {
     if (obj[prop] && typeof obj[prop] === 'object') {
       extractEntriesFromObject(obj[prop], results, nextPath);
@@ -285,6 +336,12 @@ async function fetchShareEntries(shareHash) {
 
   const headersList = [
     {
+      'X-Inertia': 'true',
+      'X-Inertia-Version': '1.0.0',
+      Accept: 'application/json, text/plain, */*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    },
+    {
       Accept: 'application/json, text/html, */*',
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     },
@@ -400,32 +457,43 @@ async function listFilesUnderMuhebrew(rootFolderId, rootFolderName = 'Muhebrew')
       }
     }
 
-    // 3. Drive-wide file entries scan for all document assets
+    // 3. Drive-wide file entries scan for all document assets across all folders
     for (const base of API_BASES) {
       try {
-        const res = await fetch(`${base}/file-entries?per_page=200`, { headers: authHeaders() });
-        if (res.ok) {
-          const data = await res.json();
-          const list = Array.isArray(data) ? data : data.data || data.entries || [];
-          if (Array.isArray(list)) {
-            for (const f of list) {
-              const isFolder = f.type === 'folder' || f.is_dir;
-              if (isFolder) continue;
-              const fName = String(f.name || f.file_name || '').toLowerCase();
-              const isDoc = fName.match(/\.(pdf|doc|docx|epub|pptx|ppt|txt)$/i) || f.type === 'file' || String(f.mime || '').includes('pdf');
-              if (isDoc) {
-                addFile({
-                  id: String(f.id || f.hash || ''),
-                  name: f.name || f.file_name || 'document.pdf',
-                  size: Number(f.file_size || f.size || 1024),
-                  mime: f.mime || f.mime_type || 'application/pdf',
-                  url: f.url || f.download_url || (f.hash ? `https://dri.me/${f.hash}` : null),
-                  folderId: f.parent_id || rootFolderId,
-                  folderPath: f.path || rootFolderName
-                });
+        const endpoints = [
+          `${base}/file-entries?perPage=100&per_page=100&page=1`,
+          `${base}/drive/file-entries?perPage=100&per_page=100&page=1`
+        ];
+
+        for (const ep of endpoints) {
+          try {
+            const res = await fetch(ep, { headers: authHeaders() });
+            if (!res.ok) continue;
+            const data = await res.json();
+            const extracted = extractEntriesFromObject(data, [], rootFolderName);
+            for (const f of extracted) {
+              addFile(f);
+            }
+
+            // Check if pagination exists (last_page > 1)
+            const lastPage = (data.pagination && data.pagination.last_page) || data.last_page || 1;
+            if (lastPage > 1) {
+              const maxPages = Math.min(lastPage, 5);
+              for (let p = 2; p <= maxPages; p++) {
+                try {
+                  const pUrl = `${ep.replace(/page=1/, `page=${p}`)}`;
+                  const pRes = await fetch(pUrl, { headers: authHeaders() });
+                  if (pRes.ok) {
+                    const pData = await pRes.json();
+                    const pExtracted = extractEntriesFromObject(pData, [], rootFolderName);
+                    for (const f of pExtracted) {
+                      addFile(f);
+                    }
+                  }
+                } catch (_) {}
               }
             }
-          }
+          } catch (_) {}
         }
       } catch (_) {}
     }
@@ -832,9 +900,10 @@ async function syncDrimeFilesToDatabase(db) {
             drime_url = ?,
             drime_folder_id = ?,
             file_size = ?,
+            cover_path = COALESCE(?, cover_path),
             status = 'approved'
           WHERE id = ?
-        `).run(cleanTitle, fileId, fileUrl, f.folderId || folderId, fileSize, rowId);
+        `).run(cleanTitle, fileId, fileUrl, f.folderId || folderId, fileSize, f.thumbnailUrl || null, rowId);
         updatedCount++;
         syncedList.push({ id: rowId, title: cleanTitle, action: 'updated', folder: f.folderPath });
       } else {
@@ -843,10 +912,10 @@ async function syncDrimeFilesToDatabase(db) {
           const info = db.prepare(`
             INSERT INTO books (
               title, subject, level, category, author, description,
-              file_path, file_name, file_size, mime_type,
+              cover_path, file_path, file_name, file_size, mime_type,
               storage_provider, drime_file_id, drime_url, drime_folder_id,
               status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, 'approved')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, 'approved')
           `).run(
             cleanTitle,
             traced.subject || 'General Studies',
@@ -854,6 +923,7 @@ async function syncDrimeFilesToDatabase(db) {
             defaultCategory,
             traced.author || 'Ministry of Education',
             `Synced from Drime folder "${folderName}" (${f.folderPath || ''})`,
+            f.thumbnailUrl || null,
             'drime://' + fileId,
             fileName,
             fileSize,
@@ -867,10 +937,10 @@ async function syncDrimeFilesToDatabase(db) {
           const info = db.prepare(`
             INSERT INTO papers (
               title, subject, level, category, year, exam_board, description,
-              file_path, file_name, file_size, mime_type,
+              cover_path, file_path, file_name, file_size, mime_type,
               storage_provider, drime_file_id, drime_url, drime_folder_id,
               status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, 'approved')
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'drime', ?, ?, ?, 'approved')
           `).run(
             cleanTitle,
             traced.subject || 'General Studies',
@@ -879,6 +949,7 @@ async function syncDrimeFilesToDatabase(db) {
             traced.year || new Date().getFullYear(),
             traced.exam_board || (defaultCategory === 'Cluster Mock' ? 'Cluster Mock' : 'MANEB'),
             `Synced from Drime folder "${folderName}" (${f.folderPath || ''})`,
+            f.thumbnailUrl || null,
             'drime://' + fileId,
             fileName,
             fileSize,
