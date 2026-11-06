@@ -1,16 +1,11 @@
 # Vercel Ignore File
-# Tells Vercel to ignore all backend, database, and server files
-# Vercel will ONLY import and deploy the frontend/ folder
-
-backend/
-server.js
-startup.sh
+# Only ignore temporary build artifacts, git, and zip bundles
+node_modules
 *.zip
-*.db
-*.db-journal
-*.db-wal
-*.db-shm
-.env
-.env.*
+*.log
+.git
+.github
+startup.sh
 XSYSTEMS_AUTO_UPDATE.md
 SETUP.md
+

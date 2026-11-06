@@ -1115,6 +1115,12 @@ function getCoordinatorStatus() {
 }
 
 function startCoordinator({ db, intervalMs = 60000 }) {
+  if (process.env.VERCEL) {
+    // In Vercel serverless environment, background intervals are skipped
+    // Sourcing coordinates on-demand when search and resource queries run
+    return coordinatorState;
+  }
+
   if (coordinatorState.active && coordinatorState.timer) {
     return coordinatorState;
   }

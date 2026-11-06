@@ -6,7 +6,7 @@ function isAdmin(user) {
   if (!user) return false;
   if (user.role === 'admin') return true;
   const email = (user.email || '').toLowerCase().trim();
-  const adminEmails = ['muhebrewwinston@gmail.com', 'admin@muhebrew.com', 'admin@library.mw'];
+  const adminEmails = ['muhebrewwinston@gmail.com', 'winstonmphatsokamiza@gmail.com', 'admin@muhebrew.com', 'admin@library.mw'];
   if (adminEmails.includes(email) || email.startsWith('admin@')) return true;
   return false;
 }

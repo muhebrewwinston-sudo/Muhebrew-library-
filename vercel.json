@@ -5,11 +5,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "http://195.123.189.186:25692/api/$1"
+      "destination": "/api/index.js"
     },
     {
       "source": "/uploads/(.*)",
-      "destination": "http://195.123.189.186:25692/uploads/$1"
+      "destination": "/api/index.js"
     },
     {
       "source": "/(.*)",
