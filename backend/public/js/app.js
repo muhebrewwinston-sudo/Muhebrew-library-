@@ -476,11 +476,6 @@ function card(item) {
       (isPaper && item.year ? '<span class="chip chip-year">' + item.year + '</span>' : '') +
       (isPaper && item.exam_board ? '<span class="chip chip-board">' + esc(item.exam_board) + '</span>' : '') +
       (showCategoryChip ? '<span class="chip chip-category">' + esc(item.category) + '</span>' : '') +
-      '<span class="chip chip-subject">' + esc(item.subject) + '</span>' +
-      '<span class="chip chip-level">' + esc(item.level) + '</span>' +
-      (isPaper && item.year ? '<span class="chip chip-year">' + item.year + '</span>' : '') +
-      (isPaper && item.exam_board ? '<span class="chip chip-board">' + esc(item.exam_board) + '</span>' : '') +
-      (showCategoryChip ? '<span class="chip chip-category">' + esc(item.category) + '</span>' : '') +
       (!isPaper && item.author ? '<span class="chip chip-author">' + esc(item.author) + '</span>' : '') +
     '</div>' +
     '<div class="card-actions">' +
@@ -578,6 +573,7 @@ async function load() {
 grid.addEventListener('click', async (e) => {
   const saveBtn = e.target.closest('[data-save]');
   const dlBtn = e.target.closest('[data-dl]');
+  const rpBtn = e.target.closest('[data-rp]');
   const coverSheet = e.target.closest('.card-cover-sheet');
 
   if (coverSheet && !e.target.closest('.act-download') && !e.target.closest('.act-report') && !e.target.closest('[data-save]')) {
@@ -588,6 +584,24 @@ grid.addEventListener('click', async (e) => {
       window.openPreview(ref, title);
       return;
     }
+  }
+
+  // In-app Report Issue View (Direct File Report without browser popup)
+  if (rpBtn) {
+    const ref = rpBtn.dataset.rp;
+    const itemCard = rpBtn.closest('.card');
+    const title = itemCard ? (itemCard.querySelector('.card-title')?.textContent || '').trim() : 'Resource';
+    if ($('helpDetails')) {
+      $('helpDetails').value = `Reporting resource: ${title}`;
+    }
+    if ($('helpEmail')) {
+      $('helpEmail').value = (user && user.email) ? user.email : '';
+    }
+    if ($('helpReason')) {
+      $('helpReason').value = 'Download not working or corrupted';
+    }
+    openModal('helpModal');
+    return;
   }
 
   try {
