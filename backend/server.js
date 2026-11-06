@@ -101,6 +101,20 @@ const browseLimit = rateLimit({ windowMs: 60 * 1000, max: 300 });
 const authLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: { error: 'Too many attempts. Try again shortly.' } });
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, name: 'Muhebrew Library' }));
+app.get('/api/drime/status', (_req, res) => {
+  const drimeService = require('./services/drime');
+  res.json({ ok: true, coordinator: drimeService.getCoordinatorStatus() });
+});
+app.post('/api/drime/sync', async (_req, res) => {
+  try {
+    const db = require('./db/database');
+    const drimeService = require('./services/drime');
+    const result = await drimeService.syncDrimeFilesToDatabase(db);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/auth', authLimit, authRoutes);
 app.use('/api/papers', browseLimit, resources.papers);
@@ -193,21 +207,14 @@ if (!process.env.VERCEL) {
         autoUpdater.startAutoPolling(pollMin);
       }
 
-      // Automatic Drime Cloud sync on startup and 5-minute background polling
+      // Direct Drime Cloud Sourcing Coordinator
+      // Regularly polls Drime Cloud every 60s and keeps SQLite database synced with Drime
       try {
         const db = require('./db/database');
         const drimeService = require('./services/drime');
-        drimeService.syncDrimeFilesToDatabase(db).then((res) => {
-          if (res.ok) {
-            console.log(`[Drime Auto-Sync] Startup sync: ${res.imported} imported, ${res.updated} updated (${res.total} files in Drime folder)`);
-          }
-        }).catch((e) => console.log('[Drime Auto-Sync] Startup note:', e.message));
-
-        setInterval(() => {
-          drimeService.syncDrimeFilesToDatabase(db).catch(() => {});
-        }, 5 * 60 * 1000);
+        drimeService.startCoordinator({ db, intervalMs: 60000 });
       } catch (e) {
-        console.warn('[Drime Auto-Sync] Init note:', e.message);
+        console.warn('[Drime Coordinator] Init note:', e.message);
       }
     });
 
