@@ -177,6 +177,11 @@ function buildRouter(table, type) {
     const row = getRow(req.params.id);
     if (!row) return res.status(404).json({ error: 'Resource not found.' });
 
+    // 0. If item has an official remote cover URL (e.g. from Drime Cloud), redirect to it
+    if (row.cover_path && /^https?:\/\//i.test(row.cover_path)) {
+      return res.redirect(row.cover_path);
+    }
+
     try {
       const thumb = await thumbnailService.getOrGenerateThumbnail(type, row.id, row, drimeService);
       res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');

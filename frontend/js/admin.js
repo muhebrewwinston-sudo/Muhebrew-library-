@@ -558,11 +558,14 @@ function renderFavBooksFlipped() {
   container.innerHTML = pageItems.map((b, idx) => {
     const globalRank = startIdx + idx + 1;
     const cleanTitle = b.title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').trim();
+    const coverSrc = (b.cover_path && b.cover_path.startsWith('http'))
+      ? b.cover_path
+      : (b.cover_path && !b.cover_path.startsWith('/') ? '/' + b.cover_path : `/api/books/${b.id}/thumbnail`);
     return `
       <div class="flipped-item-row">
         <span style="font-weight:700;color:var(--primary);font-size:13px;width:22px;text-align:center">#${globalRank}</span>
         <div style="width:38px;height:50px;border-radius:4px;overflow:hidden;background:#fff;border:1px solid var(--border);box-shadow:0 2px 4px rgba(0,0,0,0.1);flex-shrink:0;position:relative">
-          <img src="${b.cover_path ? ('/' + esc(b.cover_path)) : ('/api/books/' + b.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='grid'">
+          <img src="${coverSrc}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='grid'">
           <div style="display:none;width:100%;height:100%;place-items:center">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
           </div>
@@ -627,11 +630,14 @@ function renderFavPapersFlipped() {
     const headerCls = isMarking ? 'key' : (boardTag.includes('MOCK') ? 'mock' : 'maneb');
     const cleanTitle = p.title.replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').trim();
 
+    const coverSrc = (p.cover_path && p.cover_path.startsWith('http'))
+      ? p.cover_path
+      : (p.cover_path && !p.cover_path.startsWith('/') ? '/' + p.cover_path : `/api/papers/${p.id}/thumbnail`);
     return `
       <div class="flipped-item-row">
         <span style="font-weight:700;color:var(--primary);font-size:13px;width:22px;text-align:center">#${globalRank}</span>
         <div style="width:38px;height:50px;border-radius:4px;overflow:hidden;background:#fff;border:1px solid var(--border);box-shadow:0 2px 4px rgba(0,0,0,0.1);flex-shrink:0;position:relative">
-          <img src="${p.cover_path ? ('/' + esc(p.cover_path)) : ('/api/papers/' + p.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'">
+          <img src="${coverSrc}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'">
           <div style="display:none;width:100%;height:100%;flex-direction:column">
             <div class="cover-sheet-header ${headerCls}" style="height:12px;font-size:6.5px">${esc(boardTag)}</div>
             <div class="cover-sheet-body" style="padding:1px"><div class="cover-sheet-subject" style="font-size:6.5px">${esc((p.subject||'').slice(0,5))}</div></div>
@@ -1500,10 +1506,10 @@ $('btnSyncDrime')?.addEventListener('click', async () => {
       }
     });
     const data = await res.json();
-    if (data.ok) {
-      alert(`Drime Cloud Sync Successful!\n• Folder: "${data.folderName || 'Muhebrew'}" (fngud8DkQTOTNvd1MmAXhszXKIm60k)\n• ${data.imported} new resource(s) imported\n• ${data.updated} resource(s) updated\n• ${data.removed || 0} file(s) removed\n• Total ${data.total} item(s) in Drime Cloud!`);
+    if (data.ok || data.success) {
+      alert(`Drime Cloud Sync Successful!\n• Folder: "${data.folderName || 'Muhebrew'}" (fngud8DkQTOTNvd1MmAXhszXKIm60k)\n• ${data.imported || 0} new resource(s) imported\n• ${data.updated || 0} resource(s) updated\n• ${data.removed || 0} file(s) removed\n• Total ${data.total || 0} item(s) in Drime Cloud!`);
       if ($('drimeCloudCount')) {
-        $('drimeCloudCount').innerHTML = `<b>Status:</b> ${data.total} item(s) active in library from Drime folder "Muhebrew".`;
+        $('drimeCloudCount').innerHTML = `<b>Status:</b> ${data.total || 0} item(s) active in library from Drime folder "Muhebrew".`;
       }
       loadStats();
     } else {

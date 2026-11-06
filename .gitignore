@@ -17,5 +17,6 @@ backend/db/*.db-journal
 backend/uploads/thumbnails/*.jpg
 backend/uploads/thumbnails/*.png
 backend/uploads/thumbnails/*.jpeg
+backend/uploads/thumbnails/*.svg
 *.zip
 !muhebrew-backend-updated.zip
