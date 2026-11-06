@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Upload - Muhebrew Library</title>
+<meta name="theme-color" content="#14532d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%2314532d' stroke-width='4' stroke-linejoin='round'%3E%3Cpath d='M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z'/%3E%3Cpath d='M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css?v=3.1.0">
+<script>
+  (function() {
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('ph_theme') || 'light');
+    var token = sessionStorage.getItem('ph_token');
+    if (!token) {
+      location.replace('/auth.html');
+    }
+  })();
+</script>
+</head>
+<body>
+<header class="site">
+  <div class="wrap">
+    <a class="logo" href="/" title="Muhebrew Library - Student Account">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg>
+      <span>Muhebrew <b>Library</b></span>
+    </a>
+    <span class="spacer"></span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <a class="switch-student-btn" href="/" title="Turn as student">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Turn as student</span>
+      </a>
+      <button class="header-icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button class="btn sm danger" id="signOutBtn" title="Log out" style="padding:6px 12px;font-size:12px;white-space:nowrap">Log out</button>
+    </div>
+  </div>
+</header>
+<main class="wrap" style="padding-bottom:30px">
+  <h1 style="margin:20px 0 4px;font-size:22px">Upload a resource</h1>
+  <p style="color:var(--muted);margin:0 0 16px;font-size:13px">Teacher uploads are reviewed by an admin before they appear on the site.</p>
+  <div class="panel">
+    <form id="f" class="form-grid">
+      <div><label>Type</label><select id="type"><option value="papers">Past paper</option><option value="books">Book</option></select></div>
+      <div><label>Subject</label><input id="subject" required placeholder="Mathematics"></div>
+      <div><label>Title</label><input id="title" required placeholder="Mathematics Paper 1"></div>
+      <div><label>Level</label><select id="level"><option>Form 1</option><option>Form 2</option><option>Form 3</option><option>Form 4</option></select></div>
+      <div id="yw"><label>Year</label><input id="year" type="number" min="1990" max="2100"></div>
+      <div id="bw"><label>Exam board</label><input id="board" placeholder="MANEB"></div>
+      <div id="aw" hidden><label>Author</label><input id="author"></div>
+      <div id="pw" hidden><label>Publisher</label><input id="publisher"></div>
+      <div><label>Description</label><textarea id="desc" rows="2"></textarea></div>
+      <div><label>File (PDF works best)</label><input id="file" type="file" required></div>
+      <div><label>Cover image (books, optional)</label><input id="cover" type="file" accept="image/*"></div>
+      <div><button class="btn primary" id="go" type="submit" style="width:100%">Submit for review</button></div>
+    </form>
+  </div>
+  <div class="panel"><h3>My uploads</h3><div id="mine"></div></div>
+  <div class="panel"><h3>Change my password</h3>
+    <form id="pwForm" class="form-grid">
+      <div><label for="pwCurrent">Current password</label><input id="pwCurrent" type="password" required autocomplete="current-password" autocapitalize="none"></div>
+      <div><label for="pwNew">New password (6+ characters)</label><input id="pwNew" type="password" required minlength="6" autocomplete="new-password" autocapitalize="none"></div>
+      <div><button class="btn primary" type="submit" style="width:100%">Change password</button></div>
+    </form>
+  </div>
+</main>
+<footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
+<script src="/js/api.js?v=3.1.0"></script>
+<script src="/js/teacher.js?v=3.1.0"></script>
+<script src="/js/account.js?v=3.1.0"></script>
+</body>
+</html>

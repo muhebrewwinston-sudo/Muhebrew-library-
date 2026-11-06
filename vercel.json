@@ -10,6 +10,10 @@
     {
       "source": "/uploads/(.*)",
       "destination": "http://195.123.189.186:25692/uploads/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
     }
   ]
 }

@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Muhebrew Library - Malawi secondary school resources</title>
+<meta name="theme-color" content="#14532d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%2314532d' stroke-width='4' stroke-linejoin='round'%3E%3Cpath d='M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z'/%3E%3Cpath d='M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css?v=3.1.0">
+<script>
+  (function() {
+    document.documentElement.setAttribute('data-theme', localStorage.getItem('ph_theme') || 'light');
+    var token = sessionStorage.getItem('ph_token') || localStorage.getItem('ph_token');
+    if (!token) {
+      location.replace('/auth.html');
+    }
+  })();
+</script>
+</head>
+<body class="has-bottom-tabs">
+
+<!-- Left Navigation Drawer Backdrop -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+<!-- Left Navigation Drawer (Clean white background with soft green accents) -->
+<aside class="side-drawer" id="sideDrawer" aria-label="Navigation drawer" aria-hidden="true">
+  <div class="drawer-content">
+    
+    <!-- Top: Circular green avatar with initial, name, email, STUDENT badge, and close button -->
+    <div class="drawer-profile">
+      <div class="profile-avatar" id="drawerAvatar">K</div>
+      <div class="profile-info">
+        <h3 class="profile-name" id="drawerName">Kamiza</h3>
+        <p class="profile-email" id="drawerEmail">muhebrewwinston@gmail.com</p>
+        <div class="profile-badge-row">
+          <span class="role-badge badge-student" id="drawerStudentBadge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            <span>STUDENT</span>
+          </span>
+          <span class="role-badge badge-teacher" id="drawerTeacherBadge" hidden>TEACHER</span>
+        </div>
+      </div>
+      <button class="drawer-close" id="drawerCloseBtn" aria-label="Close menu">&times;</button>
+    </div>
+
+    <!-- Admin / Teacher area switchers (discreetly visible only if owner or teacher) -->
+    <div class="admin-quick-access" id="adminRoleSwitcher" hidden>
+      <a href="/admin.html" class="admin-quick-btn" id="drawerAdminLink">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13" aria-hidden="true"><path fill-rule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5C2.056 5.649 2 6.319 2 7c0 5.225 3.34 9.67 8 11.317C14.66 16.67 18 12.225 18 7c0-.682-.057-1.35-.166-2.001A11.954 11.954 0 0110 1.944zM11 14a1 1 0 11-2 0 1 1 0 012 0zm0-7a1 1 0 10-2 0v3a1 1 0 102 0V7z" clip-rule="evenodd" /></svg>
+        <span>Open Admin Dashboard &rarr;</span>
+      </a>
+      <a href="/teacher.html" class="teacher-quick-btn" id="drawerTeacherLink" hidden>
+        Teacher Uploads &rarr;
+      </a>
+    </div>
+
+    <!-- Download Quota card with progress bar and "Upload to unlock +5" button -->
+    <div class="drawer-quota-card" id="drawerQuotaCard">
+      <div class="quota-head">
+        <div class="quota-title-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span class="quota-title">Download Quota</span>
+        </div>
+        <span class="quota-pill" id="quotaPill">3 left</span>
+      </div>
+      <div class="quota-bar-track">
+        <div class="quota-bar-fill" id="quotaFill" style="width: 60%;"></div>
+      </div>
+      <p class="quota-sub" id="quotaSub">3 of 5 downloads available</p>
+      <button class="btn sm primary quota-unlock-btn" id="drawerUnlockBtn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Upload to unlock +5</span>
+      </button>
+    </div>
+
+    <!-- Exact Student Menu Items Order (Matching User Screenshot + Notes):
+      1. My profile
+      2. Upload resources
+      3. Books (expandable: Form 1 & 2, Form 3 & 4)
+      4. Papers (expandable: Form 1 & 2, Form 3 & 4)
+      5. Marking keys (expandable: JCE, MSCE)
+      6. Notes (expandable: Form 1 & 2, Form 3 & 4)
+      7. Help & Report Issue
+      8. Log out (red card)
+    -->
+    <nav class="drawer-nav">
+      <!-- 1. My profile -->
+      <button class="drawer-item" type="button" id="drawerProfileBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="drawer-label">My profile</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <!-- 2. Upload resources -->
+      <a class="drawer-item" href="#" id="drawerUploadLink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span class="drawer-label">Upload resources</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+
+      <div class="drawer-divider"></div>
+
+      <!-- 3. Books (expandable: Form 1 & 2, Form 3 & 4) -->
+      <div class="drawer-accordion-group" id="drawerAccordionBooks">
+        <button class="drawer-item drawer-accordion-trigger" type="button" aria-expanded="false" data-accordion="books">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span class="drawer-label">Books</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="drawer-accordion-content" id="accordionContentBooks">
+          <button class="drawer-sub-item" type="button" data-drawer-filter="books:JCE:JCE">
+            <span class="dot"></span>
+            <span>(JCE) Form 1 &amp; Form 2</span>
+          </button>
+          <button class="drawer-sub-item" type="button" data-drawer-filter="books:MSCE:MSCE">
+            <span class="dot"></span>
+            <span>(MSCE) Form 3 &amp; Form 4</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Papers (expandable: Form 1 & 2, Form 3 & 4) -->
+      <div class="drawer-accordion-group" id="drawerAccordionPapers">
+        <button class="drawer-item drawer-accordion-trigger" type="button" aria-expanded="false" data-accordion="papers">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span class="drawer-label">Papers</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="drawer-accordion-content" id="accordionContentPapers">
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:JCE:JCE">
+            <span class="dot"></span>
+            <span>(JCE) Form 1 &amp; Form 2</span>
+          </button>
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:MSCE:MSCE">
+            <span class="dot"></span>
+            <span>(MSCE) Form 3 &amp; Form 4</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. Marking keys (expandable: JCE, MSCE) -->
+      <div class="drawer-accordion-group" id="drawerAccordionKeys">
+        <button class="drawer-item drawer-accordion-trigger" type="button" aria-expanded="false" data-accordion="keys">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3"/></svg>
+          <span class="drawer-label">Marking keys</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="drawer-accordion-content" id="accordionContentKeys">
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Marking Key:JCE">
+            <span class="dot"></span>
+            <span>(JCE) Marking Keys</span>
+          </button>
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Marking Key:MSCE">
+            <span class="dot"></span>
+            <span>(MSCE) Marking Keys</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 6. Notes (expandable: Form 1 & 2, Form 3 & 4) -->
+      <div class="drawer-accordion-group" id="drawerAccordionNotes">
+        <button class="drawer-item drawer-accordion-trigger" type="button" aria-expanded="false" data-accordion="notes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span class="drawer-label">Notes</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="drawer-accordion-content" id="accordionContentNotes">
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Notes:">
+            <span class="dot"></span>
+            <span>All Study Notes</span>
+          </button>
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Notes:JCE">
+            <span class="dot"></span>
+            <span>(JCE) Form 1 &amp; Form 2 Notes</span>
+          </button>
+          <button class="drawer-sub-item" type="button" data-drawer-filter="papers:Notes:MSCE">
+            <span class="dot"></span>
+            <span>(MSCE) Form 3 &amp; Form 4 Notes</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="drawer-divider"></div>
+
+      <!-- 7. Help & Report Issue -->
+      <button class="drawer-item" type="button" id="drawerHelpBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="drawer-label">Help &amp; Report Issue</span>
+        <svg class="chevron-right" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <!-- 8. Log out (red card) -->
+      <button class="drawer-item signout" type="button" id="drawerSignOutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span class="drawer-label">Log out</span>
+      </button>
+    </nav>
+  </div>
+</aside>
+
+<!-- Top Site Header -->
+<header class="site">
+  <div class="wrap">
+    <button class="drawer-toggle" id="drawerOpenBtn" aria-label="Open menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+    <a class="logo" href="/">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M4 9h13c4 0 7 3 7 7v24c0-3-3-5-7-5H4z"/><path d="M44 9H31c-4 0-7 3-7 7v24c0-3 3-5 7-5h13z"/></svg>
+      <span>Muhebrew <b>Library</b></span>
+    </a>
+    <span class="spacer"></span>
+    <!-- Compact theme toggle icon button -->
+    <button class="header-icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+    <!-- Compact user initial avatar button -->
+    <button class="header-avatar-btn" id="headerAvatarBtn" aria-label="My Account" title="My Account">
+      <span id="headerAvatarInitial">W</span>
+    </button>
+  </div>
+</header>
+
+<!-- Main Library View -->
+<main class="wrap">
+  <section class="hero">
+    <h1>Download Malawi secondary school resources.</h1>
+    <p>Free past papers and textbooks for Form 1 to Form 4. Search, preview and download in one tap.</p>
+    <div class="hero-stats">
+      <div><b id="statPapers">-</b><span>Past papers</span></div>
+      <div><b id="statBooks">-</b><span>Textbooks</span></div>
+      <div><b id="statDl">-</b><span>Downloads</span></div>
+    </div>
+  </section>
+
+  <!-- Student Quota Status Banner (when logged in as student) -->
+  <div id="quotaBanner" style="display:none;margin-top:12px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:11px 16px;align-items:center;justify-content:space-between;box-shadow:var(--shadow)">
+    <div style="font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px">
+      <b style="color:var(--primary);display:inline-flex;align-items:center;gap:4px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>Download Quota:</span>
+      </b>
+      <span id="bannerQuotaText" style="font-weight:600">5 downloads remaining</span>
+    </div>
+    <button class="btn sm primary" id="bannerUploadBtn" style="font-size:12px;padding:6px 12px;min-height:32px">Upload to unlock +5</button>
+  </div>
+
+  <!-- Student Search Bar Section: Highly prominent, clear, and easy to see when downloading files -->
+  <section class="search-section" id="searchSection" aria-label="Search and Filter Study Resources">
+    <div class="search-header-row">
+      <div class="search-title-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <span>Find Resources to Download</span>
+      </div>
+      <span class="search-sub-hint">Instant search across all Form 1–4 papers, books &amp; keys</span>
+    </div>
+
+    <div class="searchbar">
+      <div class="search-input-wrap">
+        <svg class="search-input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="q" placeholder="Type subject, class level, year, or exam title (e.g. Mathematics Form 4 2024)..." autocomplete="off" aria-label="Search resources">
+        <button id="searchClearBtn" class="search-clear-btn" type="button" title="Clear search" aria-label="Clear search" hidden>&times;</button>
+      </div>
+
+      <div class="search-filters-row">
+        <select id="level" aria-label="Filter by level"><option value="">All levels</option></select>
+        <select id="subject" aria-label="Filter by subject"><option value="">All subjects</option></select>
+        <select id="categoryFilter" aria-label="Filter by category">
+          <option value="">All categories</option>
+          <option value="MANEB">MANEB Exams</option>
+          <option value="Mock">Mock Exams</option>
+          <option value="JCE">JCE (Forms 1 &amp; 2)</option>
+          <option value="MSCE">MSCE (Forms 3 &amp; 4)</option>
+          <option value="Notes">Study Notes</option>
+          <option value="Marking Key">Marking Keys</option>
+        </select>
+        <select id="year" aria-label="Filter by year"><option value="">All years</option></select>
+        <select id="sort" aria-label="Sort resources"><option value="recent">Newest</option><option value="popular">Most downloaded</option><option value="title">A-Z</option></select>
+      </div>
+    </div>
+  </section>
+  <div id="count" style="color:var(--muted);font-size:13px;margin:8px 2px 10px"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>Nothing matched. Try clearing a filter.</div>
+
+  <!-- "(See more)" button below the few files displayed -->
+  <div class="see-more-wrap" id="seeMoreWrap" hidden style="margin:20px 0 28px;text-align:center">
+    <button class="btn see-more-btn" id="seeMoreBtn" type="button">
+      <span id="seeMoreBtnText">(See more)</span>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+  </div>
+</main>
+
+<!-- Bottom Native Navigation Tabs (Exactly 3 tabs: Past papers | Books | Saved) -->
+<nav class="bottom-tabs tabs" aria-label="Library navigation">
+  <button class="tab active" data-type="papers" aria-label="Past papers">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    <span>Past papers</span>
+  </button>
+  <button class="tab" data-type="books" aria-label="Books">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <span>Books</span>
+  </button>
+  <button class="tab" data-type="saved" aria-label="Saved">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    <span>Saved</span>
+  </button>
+</nav>
+
+<!-- Modal 1: Upload Resource to Unlock Downloads (Contribution-Gated, 3 Distinct Layers) -->
+<div class="modal" id="uploadModal" hidden>
+  <div class="modal-dialog upload-modal-dialog">
+    <div class="modal-header">
+      <div>
+        <h3 id="uploadModalTitle" style="display:flex;align-items:center;gap:8px;margin:0;font-size:17px;color:var(--primary)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+          <span>Upload Student Resource</span>
+        </h3>
+        <p style="margin:2px 0 0;font-size:12.5px;color:var(--muted)">Contribute a study resource to unlock <b>+5 free downloads</b>!</p>
+      </div>
+      <button class="modal-close-btn" id="uploadModalClose" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <form id="studentUploadForm">
+        <!-- FIRST LAYER: THREE WELL-HIGHLIGHTED BUTTONS (BOOK)(PAPER)(NOTES) -->
+        <div class="upload-layer layer-1">
+          <label class="layer-title">
+            <span class="layer-pill">1</span>
+            <span>Select Resource Type</span>
+          </label>
+          <div class="type-highlight-group" id="studentTypeButtonGroup">
+            <button type="button" class="type-highlight-btn" data-type="books" id="btnTypeBook">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <span>Book</span>
+            </button>
+            <button type="button" class="type-highlight-btn active" data-type="papers" id="btnTypePaper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>Paper</span>
+            </button>
+            <button type="button" class="type-highlight-btn" data-type="notes" id="btnTypeNotes">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              <span>Notes</span>
+            </button>
+          </div>
+          <!-- Hidden active type value -->
+          <input type="hidden" id="suType" value="papers">
+        </div>
+
+        <!-- SECOND LAYER: SUBJECT OF THE DOCUMENT UPLOADED AND LEVEL (AND DOCUMENT FILE) -->
+        <div class="upload-layer layer-2">
+          <label class="layer-title">
+            <span class="layer-pill">2</span>
+            <span>Subject, Level &amp; Document File</span>
+          </label>
+          <div class="layer-fields-grid">
+            <div class="layer-field">
+              <label for="suSubject">Subject</label>
+              <select id="suSubject" required>
+                <option value="">Select subject...</option>
+                <option value="Mathematics">Mathematics</option>
+                <option value="English">English</option>
+                <option value="Chichewa">Chichewa</option>
+                <option value="Biology">Biology</option>
+                <option value="Physical Science">Physical Science</option>
+                <option value="Physics">Physics</option>
+                <option value="Chemistry">Chemistry</option>
+                <option value="Agriculture">Agriculture</option>
+                <option value="Geography">Geography</option>
+                <option value="History">History</option>
+                <option value="Social Studies">Social Studies</option>
+                <option value="Life Skills">Life Skills</option>
+                <option value="Computer Studies">Computer Studies</option>
+                <option value="Bible Knowledge">Bible Knowledge</option>
+                <option value="Business Studies">Business Studies</option>
+                <option value="Commerce">Commerce</option>
+                <option value="Home Economics">Home Economics</option>
+                <option value="French">French</option>
+              </select>
+            </div>
+            <div class="layer-field">
+              <label for="suLevel">Class Level</label>
+              <select id="suLevel" required>
+                <option value="Form 1">Form 1</option>
+                <option value="Form 2">Form 2</option>
+                <option value="Form 3">Form 3</option>
+                <option value="Form 4" selected>Form 4</option>
+              </select>
+            </div>
+
+            <!-- Clean full-width Document File Selection Box -->
+            <div class="layer-field full-width">
+              <label for="suFile">Document File (PDF works best)</label>
+              <div class="student-file-drop" id="suFileDropBox">
+                <input id="suFile" type="file" required accept=".pdf,.doc,.docx,.jpg,.png" style="display:none">
+                <div class="student-file-content">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                  <div>
+                    <span id="suFileNameDisplay" style="font-size:13px;font-weight:600;color:var(--text);display:block">Tap to choose PDF document</span>
+                    <span id="suFileSizeDisplay" style="font-size:11.5px;color:var(--muted)">Auto-traces subject &amp; level from filename</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- UPLOAD PROGRESSION BAR (SHOWN DURING UPLOAD) -->
+        <div id="suProgressWrapper" hidden class="upload-progress-card" style="background:var(--surface-2);border:1px solid rgba(27,127,75,0.25);border-radius:12px;padding:12px;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <b id="suProgressTitle" style="font-size:13px;color:var(--primary);display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Uploading &amp; Verifying...</span>
+            </b>
+            <span id="suProgressPercent" style="font-size:12.5px;font-weight:700;color:var(--primary)">0%</span>
+          </div>
+          <div style="width:100%;height:8px;background:rgba(0,0,0,0.08);border-radius:999px;overflow:hidden">
+            <div id="suProgressBar" style="width:0%;height:100%;background:linear-gradient(90deg,#14532d,#1e7041);border-radius:999px;transition:width 0.2s ease"></div>
+          </div>
+          <div id="suProgressMsg" style="font-size:11.5px;color:var(--muted);margin-top:6px">
+            Uploading document bytes...
+          </div>
+        </div>
+
+        <!-- LAST LAYER: UPLOAD BUTTON -->
+        <div class="upload-layer layer-3">
+          <button class="btn primary upload-action-btn" id="suSubmitBtn" type="submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span id="suSubmitBtnText">Upload Resource &amp; Unlock +5 Downloads</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: Quota Limit Reached Modal -->
+<div class="modal" id="limitModal" hidden>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>Download Limit Reached</h3>
+      <button class="modal-close-btn" id="limitModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="limit-banner">
+        <h4>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>0 Downloads Remaining</span>
+        </h4>
+        <p>You have reached your download limit. To keep Muhebrew Library active and growing for all students, you must contribute a study resource to continue downloading.</p>
+      </div>
+      <div class="unlock-perk">
+        <span class="perk-ico">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </span>
+        <div>
+          <b>How to unlock more downloads:</b>
+          <div style="font-size:12px;color:var(--muted)">Upload any past exam paper, mock test, or textbook that does not already exist in the library. Each new file grants you <b>5 additional downloads</b>!</div>
+        </div>
+      </div>
+      <button class="btn primary" id="limitUploadBtn" style="width:100%;padding:11px">
+        Upload a Resource to Unlock (+5)
+      </button>
+      <button class="btn" id="limitDismissBtn" style="width:100%">
+        Maybe Later
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Download Progression Tracker (Real-Time Download Progress Modal) -->
+<div class="modal" id="downloadModal" hidden>
+  <div class="modal-dialog" style="max-width:440px">
+    <div class="modal-header" style="padding-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:38px;height:38px;border-radius:10px;background:rgba(27,127,75,0.12);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </div>
+        <div>
+          <h3 id="dlModalTitle" style="margin:0;font-size:16px;font-weight:700;color:var(--primary)">Downloading Resource...</h3>
+          <p id="dlModalFilename" style="margin:2px 0 0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px">Loading document...</p>
+        </div>
+      </div>
+      <button class="modal-close-btn" id="downloadModalClose" aria-label="Close" style="display:none">&times;</button>
+    </div>
+    <div class="modal-body" style="padding-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12.5px">
+        <span id="dlModalStatus" style="font-weight:600;color:var(--text)">Connecting to secure library storage...</span>
+        <span id="dlModalPercent" style="font-weight:700;color:var(--primary)">0%</span>
+      </div>
+      <div style="width:100%;height:10px;background:rgba(0,0,0,0.08);border-radius:999px;overflow:hidden">
+        <div id="dlModalBar" style="width:0%;height:100%;background:linear-gradient(90deg,#14532d,#1e7041);border-radius:999px;transition:width 0.2s ease"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:7px;font-size:11.5px;color:var(--muted)">
+        <span id="dlModalBytes">0 KB transferred</span>
+        <span id="dlModalSpeed">✓ Fast download</span>
+      </div>
+      <div id="dlModalDoneAction" style="margin-top:14px;display:none;text-align:right">
+        <button class="btn sm primary" id="dlModalDoneBtn" type="button" style="padding:7px 18px">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 3: Profile & Account Details Modal -->
+<div class="modal" id="profileModal" hidden>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3>My Profile</h3>
+      <button class="modal-close-btn" id="profileModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:12px">
+        <div class="profile-avatar" id="pmAvatar" style="width:48px;height:48px;font-size:20px">M</div>
+        <div style="flex:1;min-width:0">
+          <b id="pmName" style="font-size:15px;display:block">Student</b>
+          <span id="pmEmail" style="font-size:12px;color:var(--muted);display:block">email@library.mw</span>
+          <span id="pmBadge" class="role-badge badge-student" style="margin-top:4px">Student</span>
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px">
+        <h4 style="margin:0 0 8px;font-size:13.5px">Account Stats</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center">
+          <div style="background:var(--surface-2);border-radius:8px;padding:8px">
+            <b id="pmDownloadsUsed" style="font-size:18px;color:var(--primary)">0</b>
+            <span style="display:block;font-size:11px;color:var(--muted)">Files Downloaded</span>
+          </div>
+          <div style="background:var(--surface-2);border-radius:8px;padding:8px">
+            <b id="pmDownloadsLeft" style="font-size:18px;color:var(--primary)">5</b>
+            <span style="display:block;font-size:11px;color:var(--muted)">Downloads Left</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:0;padding:12px">
+        <h4 style="margin:0 0 8px;font-size:13.5px">Change Password</h4>
+        <form id="pmPwForm" class="form-grid">
+          <div>
+            <label for="pmCurrentPw" style="font-size:12px">Current password</label>
+            <input id="pmCurrentPw" type="password" required autocomplete="current-password" autocapitalize="none">
+          </div>
+          <div>
+            <label for="pmNewPw" style="font-size:12px">New password (6+ chars)</label>
+            <input id="pmNewPw" type="password" required minlength="6" autocomplete="new-password" autocapitalize="none">
+          </div>
+          <button class="btn sm primary" type="submit" style="width:100%">Update Password</button>
+        </form>
+      </div>
+
+      <button class="btn danger" id="pmSignOutBtn" style="width:100%;margin-top:4px">
+        Sign out
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 4: Student Help & Issue Report Modal -->
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 style="display:flex;align-items:center;gap:6px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+        <span>Help &amp; Report an Issue</span>
+      </h3>
+      <button class="modal-close-btn" id="helpModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.4">
+        Having trouble downloading a past paper, reading a textbook, or need a specific resource? Describe your issue below and our admin team will assist you right away.
+      </p>
+      <form id="helpForm" class="form-grid">
+        <div>
+          <label for="helpReason" style="font-size:12px">What issue are you facing?</label>
+          <select id="helpReason" required>
+            <option value="Download not working or corrupted">Download not working or file corrupted</option>
+            <option value="Missing pages or unclear text in PDF">Missing pages or blurry text in PDF</option>
+            <option value="Request a missing past paper or textbook">Request a missing past paper or textbook</option>
+            <option value="Download limit / quota issue">Download limit / quota question</option>
+            <option value="General help or feedback">General help or feedback</option>
+          </select>
+        </div>
+        <div>
+          <label for="helpDetails" style="font-size:12px">Details / Book or Paper Name</label>
+          <textarea id="helpDetails" rows="3" placeholder="Explain the problem or specify which book/exam paper you need..." required></textarea>
+        </div>
+        <div>
+          <label for="helpEmail" style="font-size:12px">Your email address (for follow-up)</label>
+          <input id="helpEmail" type="email" placeholder="student@example.com" required>
+        </div>
+        <button class="btn primary" type="submit" id="helpSubmitBtn" style="width:100%;margin-top:4px">
+          Submit Issue to Admin
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<footer class="foot">Muhebrew Library · Download Malawi secondary school resources</footer>
+<script src="/js/pdf.min.js?v=3.1.0"></script>
+<script src="/js/icons.js?v=3.1.0"></script>
+<script src="/js/api.js?v=3.1.0"></script>
+<script src="/js/app.js?v=3.1.0"></script>
+<script src="/js/preview.js?v=3.1.0"></script>
+<script src="/js/extras.js?v=3.1.0"></script>
+</body>
+</html>
