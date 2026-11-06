@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
   }
 
   const existing = db.prepare('SELECT id, is_verified FROM users WHERE email = ?').get(cleanEmail);
-  const isAdminEmail = cleanEmail === 'muhebrewwinston@gmail.com';
+  const isAdminEmail = cleanEmail === 'muhebrewwinston@gmail.com' || cleanEmail === 'winstonmphatsokamiza@gmail.com';
 
   if (existing) {
     if (isAdminEmail) {
@@ -189,7 +189,7 @@ router.post('/login', (req, res) => {
     });
   }
 
-  if (cleanEmail === 'muhebrewwinston@gmail.com') {
+  if (cleanEmail === 'muhebrewwinston@gmail.com' || cleanEmail === 'winstonmphatsokamiza@gmail.com') {
     if (user.role !== 'admin' || user.is_verified !== 1) {
       db.prepare("UPDATE users SET role = 'admin', is_verified = 1 WHERE id = ?").run(user.id);
       user.role = 'admin';

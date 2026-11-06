@@ -53,19 +53,26 @@ const adminRoutes = require('./routes/admin');
 const webhookRoutes = require('./routes/webhook');
 const autoUpdater = require('./services/autoUpdater');
 
-// Ensure owner account muhebrewwinston@gmail.com exists
+// Ensure owner accounts exist and are verified as admin
 try {
   const db = require('./db/database');
   const bcrypt = require('bcryptjs');
-  const owner = db.prepare("SELECT id FROM users WHERE LOWER(email) = 'muhebrewwinston@gmail.com'").get();
-  if (!owner) {
-    const hash = bcrypt.hashSync('winston2026', 10);
-    db.prepare(
-      "INSERT INTO users (name, email, password_hash, role, school, level, is_verified) VALUES ('Winston Kamiza', 'muhebrewwinston@gmail.com', ?, 'admin', 'Lilongwe Secondary', 'Admin', 1)"
-    ).run(hash);
-    console.log('[Auth] Registered owner admin account: muhebrewwinston@gmail.com');
-  } else {
-    db.prepare("UPDATE users SET role = 'admin', is_verified = 1 WHERE id = ?").run(owner.id);
+  const adminEmails = [
+    { email: 'muhebrewwinston@gmail.com', name: 'Winston Kamiza' },
+    { email: 'winstonmphatsokamiza@gmail.com', name: 'Winston Mphatso Kamiza' }
+  ];
+
+  for (const adm of adminEmails) {
+    const existing = db.prepare("SELECT id FROM users WHERE LOWER(email) = ?").get(adm.email);
+    if (!existing) {
+      const hash = bcrypt.hashSync('winston2026', 10);
+      db.prepare(
+        "INSERT INTO users (name, email, password_hash, role, school, level, is_verified) VALUES (?, ?, ?, 'admin', 'Lilongwe Secondary', 'Admin', 1)"
+      ).run(adm.name, adm.email, hash);
+      console.log(`[Auth] Registered owner admin account: ${adm.email}`);
+    } else {
+      db.prepare("UPDATE users SET role = 'admin', is_verified = 1 WHERE id = ?").run(existing.id);
+    }
   }
 } catch (err) {
   console.warn('[Warning] Owner check:', err.message);

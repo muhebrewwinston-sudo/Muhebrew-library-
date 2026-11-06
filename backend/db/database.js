@@ -244,10 +244,9 @@ function syncUsersFromRegistry() {
       const existing = db.prepare('SELECT id FROM users WHERE LOWER(email) = ?').get(cleanEmail);
       if (!existing) {
         db.prepare(`
-          INSERT INTO users (id, name, email, password_hash, role, school, level, bonus_downloads, is_verified, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO users (name, email, password_hash, role, school, level, bonus_downloads, is_verified, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
-          u.id || null,
           u.name || 'User',
           cleanEmail,
           u.password_hash,
