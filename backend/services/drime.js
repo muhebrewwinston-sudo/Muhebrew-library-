@@ -9,7 +9,7 @@ const { autoTraceFile } = require('../utils/autotrace');
 
 // Default API base and folder provided by user
 const DRIME_API_BASE = (process.env.DRIME_API_BASE || 'https://app.drime.cloud/api/v1').replace(/\/$/, '');
-const DRIME_API_KEY = process.env.DRIME_API_KEY || '75742|BShm3EM0mJPNumW9qZphDpHCCkJK1koYZb3HBMFA0aedf331';
+const DRIME_API_KEY = process.env.DRIME_API_KEY || '109407|8C0QMXEiTVZI9IGuzTPd6UT1Dit6IN4w5Id3nfiGa2800711';
 const DRIME_FOLDER_NAME = process.env.DRIME_FOLDER_NAME || 'Muhebrew';
 const DRIME_FOLDER_ID = process.env.DRIME_FOLDER_ID || 'fngud8DkQTOTNvd1MmAXhszXKIm60k';
 const DRIME_FOLDER_URL = process.env.DRIME_FOLDER_URL || 'https://dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k';
@@ -395,37 +395,34 @@ async function listFilesUnderMuhebrew(rootFolderId, rootFolderName = 'Muhebrew')
       }
     }
 
-    // 3. Drive-wide file entries search matching "muhebrew"
-    if (allFiles.length === 0) {
-      for (const base of API_BASES) {
-        try {
-          const res = await fetch(`${base}/file-entries?per_page=200`, { headers: authHeaders() });
-          if (res.ok) {
-            const data = await res.json();
-            const list = Array.isArray(data) ? data : data.data || data.entries || [];
-            if (Array.isArray(list)) {
-              for (const f of list) {
-                const isFolder = f.type === 'folder' || f.is_dir;
-                if (isFolder) continue;
-                const fPath = String(f.path || f.parent_name || '').toLowerCase();
-                const fName = String(f.name || '').toLowerCase();
-                if (fPath.includes('muhebrew') || fName.includes('muhebrew') || FOLDER_TARGETS.includes(String(f.parent_id))) {
-                  addFile({
-                    id: String(f.id || f.hash || ''),
-                    name: f.name || 'document.pdf',
-                    size: Number(f.file_size || f.size || 0),
-                    mime: f.mime || f.mime_type || 'application/pdf',
-                    url: f.url || f.download_url || null,
-                    folderId: f.parent_id || rootFolderId,
-                    folderPath: f.path || rootFolderName
-                  });
-                }
+    // 3. Drive-wide file entries scan for all document assets
+    for (const base of API_BASES) {
+      try {
+        const res = await fetch(`${base}/file-entries?per_page=200`, { headers: authHeaders() });
+        if (res.ok) {
+          const data = await res.json();
+          const list = Array.isArray(data) ? data : data.data || data.entries || [];
+          if (Array.isArray(list)) {
+            for (const f of list) {
+              const isFolder = f.type === 'folder' || f.is_dir;
+              if (isFolder) continue;
+              const fName = String(f.name || f.file_name || '').toLowerCase();
+              const isDoc = fName.match(/\.(pdf|doc|docx|epub|pptx|ppt|txt)$/i) || f.type === 'file' || String(f.mime || '').includes('pdf');
+              if (isDoc) {
+                addFile({
+                  id: String(f.id || f.hash || ''),
+                  name: f.name || f.file_name || 'document.pdf',
+                  size: Number(f.file_size || f.size || 1024),
+                  mime: f.mime || f.mime_type || 'application/pdf',
+                  url: f.url || f.download_url || (f.hash ? `https://dri.me/${f.hash}` : null),
+                  folderId: f.parent_id || rootFolderId,
+                  folderPath: f.path || rootFolderName
+                });
               }
             }
           }
-        } catch (_) {}
-        if (allFiles.length > 0) break;
-      }
+        }
+      } catch (_) {}
     }
   }
 
@@ -893,28 +890,14 @@ async function syncDrimeFilesToDatabase(db) {
       }
     }
 
-    // Reconcile deleted / removed files from Drime:
-    // If files were successfully scanned, remove database records whose Drime file is no longer present
-    if (files.length > 0) {
-      for (const t of ['books', 'papers']) {
-        const drimeRows = db.prepare(`
-          SELECT id, title, drime_file_id FROM ${t}
-          WHERE storage_provider = 'drime'
-            AND (drime_folder_id = ? OR drime_folder_id = ? OR drime_folder_id IS NULL OR drime_folder_id = '')
-        `).all(folderId, DRIME_FOLDER_ID);
-
-        for (const r of drimeRows) {
-          if (!activeRowIdsByTable[t].has(r.id)) {
-            db.prepare(`DELETE FROM ${t} WHERE id = ?`).run(r.id);
-            db.prepare('DELETE FROM bookmarks WHERE item_type = ? AND item_id = ?').run(t === 'books' ? 'book' : 'paper', r.id);
-            removedCount++;
-            syncedList.push({ id: r.id, title: r.title, action: 'removed', folder: folderName });
-          }
-        }
-      }
+    // Persist all approved items into drime_catalog.json registry
+    if (typeof db.saveCatalogToRegistry === 'function') {
+      try {
+        db.saveCatalogToRegistry();
+      } catch (_) {}
     }
 
-    console.log(`[Drime Auto-Sync] Synced ${importedCount} new, ${updatedCount} updated, ${removedCount} removed from Drime folder "${folderName}" (${files.length} total files)`);
+    console.log(`[Drime Auto-Sync] Synced ${importedCount} new, ${updatedCount} updated from Drime folder "${folderName}" (${files.length} total files)`);
     return {
       ok: true,
       apiBase: DRIME_API_BASE,
@@ -923,7 +906,6 @@ async function syncDrimeFilesToDatabase(db) {
       folderUrl: DRIME_FOLDER_URL,
       imported: importedCount,
       updated: updatedCount,
-      removed: removedCount,
       total: files.length,
       files: syncedList
     };
@@ -951,9 +933,10 @@ async function searchDrimeCloud(query, db) {
   if (DRIME_API_KEY) {
     for (const base of API_BASES) {
       const searchUrls = [
-        `${base}/file-entries?query=${encodeURIComponent(qClean)}&per_page=50`,
+        `${base}/file-entries?query=${encodeURIComponent(qClean)}&per_page=100`,
         `${base}/search?query=${encodeURIComponent(qClean)}`,
-        `${base}/drive/file-entries?query=${encodeURIComponent(qClean)}`
+        `${base}/drive/file-entries?query=${encodeURIComponent(qClean)}`,
+        `${base}/file-entries?per_page=150`
       ];
 
       for (const url of searchUrls) {
@@ -967,6 +950,11 @@ async function searchDrimeCloud(query, db) {
               const fid = String(item.id || item.hash || item.uuid || '');
               const fname = item.name || item.title || item.file_name || '';
               if (!fname || seenIds.has(fid)) continue;
+              const fPath = String(item.path || item.parent_name || '').toLowerCase();
+              const fLower = fname.toLowerCase();
+              if (url.includes('per_page=150') && !url.includes('query=')) {
+                if (!fLower.includes(qLower) && !fPath.includes(qLower)) continue;
+              }
               seenIds.add(fid);
               matchedDrimeFiles.push({
                 id: fid,
@@ -974,7 +962,8 @@ async function searchDrimeCloud(query, db) {
                 size: Number(item.file_size || item.size || item.file_size_bytes || 1024),
                 mime: item.mime || item.type || 'application/pdf',
                 url: item.url || `${DRIME_FOLDER_URL}/${encodeURIComponent(fid)}`,
-                folderId: item.folder_id || item.parent_id || DRIME_FOLDER_ID
+                folderId: item.folder_id || item.parent_id || DRIME_FOLDER_ID,
+                folderPath: item.path || DRIME_FOLDER_NAME
               });
             }
           }
@@ -1084,6 +1073,12 @@ async function searchDrimeCloud(query, db) {
           reflectedItems.push({ ...fullRow, _type: isBook ? 'book' : 'paper' });
         }
       }
+    } catch (_) {}
+  }
+
+  if (reflectedItems.length > 0 && typeof db.saveCatalogToRegistry === 'function') {
+    try {
+      db.saveCatalogToRegistry();
     } catch (_) {}
   }
 

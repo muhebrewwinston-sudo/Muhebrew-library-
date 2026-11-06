@@ -104,12 +104,19 @@ function buildRouter(table, type) {
 
     // Drime Cloud Coordinator integration:
     // If a search query is provided, query Drime live and reflect any newly discovered items
-    if (q && String(q).trim().length >= 2) {
+    if (q && String(q).trim().length >= 1) {
       try {
         await drimeService.searchDrimeCloud(q, db);
       } catch (err) {
         console.warn(`[Resources Coordinator] Drime search error for ${table}:`, err.message);
       }
+    } else {
+      try {
+        const currentApproved = db.prepare("SELECT COUNT(*) c FROM " + table + " WHERE status = 'approved'").get().c;
+        if (currentApproved === 0) {
+          await drimeService.syncDrimeFilesToDatabase(db);
+        }
+      } catch (_) {}
     }
 
     const where = ["status = 'approved'"], params = [];

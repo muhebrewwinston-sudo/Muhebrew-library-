@@ -285,8 +285,107 @@ function saveUsersToRegistry() {
 // Automatically sync previously registered users upon database boot
 syncUsersFromRegistry();
 
+// Persistent Drime Catalog Registry: ensures past papers, marking keys, and books are never lost
+const catalogFile = path.join(__dirname, 'drime_catalog.json');
+
+function syncCatalogFromRegistry() {
+  try {
+    if (!fs.existsSync(catalogFile)) return;
+    const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8') || '{}');
+    const papers = Array.isArray(catalog.papers) ? catalog.papers : [];
+    const books = Array.isArray(catalog.books) ? catalog.books : [];
+
+    for (const p of papers) {
+      if (!p || !p.title) continue;
+      const cleanTitle = String(p.title).trim();
+      const existing = db.prepare('SELECT id FROM papers WHERE LOWER(title) = ? OR file_name = ?').get(cleanTitle.toLowerCase(), p.file_name);
+      if (!existing) {
+        db.prepare(`
+          INSERT INTO papers (
+            title, subject, level, category, year, exam_board, paper_no, description,
+            file_path, file_name, file_size, mime_type,
+            storage_provider, drime_file_id, drime_url, drime_folder_id, status, downloads
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          cleanTitle,
+          p.subject || 'General Studies',
+          p.level || 'Form 4',
+          p.category || 'MANEB',
+          p.year || new Date().getFullYear(),
+          p.exam_board || 'MANEB',
+          p.paper_no || null,
+          p.description || 'Drime Cloud past paper',
+          p.file_path || ('drime://' + (p.drime_file_id || 'file')),
+          p.file_name || (cleanTitle + '.pdf'),
+          p.file_size || 1024,
+          p.mime_type || 'application/pdf',
+          p.storage_provider || 'drime',
+          p.drime_file_id || null,
+          p.drime_url || 'https://dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k',
+          p.drime_folder_id || 'fngud8DkQTOTNvd1MmAXhszXKIm60k',
+          p.status || 'approved',
+          p.downloads || 0
+        );
+      }
+    }
+
+    for (const b of books) {
+      if (!b || !b.title) continue;
+      const cleanTitle = String(b.title).trim();
+      const existing = db.prepare('SELECT id FROM books WHERE LOWER(title) = ? OR file_name = ?').get(cleanTitle.toLowerCase(), b.file_name);
+      if (!existing) {
+        db.prepare(`
+          INSERT INTO books (
+            title, author, publisher, subject, level, category, edition, isbn, description,
+            cover_path, file_path, file_name, file_size, mime_type,
+            storage_provider, drime_file_id, drime_url, drime_folder_id, status, downloads
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          cleanTitle,
+          b.author || 'Ministry of Education',
+          b.publisher || null,
+          b.subject || 'General Studies',
+          b.level || 'Form 4',
+          b.category || 'MSCE',
+          b.edition || null,
+          b.isbn || null,
+          b.description || 'Drime Cloud textbook',
+          b.cover_path || null,
+          b.file_path || ('drime://' + (b.drime_file_id || 'file')),
+          b.file_name || (cleanTitle + '.pdf'),
+          b.file_size || 1024,
+          b.mime_type || 'application/pdf',
+          b.storage_provider || 'drime',
+          b.drime_file_id || null,
+          b.drime_url || 'https://dri.me/fngud8DkQTOTNvd1MmAXhszXKIm60k',
+          b.drime_folder_id || 'fngud8DkQTOTNvd1MmAXhszXKIm60k',
+          b.status || 'approved',
+          b.downloads || 0
+        );
+      }
+    }
+  } catch (err) {
+    console.warn('[DB] Catalog restore from registry error:', err.message);
+  }
+}
+
+function saveCatalogToRegistry() {
+  try {
+    const papers = db.prepare("SELECT * FROM papers WHERE status = 'approved'").all();
+    const books = db.prepare("SELECT * FROM books WHERE status = 'approved'").all();
+    fs.writeFileSync(catalogFile, JSON.stringify({ papers, books }, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('[DB] Catalog backup error:', err.message);
+  }
+}
+
+// Automatically sync catalog upon database boot
+syncCatalogFromRegistry();
+
 // Export helpers alongside database instance
 db.saveUsersToRegistry = saveUsersToRegistry;
 db.syncUsersFromRegistry = syncUsersFromRegistry;
+db.saveCatalogToRegistry = saveCatalogToRegistry;
+db.syncCatalogFromRegistry = syncCatalogFromRegistry;
 
 module.exports = db;
