@@ -5,7 +5,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { autoTraceFile } = require('../utils/autotrace');
+const { autoTraceFile, isPrimarySchoolFile, isSecondarySchoolFile } = require('../utils/autotrace');
 
 // Default API base and folder provided by user
 const DRIME_API_BASE = (process.env.DRIME_API_BASE || 'https://app.drime.cloud/api/v1').replace(/\/$/, '');
@@ -330,6 +330,11 @@ async function listFilesUnderMuhebrew(rootFolderId, rootFolderName = 'Muhebrew')
   function addFile(f) {
     const key = (f.id && f.id !== 'undefined') ? f.id : f.name;
     if (!key || seenFileKeys.has(key)) return;
+    // Exclude every primary school file (Standard 1–8 / PSLCE / Primary)
+    if (isPrimarySchoolFile(f.name, f.folderPath || '')) {
+      console.log(`[Drime Filter] Excluded primary school file: ${f.name}`);
+      return;
+    }
     seenFileKeys.add(key);
     allFiles.push(f);
   }
@@ -769,7 +774,18 @@ async function syncDrimeFilesToDatabase(db) {
       const fileId = String(f.id || `drime_${Date.now()}`);
       const fileUrl = f.url || `${DRIME_FOLDER_URL}/${encodeURIComponent(fileId)}`;
 
-      const traced = autoTraceFile(fileName, fileSize);
+      // Strictly exclude primary school files
+      if (isPrimarySchoolFile(fileName, f.folderPath || '')) {
+        console.log(`[Drime Sync] Skipping primary school file: ${fileName}`);
+        continue;
+      }
+
+      const traced = autoTraceFile(fileName, fileSize, f.folderPath || '');
+      if (traced.isPrimary || traced.exclude) {
+        console.log(`[Drime Sync] Skipping non-secondary file: ${fileName}`);
+        continue;
+      }
+
       const isBook = traced.type === 'books' || String(f.folderPath || '').toLowerCase().includes('book') || String(f.folderPath || '').toLowerCase().includes('text');
       const table = isBook ? 'books' : 'papers';
 
@@ -1001,7 +1017,16 @@ async function searchDrimeCloud(query, db) {
       const fileId = String(f.id || `drime_${Date.now()}`);
       const fileUrl = f.url || `${DRIME_FOLDER_URL}/${encodeURIComponent(fileId)}`;
 
-      const traced = autoTraceFile(fileName, fileSize);
+      // Strictly exclude primary school files
+      if (isPrimarySchoolFile(fileName, f.folderPath || '')) {
+        continue;
+      }
+
+      const traced = autoTraceFile(fileName, fileSize, f.folderPath || '');
+      if (traced.isPrimary || traced.exclude) {
+        continue;
+      }
+
       const isBook = traced.type === 'books' || String(f.folderPath || '').toLowerCase().includes('book');
       const table = isBook ? 'books' : 'papers';
       const category = traced.category || (isBook ? 'MSCE' : 'MANEB');

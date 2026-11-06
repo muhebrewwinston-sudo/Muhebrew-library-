@@ -119,7 +119,7 @@ function buildRouter(table, type) {
       } catch (_) {}
     }
 
-    const where = ["status = 'approved'"], params = [];
+    const where = ["status = 'approved'", "(level NOT LIKE '%Standard%' AND level NOT LIKE '%Primary%')"], params = [];
 
     if (q) {
       const cols = isBook ? ['title', 'subject', 'author', 'publisher', 'category'] : ['title', 'subject', 'exam_board', 'category'];
@@ -179,14 +179,31 @@ function buildRouter(table, type) {
 
     try {
       const thumb = await thumbnailService.getOrGenerateThumbnail(type, row.id, row, drimeService);
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      
       if (thumb && thumb.ok && thumb.path && fs.existsSync(thumb.path)) {
-        res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-        res.type('image/jpeg');
+        if (thumb.type === 'svg' || thumb.path.endsWith('.svg')) {
+          res.type('image/svg+xml');
+        } else {
+          res.type('image/jpeg');
+        }
         return res.sendFile(path.resolve(thumb.path));
+      }
+      if (thumb && thumb.svg) {
+        res.type('image/svg+xml');
+        return res.send(thumb.svg);
       }
     } catch (err) {
       console.warn(`[Thumbnail Route] Error for ${type} ${row.id}:`, err.message);
     }
+
+    // Always fallback to generating an authentic cover SVG
+    try {
+      const svg = thumbnailService.generateAuthenticCoverSvg(type, row);
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      res.type('image/svg+xml');
+      return res.send(svg);
+    } catch (_) {}
 
     return res.status(404).json({ error: 'Thumbnail not available' });
   });
@@ -394,6 +411,15 @@ function buildRouter(table, type) {
       body.title = (body.title || '').replace(/\s*\(\s*Form\s*[1-4]\s*\)\s*$/i, '').replace(/\s+Form\s*[1-4]\s*$/i, '').trim();
 
       if (!body.subject || !body.level) { discard(); return res.status(400).json({ error: 'Subject and class level are required.' }); }
+
+      // Strictly reject any primary school uploads (Standard 1–8 / PSLCE)
+      const { isPrimarySchoolFile } = require('../utils/autotrace');
+      if (isPrimarySchoolFile(file.originalname, '', body.title) || String(body.level || '').toLowerCase().includes('standard') || String(body.level || '').toLowerCase().includes('primary') || String(body.level || '').toLowerCase().includes('std')) {
+        discard();
+        return res.status(400).json({
+          error: 'Muhebrew Library is dedicated exclusively to Secondary School (Form 1 to Form 4). Primary school files (Standard 1–8 / PSLCE) are not accepted.'
+        });
+      }
 
       // Check for duplicate uploads in the library ("which was not existing")
       const dup = findDuplicate(table, type, body, file);

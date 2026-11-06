@@ -440,9 +440,16 @@ router.post('/sync-from-drime', async (req, res) => {
 
   const imported = [];
   const skipped = [];
+  const { isPrimarySchoolFile } = require('../utils/autotrace');
 
   for (const f of listed.files) {
     const name = f.name || 'file.pdf';
+    // Strictly exclude every primary school file (Standard 1–8 / PSLCE)
+    if (isPrimarySchoolFile(name, f.folderPath || '')) {
+      skipped.push({ name, reason: 'Primary school file excluded (Form 1 to Form 4 only)' });
+      continue;
+    }
+
     if (!/\.(pdf|doc|docx)$/i.test(name)) {
       skipped.push({ name, reason: 'Not a document' });
       continue;

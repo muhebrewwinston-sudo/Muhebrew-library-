@@ -338,6 +338,7 @@ function renderPagedItems() {
   empty.hidden = true;
   const currentBatch = allLoadedItems.slice(0, visibleItemCount);
   grid.innerHTML = currentBatch.map(card).join('');
+  renderRealPdfCovers();
 
   if (allLoadedItems.length > visibleItemCount) {
     if (seeMoreWrap) seeMoreWrap.hidden = false;
@@ -347,6 +348,35 @@ function renderPagedItems() {
   } else {
     if (seeMoreWrap) seeMoreWrap.hidden = true;
   }
+}
+
+function renderRealPdfCovers() {
+  if (!window.pdfjsLib) return;
+  const sheets = document.querySelectorAll('.card-cover-sheet:not([data-rendered])');
+  sheets.forEach((sheet) => {
+    sheet.setAttribute('data-rendered', '1');
+    const previewUrl = sheet.dataset.preview;
+    const canvasEl = sheet.querySelector('.card-cover-canvas');
+    const imgEl = sheet.querySelector('.card-cover-thumb');
+    if (!previewUrl || !canvasEl) return;
+
+    try {
+      pdfjsLib.getDocument({ url: previewUrl, withCredentials: false }).promise.then((pdf) => {
+        return pdf.getPage(1).then((page) => {
+          const viewport = page.getViewport({ scale: 0.5 });
+          canvasEl.width = viewport.width;
+          canvasEl.height = viewport.height;
+          const ctx = canvasEl.getContext('2d');
+          return page.render({ canvasContext: ctx, viewport }).promise.then(() => {
+            canvasEl.style.display = 'block';
+            if (imgEl) imgEl.style.display = 'none';
+          });
+        });
+      }).catch(() => {
+        // Retain authentic vector/image cover thumbnail
+      });
+    } catch (_) {}
+  });
 }
 
 $('seeMoreBtn')?.addEventListener('click', () => {
@@ -362,7 +392,10 @@ async function loadFacets() {
       el.innerHTML = el.firstElementChild.outerHTML + values.map((v) => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('');
     };
     fill($('subject'), [...new Set([...p.subjects, ...b.subjects])].sort());
-    fill($('level'), [...new Set([...p.levels, ...b.levels])].sort());
+    // Exclude any primary school levels — strictly Form 1 to Form 4
+    fill($('level'), [...new Set([...p.levels, ...b.levels])]
+      .filter((l) => !/standard|primary|std|pslce/i.test(l) && /form\s*[1-4]|jce|msce/i.test(l))
+      .sort());
     fill($('year'), p.years);
   } catch (e) { /* filters stay empty */ }
 }
@@ -404,33 +437,19 @@ function card(item) {
     }
   }
 
-  // Document Cover Page / Thumbnail Display for Easy Visual Identification
-  const isMarkingKey = (item.category || '').toLowerCase().includes('mark') || (item.title || '').toLowerCase().includes('mark');
-  const boardHeader = isMarkingKey ? 'KEY' : (item.exam_board ? item.exam_board.toUpperCase().slice(0, 7) : (isPaper ? 'MANEB' : 'BOOK'));
-  const headerClass = isMarkingKey ? 'key' : (boardHeader.includes('MOCK') ? 'mock' : (isPaper ? 'maneb' : 'book'));
-  const subAbbr = (item.subject || 'GENERAL').toUpperCase().slice(0, 9);
-  const lvlShort = item.level ? item.level.replace(/Form\s*/i, 'F') : (item.year ? String(item.year) : '');
   const cleanTitleStr = formatDocumentTitle(item.title);
 
   const thumbUrl = item.cover_path
     ? ('/' + esc(item.cover_path))
     : ('/api/' + (isPaper ? 'papers' : 'books') + '/' + item.id + '/thumbnail');
+  const previewUrl = '/api/' + (isPaper ? 'papers' : 'books') + '/' + item.id + '/preview';
 
+  // Authentic Document Cover Page / Thumbnail Display
   const visualCol =
-    '<div class="card-cover-sheet" aria-label="Document Cover Page">' +
-      '<img src="' + thumbUrl + '" alt="' + esc(cleanTitleStr) + '" class="card-cover-thumb" loading="lazy" ' +
-        'onerror="this.style.display=\'none\'; if(this.nextElementSibling) this.nextElementSibling.style.display=\'flex\';" />' +
-      '<div class="cover-sheet-fallback" style="display:none; width:100%; height:100%; flex-direction:column;">' +
-        '<div class="cover-sheet-header ' + headerClass + '">' + esc(boardHeader) + '</div>' +
-        '<div class="cover-sheet-body">' +
-          '<div class="cover-sheet-subject">' + esc(subAbbr) + '</div>' +
-          '<div class="cover-sheet-sub">' + esc(lvlShort) + '</div>' +
-        '</div>' +
-        '<div class="cover-sheet-footer">' +
-          '<span class="cover-type-tag ' + (isPaper ? 'tag-pdf' : 'tag-book') + '">' + (isPaper ? 'PDF' : 'BOOK') + '</span>' +
-        '</div>' +
-      '</div>' +
-      '<span class="cover-type-tag ' + (isPaper ? 'tag-pdf' : 'tag-book') + '" style="position:absolute;bottom:2px;right:2px">' + (isPaper ? 'PDF' : 'BOOK') + '</span>' +
+    '<div class="card-cover-sheet" data-ref="' + ref + '" data-preview="' + previewUrl + '" title="Tap to inspect real cover page">' +
+      '<img src="' + thumbUrl + '" alt="' + esc(cleanTitleStr) + '" class="card-cover-thumb" loading="lazy" />' +
+      '<canvas class="card-cover-canvas" style="display:none;width:100%;height:100%"></canvas>' +
+      '<span class="cover-type-tag ' + (isPaper ? 'tag-pdf' : 'tag-book') + '" style="position:absolute;bottom:3px;right:3px">' + (isPaper ? 'PDF' : 'BOOK') + '</span>' +
     '</div>';
 
   return '<article class="card">' +
@@ -452,6 +471,11 @@ function card(item) {
       '</div>' +
     '</div>' +
     '<div class="card-chips">' +
+      '<span class="chip chip-subject">' + esc(item.subject) + '</span>' +
+      '<span class="chip chip-level">' + esc(item.level) + '</span>' +
+      (isPaper && item.year ? '<span class="chip chip-year">' + item.year + '</span>' : '') +
+      (isPaper && item.exam_board ? '<span class="chip chip-board">' + esc(item.exam_board) + '</span>' : '') +
+      (showCategoryChip ? '<span class="chip chip-category">' + esc(item.category) + '</span>' : '') +
       '<span class="chip chip-subject">' + esc(item.subject) + '</span>' +
       '<span class="chip chip-level">' + esc(item.level) + '</span>' +
       (isPaper && item.year ? '<span class="chip chip-year">' + item.year + '</span>' : '') +
@@ -554,6 +578,18 @@ async function load() {
 grid.addEventListener('click', async (e) => {
   const saveBtn = e.target.closest('[data-save]');
   const dlBtn = e.target.closest('[data-dl]');
+  const coverSheet = e.target.closest('.card-cover-sheet');
+
+  if (coverSheet && !e.target.closest('.act-download') && !e.target.closest('.act-report') && !e.target.closest('[data-save]')) {
+    const ref = coverSheet.dataset.ref;
+    const itemCard = coverSheet.closest('.card');
+    const title = itemCard ? itemCard.querySelector('.card-title')?.textContent : 'Document Inspection';
+    if (ref && window.openPreview) {
+      window.openPreview(ref, title);
+      return;
+    }
+  }
+
   try {
     if (saveBtn) {
       if (!user) return location.replace('/auth.html');

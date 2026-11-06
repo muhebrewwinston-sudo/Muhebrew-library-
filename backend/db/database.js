@@ -290,13 +290,31 @@ const catalogFile = path.join(__dirname, 'drime_catalog.json');
 
 function syncCatalogFromRegistry() {
   try {
+    // Purge any primary school files (library is exclusively secondary Form 1 to Form 4)
+    db.prepare(`
+      DELETE FROM papers WHERE 
+        LOWER(title) LIKE '%standard%' OR LOWER(title) LIKE '%pslce%' OR LOWER(title) LIKE '%primary%'
+        OR LOWER(level) LIKE '%standard%' OR LOWER(level) LIKE '%primary%'
+    `).run();
+    db.prepare(`
+      DELETE FROM books WHERE 
+        LOWER(title) LIKE '%standard%' OR LOWER(title) LIKE '%pslce%' OR LOWER(title) LIKE '%primary%'
+        OR LOWER(level) LIKE '%standard%' OR LOWER(level) LIKE '%primary%'
+    `).run();
+
     if (!fs.existsSync(catalogFile)) return;
     const catalog = JSON.parse(fs.readFileSync(catalogFile, 'utf8') || '{}');
     const papers = Array.isArray(catalog.papers) ? catalog.papers : [];
     const books = Array.isArray(catalog.books) ? catalog.books : [];
 
+    const { isPrimarySchoolFile } = require('../utils/autotrace');
+
     for (const p of papers) {
       if (!p || !p.title) continue;
+      // Exclude every primary school file
+      if (isPrimarySchoolFile(p.title, '', p.file_name) || String(p.level || '').toLowerCase().includes('standard') || String(p.level || '').toLowerCase().includes('primary')) {
+        continue;
+      }
       const cleanTitle = String(p.title).trim();
       const existing = db.prepare('SELECT id FROM papers WHERE LOWER(title) = ? OR file_name = ?').get(cleanTitle.toLowerCase(), p.file_name);
       if (!existing) {
