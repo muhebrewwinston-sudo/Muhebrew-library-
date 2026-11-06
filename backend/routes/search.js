@@ -31,8 +31,8 @@ router.get('/', async (req, res) => {
 
   const like = '%' + q + '%';
 
-  const pw = ["status = 'approved'", '(title LIKE ? OR subject LIKE ? OR exam_board LIKE ?)'], pa = [like, like, like];
-  const bw = ["status = 'approved'", '(title LIKE ? OR subject LIKE ? OR author LIKE ?)'], ba = [like, like, like];
+  const pw = ["status = 'approved'", "(level NOT LIKE '%Standard%' AND level NOT LIKE '%Primary%')", '(title LIKE ? OR subject LIKE ? OR exam_board LIKE ?)'], pa = [like, like, like];
+  const bw = ["status = 'approved'", "(level NOT LIKE '%Standard%' AND level NOT LIKE '%Primary%')", '(title LIKE ? OR subject LIKE ? OR author LIKE ?)'], ba = [like, like, like];
   if (level) { pw.push('level = ?'); pa.push(level); bw.push('level = ?'); ba.push(level); }
 
   const papers = db.prepare("SELECT id,title,subject,level,year,exam_board,category,file_size,storage_provider,drime_url,downloads,'paper' AS type FROM papers WHERE " +

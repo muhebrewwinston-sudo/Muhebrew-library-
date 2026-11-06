@@ -561,8 +561,8 @@ function renderFavBooksFlipped() {
     return `
       <div class="flipped-item-row">
         <span style="font-weight:700;color:var(--primary);font-size:13px;width:22px;text-align:center">#${globalRank}</span>
-        <div style="width:34px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;position:relative">
-          <img src="${b.cover_path ? ('/' + esc(b.cover_path)) : ('/api/books/' + b.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='grid'">
+        <div style="width:38px;height:50px;border-radius:4px;overflow:hidden;background:#fff;border:1px solid var(--border);box-shadow:0 2px 4px rgba(0,0,0,0.1);flex-shrink:0;position:relative">
+          <img src="${b.cover_path ? ('/' + esc(b.cover_path)) : ('/api/books/' + b.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='grid'">
           <div style="display:none;width:100%;height:100%;place-items:center">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/></svg>
           </div>
@@ -630,8 +630,8 @@ function renderFavPapersFlipped() {
     return `
       <div class="flipped-item-row">
         <span style="font-weight:700;color:var(--primary);font-size:13px;width:22px;text-align:center">#${globalRank}</span>
-        <div style="width:34px;height:44px;border-radius:6px;overflow:hidden;background:#fff;border:1px solid var(--border);flex-shrink:0;position:relative">
-          <img src="${p.cover_path ? ('/' + esc(p.cover_path)) : ('/api/papers/' + p.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'">
+        <div style="width:38px;height:50px;border-radius:4px;overflow:hidden;background:#fff;border:1px solid var(--border);box-shadow:0 2px 4px rgba(0,0,0,0.1);flex-shrink:0;position:relative">
+          <img src="${p.cover_path ? ('/' + esc(p.cover_path)) : ('/api/papers/' + p.id + '/thumbnail')}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:top center;display:block" onerror="this.style.display='none';if(this.nextElementSibling)this.nextElementSibling.style.display='flex'">
           <div style="display:none;width:100%;height:100%;flex-direction:column">
             <div class="cover-sheet-header ${headerCls}" style="height:12px;font-size:6.5px">${esc(boardTag)}</div>
             <div class="cover-sheet-body" style="padding:1px"><div class="cover-sheet-subject" style="font-size:6.5px">${esc((p.subject||'').slice(0,5))}</div></div>

@@ -32,8 +32,9 @@
             <span style="font-size:12.5px;color:var(--muted)">Loading document preview...</span>
           </div>
 
-          <!-- Canvas for PDF.js Rendering -->
+          <!-- Canvas for PDF.js Rendering & Instant Real Cover Display -->
           <div id="pvCanvasWrap" style="width:100%;display:flex;justify-content:center;overflow:auto">
+            <img id="pvCoverImg" style="max-width:100%;max-height:480px;box-shadow:0 4px 14px rgba(0,0,0,0.15);border-radius:6px;background:#ffffff;display:none;object-fit:contain" alt="Document Cover Page" />
             <canvas id="pvCanvas" style="max-width:100%;box-shadow:0 4px 14px rgba(0,0,0,0.15);border-radius:6px;background:#ffffff;display:none"></canvas>
           </div>
 
@@ -197,6 +198,11 @@
 
     if (loading) loading.style.display = 'flex';
     if (canvas) canvas.style.display = 'none';
+    const coverImg = document.getElementById('pvCoverImg');
+    if (coverImg) {
+      coverImg.src = `${API.base}/${coll}/${id}/thumbnail`;
+      coverImg.style.display = 'block';
+    }
     if (fallback) fallback.style.display = 'none';
     if (pagination) pagination.style.display = 'none';
 
@@ -220,7 +226,8 @@
           pagination.style.display = totalPages > 1 ? 'flex' : 'none';
         }
 
-        renderPage(1);
+        await renderPage(1);
+        if (coverImg) coverImg.style.display = 'none';
       } catch (err) {
         console.warn('[Preview] PDF.js load error, falling back to direct access:', err.message);
         showFallbackView();
@@ -230,4 +237,59 @@
       showFallbackView();
     }
   });
+
+  window.openPreview = function(ref, title = 'Document Inspection') {
+    if (!ref) return;
+    const [coll, id] = ref.split(':');
+    const url = `${API.base}/${coll}/${id}/preview`;
+    const thumbUrl = `${API.base}/${coll}/${id}/thumbnail`;
+
+    const titleEl = document.getElementById('pvTitle');
+    const openBtn = document.getElementById('pvOpen');
+    const fallbackBtn = document.getElementById('pvFallbackBtn');
+    const fallbackTitle = document.getElementById('pvFallbackTitle');
+    const loading = document.getElementById('pvLoading');
+    const canvas = document.getElementById('pvCanvas');
+    const coverImg = document.getElementById('pvCoverImg');
+    const fallback = document.getElementById('pvFallback');
+    const pagination = document.getElementById('pvPaginationBar');
+
+    if (titleEl) titleEl.textContent = title;
+    if (fallbackTitle) fallbackTitle.textContent = title;
+    if (openBtn) openBtn.href = url;
+    if (fallbackBtn) fallbackBtn.href = url;
+
+    // Show real cover image immediately
+    if (coverImg) {
+      coverImg.src = thumbUrl;
+      coverImg.style.display = 'block';
+    }
+    if (loading) loading.style.display = 'flex';
+    if (canvas) canvas.style.display = 'none';
+    if (fallback) fallback.style.display = 'none';
+    if (pagination) pagination.style.display = 'none';
+
+    modal.hidden = false;
+
+    if (window.pdfjsLib) {
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/js/pdf.worker.min.js';
+        const loadingTask = pdfjsLib.getDocument({ url, withCredentials: false });
+        loadingTask.promise.then(async (pdf) => {
+          currentPdfDoc = pdf;
+          totalPages = currentPdfDoc.numPages || 1;
+          if (pagination) pagination.style.display = totalPages > 1 ? 'flex' : 'none';
+          await renderPage(1);
+          if (coverImg) coverImg.style.display = 'none';
+          if (loading) loading.style.display = 'none';
+        }).catch(() => {
+          if (loading) loading.style.display = 'none';
+        });
+      } catch (_) {
+        if (loading) loading.style.display = 'none';
+      }
+    } else {
+      if (loading) loading.style.display = 'none';
+    }
+  };
 })();
