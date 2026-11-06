@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -9,10 +8,6 @@
     {
       "source": "/uploads/(.*)",
       "destination": "/api"
-    },
-    {
-      "source": "/((?!api|uploads).*)",
-      "destination": "/frontend/$1"
     }
   ]
 }
