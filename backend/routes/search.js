@@ -13,12 +13,20 @@ router.get('/', async (req, res) => {
   // Direct Drime Cloud Sourcing Coordinator:
   // When a student searches, trigger live coordination with Drime Cloud
   // to fetch, auto-trace, and reflect newly discovered matching files into SQLite.
-  if (q.length >= 2) {
+  if (q.length >= 1) {
     try {
       await drime.searchDrimeCloud(q, db);
     } catch (err) {
       console.warn('[Search Coordinator] Drime search error:', err.message);
     }
+  } else {
+    try {
+      const pCount = db.prepare("SELECT COUNT(*) c FROM papers WHERE status = 'approved'").get().c;
+      const bCount = db.prepare("SELECT COUNT(*) c FROM books WHERE status = 'approved'").get().c;
+      if (pCount === 0 || bCount === 0) {
+        await drime.syncDrimeFilesToDatabase(db);
+      }
+    } catch (_) {}
   }
 
   const like = '%' + q + '%';

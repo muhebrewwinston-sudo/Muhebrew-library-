@@ -484,6 +484,10 @@ router.post('/sync-from-drime', async (req, res) => {
     imported.push({ name, title: meta.title, subject: meta.subject, level: meta.level });
   }
 
+  if (imported.length > 0 && typeof db.saveCatalogToRegistry === 'function') {
+    try { db.saveCatalogToRegistry(); } catch (_) {}
+  }
+
   res.json({
     success: true,
     message: 'Synced from Drime: ' + imported.length + ' new, ' + skipped.length + ' skipped.',
